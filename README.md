@@ -64,6 +64,18 @@ pnpm tauri build
 
 > 첫 빌드는 Rust 의존성 컴파일로 시간이 걸린다. 두 번째부터는 incremental.
 
+### 릴리즈
+
+GitHub Releases 배포는 로컬에서 빌드한 파일을 업로드하는 방식으로 진행한다. 각 OS에서 `pnpm release:local`을 실행하면 산출물이 루트 `release-dist/`에 모인다.
+
+```bash
+cd munix
+pnpm release:local
+pnpm release:upload
+```
+
+자세한 절차는 [`docs/release.md`](./docs/release.md)를 참조.
+
 ## 📁 vault 구조
 
 vault란 Munix가 다루는 폴더 단위. 폴더 자체가 곧 데이터 — 그 안의 모든 `.md` 파일이 트리에 표시된다.

@@ -29,6 +29,10 @@ target/
 
 # Tauri build artifacts
 src-tauri/gen/schemas/
+release-dist/
+munix/src-tauri/icons/64x64.png
+munix/src-tauri/icons/android/
+munix/src-tauri/icons/ios/
 
 # Env
 .env
