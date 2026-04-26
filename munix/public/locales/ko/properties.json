@@ -1,0 +1,25 @@
+{
+  "heading": "속성",
+  "types": {
+    "text": "텍스트",
+    "multitext": "목록",
+    "number": "숫자",
+    "checkbox": "체크박스",
+    "date": "날짜",
+    "datetime": "날짜 및 시간",
+    "tags": "태그",
+    "aliases": "별칭"
+  },
+  "menu": { "type": "속성 유형", "delete": "삭제" },
+  "add": "속성 추가",
+  "deletePanel": "속성 영역 삭제",
+  "picker": {
+    "date": "날짜",
+    "time": "시간",
+    "set": "적용",
+    "cancel": "취소",
+    "hour": "시",
+    "minute": "분"
+  },
+  "placeholder": { "newKey": "속성 이름" }
+}

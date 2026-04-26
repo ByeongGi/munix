@@ -1,0 +1,164 @@
+{
+  "placeholder": {
+    "document": "제목을 입력하거나 '/'로 블록을 추가하세요",
+    "selectFile": "파일을 선택하세요."
+  },
+  "saveStatus": {
+    "dirty": "저장 대기중",
+    "saving": "저장 중",
+    "saved": "저장됨",
+    "conflict": "충돌",
+    "error": "저장 실패"
+  },
+  "conflict": {
+    "title": "외부에서 파일이 변경됨",
+    "bodyBefore": "",
+    "bodyAfter": " 이(가) 다른 프로세스에서 수정되었습니다.",
+    "explainer": "내 변경 사항을 덮어쓰거나, 디스크의 최신 내용으로 되돌릴 수 있습니다.",
+    "reload": "디스크 내용 불러오기",
+    "overwrite": "내 변경 덮어쓰기"
+  },
+  "searchBar": {
+    "placeholder": "현재 파일 검색",
+    "previous": "이전",
+    "next": "다음",
+    "close": "닫기"
+  },
+  "blockMenu": {
+    "moveUp": "위로 이동",
+    "moveDown": "아래로 이동",
+    "duplicate": "복제",
+    "delete": "삭제",
+    "convert": "변환",
+    "paragraph": "단락",
+    "heading1": "제목 1",
+    "heading2": "제목 2",
+    "heading3": "제목 3",
+    "blockquote": "인용",
+    "codeBlock": "코드 블록",
+    "bulletList": "글머리 목록",
+    "orderedList": "번호 목록",
+    "taskList": "할 일",
+    "trigger": "블록 메뉴"
+  },
+  "bubbleMenu": {
+    "bold": "굵게 (Mod+B)",
+    "italic": "기울임 (Mod+I)",
+    "strike": "취소선 (Mod+Shift+X)",
+    "code": "인라인 코드 (Mod+E)",
+    "highlight": "하이라이트 (==text==)",
+    "link": "링크 (Mod+K)"
+  },
+  "tableMenu": {
+    "addRowBefore": "위에 행 추가",
+    "addRowAfter": "아래에 행 추가",
+    "deleteRow": "현재 행 삭제",
+    "addColumnBefore": "왼쪽에 열 추가",
+    "addColumnAfter": "오른쪽에 열 추가",
+    "deleteColumn": "현재 열 삭제",
+    "toggleHeaderRow": "헤더 행 토글",
+    "deleteTable": "표 삭제 (Mod+Shift+Backspace)"
+  },
+  "frontmatter": {
+    "fieldCount": "{{count}}개 필드",
+    "empty": "YAML frontmatter가 비어있습니다.",
+    "removeField": "{{key}} 필드 삭제",
+    "newFieldPlaceholder": "새 필드 이름",
+    "addField": "추가",
+    "hint": "tags / aliases / keywords 는 쉼표로 구분 · true/false/숫자 자동 변환 · 날짜·불리언은 값 형식 따라 전용 입력 표시"
+  },
+  "image": {
+    "resizeHandle": "이미지 크기 조절",
+    "resizeHint": "드래그로 크기 조절 · 더블클릭으로 원래 크기",
+    "altPlaceholder": "이미지 설명"
+  },
+  "math": {
+    "inlinePlaceholder": "LaTeX 수식",
+    "blockPlaceholder": "LaTeX 블록 수식"
+  },
+  "codeBlock": {
+    "copy": "코드 복사",
+    "copied": "복사됨",
+    "copyLabel": "복사"
+  },
+  "wikilink": {
+    "noMatch": "일치하는 파일 없음",
+    "notFound": "[wikilink] '{{target}}' 파일을 vault에서 찾지 못했습니다."
+  },
+  "footnote": {
+    "jumpTo": "각주 {{id}}로 이동",
+    "undefined": "정의되지 않은 각주: {{id}}"
+  },
+  "slashGroups": {
+    "heading": "제목",
+    "list": "리스트",
+    "block": "블록",
+    "callout": "콜아웃"
+  },
+  "slashMenu": {
+    "noResults": "결과 없음"
+  },
+  "slashCommands": {
+    "calloutContent": "내용",
+    "heading1": {
+      "title": "제목 1",
+      "description": "큰 섹션 제목"
+    },
+    "heading2": {
+      "title": "제목 2",
+      "description": "섹션 제목"
+    },
+    "heading3": {
+      "title": "제목 3",
+      "description": "하위 제목"
+    },
+    "bulletList": {
+      "title": "글머리 기호",
+      "description": "순서 없는 목록"
+    },
+    "orderedList": {
+      "title": "번호 매기기",
+      "description": "순서 있는 목록"
+    },
+    "taskList": {
+      "title": "할 일",
+      "description": "체크 가능한 체크리스트"
+    },
+    "codeBlock": {
+      "title": "코드 블록",
+      "description": "코드 표시용 블록"
+    },
+    "blockquote": {
+      "title": "인용",
+      "description": "인용문 블록"
+    },
+    "horizontalRule": {
+      "title": "구분선",
+      "description": "가로 구분선"
+    },
+    "table": {
+      "title": "표",
+      "description": "3×3 표 삽입"
+    },
+    "calloutInfo": {
+      "title": "콜아웃 — 정보",
+      "description": "파란색 강조 박스 (💡)"
+    },
+    "calloutTip": {
+      "title": "콜아웃 — 팁",
+      "description": "초록색 팁 박스"
+    },
+    "calloutWarning": {
+      "title": "콜아웃 — 경고",
+      "description": "노란색 경고 박스 (⚠️)"
+    },
+    "calloutSuccess": {
+      "title": "콜아웃 — 성공",
+      "description": "초록 체크 박스 (✅)"
+    },
+    "calloutToggle": {
+      "title": "토글 (접이식 콜아웃)",
+      "description": "클릭해서 접고 펼 수 있는 블록"
+    }
+  }
+}

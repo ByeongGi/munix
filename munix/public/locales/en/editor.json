@@ -1,0 +1,165 @@
+{
+  "placeholder": {
+    "document": "Type a heading or press '/' to add a block",
+    "selectFile": "Select a file."
+  },
+  "saveStatus": {
+    "dirty": "Pending save",
+    "saving": "Saving",
+    "saved": "Saved",
+    "conflict": "Conflict",
+    "error": "Save failed"
+  },
+  "conflict": {
+    "title": "File changed externally",
+    "bodyBefore": "",
+    "bodyAfter": " was modified by another process.",
+    "explainer": "You can overwrite the external changes or reload the latest contents from disk.",
+    "reload": "Load disk contents",
+    "overwrite": "Overwrite my changes"
+  },
+  "searchBar": {
+    "placeholder": "Search current file",
+    "previous": "Previous",
+    "next": "Next",
+    "close": "Close"
+  },
+  "blockMenu": {
+    "moveUp": "Move up",
+    "moveDown": "Move down",
+    "duplicate": "Duplicate",
+    "delete": "Delete",
+    "convert": "Convert",
+    "paragraph": "Paragraph",
+    "heading1": "Heading 1",
+    "heading2": "Heading 2",
+    "heading3": "Heading 3",
+    "blockquote": "Quote",
+    "codeBlock": "Code block",
+    "bulletList": "Bullet list",
+    "orderedList": "Numbered list",
+    "taskList": "To-do list",
+    "trigger": "Block menu"
+  },
+  "bubbleMenu": {
+    "bold": "Bold (Mod+B)",
+    "italic": "Italic (Mod+I)",
+    "strike": "Strikethrough (Mod+Shift+X)",
+    "code": "Inline code (Mod+E)",
+    "highlight": "Highlight (==text==)",
+    "link": "Link (Mod+K)"
+  },
+  "tableMenu": {
+    "addRowBefore": "Insert row above",
+    "addRowAfter": "Insert row below",
+    "deleteRow": "Delete row",
+    "addColumnBefore": "Insert column left",
+    "addColumnAfter": "Insert column right",
+    "deleteColumn": "Delete column",
+    "toggleHeaderRow": "Toggle header row",
+    "deleteTable": "Delete table (Mod+Shift+Backspace)"
+  },
+  "frontmatter": {
+    "fieldCount": "{{count}} fields",
+    "fieldCount_one": "{{count}} field",
+    "empty": "YAML frontmatter is empty.",
+    "removeField": "Delete field {{key}}",
+    "newFieldPlaceholder": "New field name",
+    "addField": "Add",
+    "hint": "tags / aliases / keywords are comma-separated · true/false/numbers auto-converted · dates and booleans use dedicated inputs"
+  },
+  "image": {
+    "resizeHandle": "Resize image",
+    "resizeHint": "Drag to resize · double-click to reset",
+    "altPlaceholder": "Image description"
+  },
+  "math": {
+    "inlinePlaceholder": "LaTeX math",
+    "blockPlaceholder": "LaTeX block math"
+  },
+  "codeBlock": {
+    "copy": "Copy code",
+    "copied": "Copied",
+    "copyLabel": "Copy"
+  },
+  "wikilink": {
+    "noMatch": "No matching files",
+    "notFound": "[wikilink] '{{target}}' not found in vault."
+  },
+  "footnote": {
+    "jumpTo": "Jump to footnote {{id}}",
+    "undefined": "Undefined footnote: {{id}}"
+  },
+  "slashGroups": {
+    "heading": "Headings",
+    "list": "Lists",
+    "block": "Blocks",
+    "callout": "Callouts"
+  },
+  "slashMenu": {
+    "noResults": "No results"
+  },
+  "slashCommands": {
+    "calloutContent": "Content",
+    "heading1": {
+      "title": "Heading 1",
+      "description": "Large section heading"
+    },
+    "heading2": {
+      "title": "Heading 2",
+      "description": "Section heading"
+    },
+    "heading3": {
+      "title": "Heading 3",
+      "description": "Sub-heading"
+    },
+    "bulletList": {
+      "title": "Bullet list",
+      "description": "Unordered list"
+    },
+    "orderedList": {
+      "title": "Numbered list",
+      "description": "Ordered list"
+    },
+    "taskList": {
+      "title": "To-do list",
+      "description": "Checkable checklist"
+    },
+    "codeBlock": {
+      "title": "Code block",
+      "description": "Block for code"
+    },
+    "blockquote": {
+      "title": "Quote",
+      "description": "Quotation block"
+    },
+    "horizontalRule": {
+      "title": "Divider",
+      "description": "Horizontal divider"
+    },
+    "table": {
+      "title": "Table",
+      "description": "Insert 3×3 table"
+    },
+    "calloutInfo": {
+      "title": "Callout — Info",
+      "description": "Blue highlight box (💡)"
+    },
+    "calloutTip": {
+      "title": "Callout — Tip",
+      "description": "Green tip box"
+    },
+    "calloutWarning": {
+      "title": "Callout — Warning",
+      "description": "Yellow warning box (⚠️)"
+    },
+    "calloutSuccess": {
+      "title": "Callout — Success",
+      "description": "Green check box (✅)"
+    },
+    "calloutToggle": {
+      "title": "Toggle (collapsible callout)",
+      "description": "A block you can expand and collapse"
+    }
+  }
+}

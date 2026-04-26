@@ -1,0 +1,202 @@
+{
+  "title": "Settings",
+  "section": {
+    "general": "General",
+    "appearance": "Appearance",
+    "editor": "Editor",
+    "shortcuts": "Shortcuts",
+    "advanced": "Advanced — Custom CSS",
+    "about": "About",
+    "vault": "Vault: {{name}}"
+  },
+  "vaultScope": {
+    "groupGlobal": "Global",
+    "groupVault": "Per vault",
+    "description": "Applies to this vault only. Unset items fall back to global.",
+    "noActive": "No active vault.",
+    "globalLabel": "Global:",
+    "usingGlobal": "Using global value",
+    "overrideActive": "Vault override",
+    "resetToGlobal": "Reset to global"
+  },
+  "theme": {
+    "label": "Theme",
+    "system": "System",
+    "light": "Light",
+    "dark": "Dark"
+  },
+  "fontSize": {
+    "label": "Body size",
+    "sm": "Small",
+    "base": "Default",
+    "lg": "Large",
+    "xl": "Extra large"
+  },
+  "editorWidth": {
+    "label": "Editor width",
+    "narrow": "Narrow",
+    "default": "Default",
+    "wide": "Wide",
+    "full": "Full"
+  },
+  "autoSave": {
+    "label": "Auto-save interval",
+    "ms500": "0.5s",
+    "ms750": "0.75s",
+    "ms1500": "1.5s",
+    "ms3000": "3s"
+  },
+  "language": {
+    "label": "Language",
+    "description": "Choose the display language. \"System\" follows your OS setting.",
+    "auto": "System",
+    "ko": "한국어",
+    "en": "English"
+  },
+  "customCss": {
+    "description": "Extra CSS applied to the whole app. Updates take effect immediately. Leave empty to disable.",
+    "placeholder": "/* Example: */\n.tiptap p { line-height: 1.8; }"
+  },
+  "about": {
+    "tagline": "Munix — local-first Markdown note app",
+    "meta": "version 0.1.0 · Obsidian compatible · MIT license"
+  },
+  "shortcuts": {
+    "settings": {
+      "hint": "Only global shortcuts can be customized. Editor-internal keys (bold/italic/etc.) and tree/search keys are read-only until v1.2.",
+      "resetAll": "Reset all to defaults",
+      "resetAllConfirm": "Reset all shortcuts to defaults? Your customizations will be lost.",
+      "readOnlyTag": "(read-only)",
+      "conflictLabel": "Conflict",
+      "change": "Change",
+      "resetOneTitle": "Reset to default"
+    },
+    "dialog": {
+      "title": "Shortcuts",
+      "searchPlaceholder": "Search shortcut or action…",
+      "clear": "Clear",
+      "noResults": "No matches for \"{{query}}\""
+    },
+    "groups": {
+      "file": "File",
+      "navigation": "Navigation",
+      "help": "Help",
+      "search": "Search",
+      "editor": "Editor",
+      "block": "Block",
+      "fileTree": "File tree",
+      "tabs": "Tabs",
+      "vault": "Vault",
+      "workspace": "Workspace",
+      "table": "Table",
+      "codeBlock": "Code block",
+      "markdownExt": "Markdown extensions",
+      "slashMenu": "Slash menu",
+      "inFileSearch": "In-file search"
+    },
+    "commands": {
+      "global.newFile": { "description": "New file (in current tab)" },
+      "global.save": { "description": "Save" },
+      "global.closeTab": { "description": "Close current tab" },
+      "global.closeAllTabs": { "description": "Close all tabs" },
+      "global.quickOpen": { "description": "Quick open file" },
+      "global.commandPalette": { "description": "Command palette" },
+      "global.searchInVault": { "description": "Search in vault" },
+      "global.nextTab": { "description": "Next tab" },
+      "global.prevTab": { "description": "Previous tab" },
+      "global.shortcuts": { "description": "Shortcut cheatsheet" },
+      "global.settings": { "description": "Settings dialog" },
+      "editor.findInFile": { "description": "Find in current file" },
+      "editor.bold": { "description": "Bold" },
+      "editor.italic": { "description": "Italic" },
+      "editor.strikethrough": { "description": "Strikethrough" },
+      "editor.inlineCode": { "description": "Inline code" },
+      "editor.undo": { "description": "Undo" },
+      "editor.redo": { "description": "Redo" },
+      "editor.moveBlockUp": { "description": "Move current block up" },
+      "editor.moveBlockDown": { "description": "Move current block down" },
+      "editor.duplicateBlock": { "description": "Duplicate current block" },
+      "editor.deleteBlock": { "description": "Delete current block" },
+      "editor.selectBlock": { "description": "Select current block node" },
+      "tree.rename": { "description": "Rename" },
+      "global.openVault": { "description": "Open vault (new tab)" },
+      "global.closeVault": { "description": "Close current vault" },
+      "global.nextVault": { "description": "Next vault" },
+      "global.prevVault": { "description": "Previous vault" },
+      "global.toggleVaultDock": { "description": "Toggle Vault Dock" },
+      "global.vaultSwitcher": { "description": "Vault switcher palette" },
+      "workspace.splitRight": { "description": "Split current tab to the right" },
+      "workspace.splitDown": { "description": "Split current tab downward" },
+      "workspace.closePane": { "description": "Close current pane" },
+      "workspace.moveTabRight": { "description": "Move current tab to the right pane" },
+      "workspace.moveTabLeft": { "description": "Move current tab to the left pane" }
+    },
+    "static": {
+      "tabs.nthTab": { "keys": "{{mod}}1~9", "action": "Go to nth tab" },
+      "vault.nthVault": { "keys": "{{mod}}+Alt+1~9", "action": "Go to nth vault" },
+      "fileTree.move": { "keys": "↑ / ↓", "action": "Move selection" },
+      "fileTree.expand": {
+        "keys": "→",
+        "action": "Expand folder / step into child"
+      },
+      "fileTree.collapse": {
+        "keys": "←",
+        "action": "Collapse folder / step to parent"
+      },
+      "fileTree.openOrToggle": {
+        "keys": "Enter",
+        "action": "Open / toggle"
+      },
+      "table.selectAll": { "keys": "Esc", "action": "Select whole table" },
+      "table.cellMove": {
+        "keys": "Tab / Shift+Tab",
+        "action": "Move between cells"
+      },
+      "table.cellMenu": {
+        "keys": "Cursor in cell",
+        "action": "Floating menu (add/remove rows·cols, toggle header)"
+      },
+      "codeBlock.indent": {
+        "keys": "Tab",
+        "action": "Indent 2 spaces (inside code block)"
+      },
+      "codeBlock.outdent": {
+        "keys": "Shift+Tab",
+        "action": "Remove leading spaces (up to 2)"
+      },
+      "codeBlock.copy": {
+        "keys": "Hover → copy button",
+        "action": "Copy code to clipboard"
+      },
+      "markdownExt.highlight": {
+        "keys": "==text==",
+        "action": "Highlight (==..==)"
+      },
+      "markdownExt.wikilink": {
+        "keys": "[[Title]]",
+        "action": "Wikilink + autocomplete popup"
+      },
+      "markdownExt.inlineKatex": {
+        "keys": "$x^2$",
+        "action": "Inline KaTeX formula"
+      },
+      "markdownExt.blockKatex": {
+        "keys": "$$\\n..\\n$$",
+        "action": "Block KaTeX formula (own line)"
+      },
+      "markdownExt.footnote": {
+        "keys": "[^id]",
+        "action": "Footnote reference (define: [^id]: text)"
+      },
+      "slashMenu.open": { "keys": "/", "action": "Slash menu (insert block)" },
+      "slashMenu.move": { "keys": "↑ / ↓", "action": "Move between items" },
+      "slashMenu.select": { "keys": "Enter / Tab", "action": "Select" },
+      "slashMenu.close": { "keys": "Esc", "action": "Close" },
+      "inFileSearch.next": {
+        "keys": "Enter / Shift+Enter",
+        "action": "Next / previous match"
+      },
+      "inFileSearch.close": { "keys": "Esc", "action": "Close search" }
+    }
+  }
+}

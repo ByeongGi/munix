@@ -1,0 +1,30 @@
+{
+  "label": "Vault Dock",
+  "heading": "Vaults",
+  "empty": "열린 vault 가 없습니다. + 버튼으로 열어보세요.",
+  "openAnother": "vault 열기…",
+  "switcherHint": "vault 전환",
+  "openCount": "열린 vault {{count}}개",
+  "openDialogTitle": "vault 폴더 선택",
+  "removeTooltip": "기록에서 제거",
+  "menu": {
+    "close": "닫기",
+    "removeFromHistory": "기록에서 제거",
+    "pin": "핀 고정",
+    "unpin": "핀 해제",
+    "copyPath": "경로 복사",
+    "revealInSystem": "Finder 에서 보기"
+  },
+  "switcher": {
+    "placeholder": "vault 전환…",
+    "group": {
+      "open": "열린 vault",
+      "recent": "최근",
+      "new": "기타"
+    },
+    "action": {
+      "openNew": "vault 폴더 열기…"
+    },
+    "activeTag": "활성"
+  }
+}

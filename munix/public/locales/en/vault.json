@@ -1,0 +1,35 @@
+{
+  "description": {
+    "choosePrompt": "Choose a folder to use as your vault."
+  },
+  "button": {
+    "openFolder": "Open folder"
+  },
+  "sample": {
+    "create": "Create sample vault",
+    "creating": "Creating sample...",
+    "files": {
+      "welcome": "---\ntags:\n  - munix\nstatus: draft\n---\n\n# Welcome to Munix\n\nMunix is a local-first note app for editing Markdown files with a block-based editor.\n\n## Try this first\n\n- Open notes from the file tree\n- Rename this title to rename the file\n- Type `---` then Enter to create a properties panel\n- Search for tags like `#munix`\n\n> This sample vault was created under your Documents folder.\n",
+      "markdown": "# Markdown basics\n\n## Checklist\n\n- [ ] Create a link: [Munix roadmap](../Projects/Munix%20roadmap.md)\n- [ ] Add a tag: #guide\n- [ ] Write a code block\n\n```ts\nconst app = \"Munix\";\n```\n\n## Table\n\n| Feature | Status |\n| --- | --- |\n| File tree | Ready |\n| Properties | Ready |\n| Search | Ready |\n",
+      "roadmap": "---\ntags:\n  - roadmap\npriority: 1\n---\n\n# Munix roadmap\n\n## v1.0\n\n- Onboarding\n- Command Palette prefix modes\n- Manual verification\n\n## v1.1 candidates\n\n- Plugin system\n- Terminal plugin\n- Graph view\n"
+    }
+  },
+  "history": {
+    "heading": "Recent vaults",
+    "removeAria": "Remove {{name}} from history",
+    "removeTitle": "Remove from history",
+    "clear": "Clear history",
+    "clearTitle": "Clear all closed vault history",
+    "brokenTag": "missing",
+    "brokenTitle": "Path not found"
+  },
+  "reset": {
+    "title": "Reset Munix vault registry",
+    "action": "Reset all vault data",
+    "confirm": "Close all vaults and clear munix.json history. Continue?"
+  },
+  "trust": {
+    "openTitle": "Trust vault",
+    "openPrompt": "Trust this folder as a vault?\n\n{{path}}\n\nA .munix/ metadata folder will be created here."
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "heading": "Properties",
+  "types": {
+    "text": "Text",
+    "multitext": "List",
+    "number": "Number",
+    "checkbox": "Checkbox",
+    "date": "Date",
+    "datetime": "Date & time",
+    "tags": "Tags",
+    "aliases": "Aliases"
+  },
+  "menu": { "type": "Property type", "delete": "Delete" },
+  "add": "Add property",
+  "deletePanel": "Delete properties",
+  "picker": {
+    "date": "Date",
+    "time": "Time",
+    "set": "Set",
+    "cancel": "Cancel",
+    "hour": "Hour",
+    "minute": "Minute"
+  },
+  "placeholder": { "newKey": "Property name" }
+}

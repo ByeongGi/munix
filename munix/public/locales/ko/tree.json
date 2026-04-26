@@ -1,0 +1,22 @@
+{
+  "contextMenu": {
+    "newFile": "새 파일",
+    "newFolder": "새 폴더",
+    "rename": "이름 변경",
+    "copyPath": "경로 복사",
+    "revealInFinder": "시스템 파인더에서 보기",
+    "delete": "삭제 (휴지통)",
+    "selectedCount": "{{count}}개 항목"
+  },
+  "empty": "비어 있음",
+  "unsupportedFileType": "지원하지 않는 파일 형식",
+  "rename": {
+    "emptyName": "이름이 비었습니다",
+    "dotForbidden": "'.' 은 사용할 수 없습니다",
+    "dotDotForbidden": "'..' 은 사용할 수 없습니다",
+    "forbiddenChars": "\\ / : * ? \" < > | 등 사용 금지",
+    "windowsReserved": "Windows 예약어 (con, prn, com1 등)",
+    "trailingDotOrSpace": "마지막에 점 또는 공백을 둘 수 없습니다",
+    "duplicateName": "같은 이름이 이미 있습니다"
+  }
+}

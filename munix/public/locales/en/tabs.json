@@ -1,0 +1,42 @@
+{
+  "contextMenu": {
+    "splitRight": "Split right",
+    "splitDown": "Split down",
+    "close": "Close",
+    "closeOthers": "Close other tabs",
+    "closeTabsAfter": "Close tabs to the right",
+    "closeAll": "Close all tabs",
+    "pin": "Pin",
+    "unpin": "Unpin",
+    "copyLink": "Copy link to tab...",
+    "copyRelativePath": "Copy relative path",
+    "revealInFileTree": "Reveal in file tree",
+    "moveToNewWindow": "Move to new window",
+    "copyPath": "Copy path",
+    "revealInSystem": "Reveal in Finder"
+  },
+  "softLimit": {
+    "tooltip": "More than {{limit}} tabs are open ({{count}}). Opening too many may impact performance."
+  },
+  "aria": {
+    "closeTab": "Close tab",
+    "newTab": "New tab"
+  },
+  "tooltip": {
+    "newTab": "New tab (Mod+T)"
+  },
+  "emptyTab": {
+    "title": "New tab"
+  },
+  "paneMenu": {
+    "label": "Pane menu",
+    "closePane": "Close pane"
+  },
+  "dropZone": {
+    "moveTab": "Move tab",
+    "splitLeft": "Split left",
+    "splitRight": "Split right",
+    "splitTop": "Split top",
+    "splitBottom": "Split bottom"
+  }
+}

@@ -1,0 +1,31 @@
+{
+  "outline": {
+    "title": "Outline",
+    "empty": "No headings",
+    "emptyTitle": "(untitled)",
+    "selectFile": "Select a file.",
+    "backlinks": "Backlinks",
+    "indexing": "Indexing…",
+    "building": "Building…",
+    "noBacklinks": "No files reference this file"
+  },
+  "tags": {
+    "indexing": "Indexing tags…",
+    "empty": "No tags — use `#tag` or frontmatter `tags:`",
+    "backToList": "Back to tags",
+    "count": "{{count}} files"
+  },
+  "statusBar": {
+    "words": "words",
+    "chars": "chars",
+    "save": {
+      "idle": "Up to date",
+      "dirty": "Unsaved",
+      "saving": "Saving…",
+      "saved": "Saved",
+      "error": "Save error",
+      "conflict": "Conflict"
+    },
+    "indexing": "Indexing…"
+  }
+}

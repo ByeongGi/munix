@@ -1,0 +1,28 @@
+{
+  "placeholder": {
+    "normal": "Search all files…",
+    "regex": "Regex… (e.g. foo|bar)"
+  },
+  "regex": {
+    "ariaToggle": "Toggle regex mode",
+    "titleOn": "Regex mode (on)",
+    "titleOff": "Regex mode (off)",
+    "error": "Regex error: {{message}}"
+  },
+  "index": {
+    "rebuildAria": "Rebuild index",
+    "building": "Building index…"
+  },
+  "result": {
+    "empty": "Enter a search query",
+    "count": "{{count}} results"
+  },
+  "status": {
+    "errorPrefix": "Error: {{message}}",
+    "unknownError": "unknown"
+  },
+  "group": {
+    "root": "(root)",
+    "count": "{{count}} results"
+  }
+}

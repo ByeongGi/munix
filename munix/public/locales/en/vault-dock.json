@@ -1,0 +1,30 @@
+{
+  "label": "Vault Dock",
+  "heading": "Vaults",
+  "empty": "No vault open. Click + to open one.",
+  "openAnother": "Open vault…",
+  "switcherHint": "Switch vault",
+  "openCount": "{{count}} open vaults",
+  "openDialogTitle": "Choose a vault folder",
+  "removeTooltip": "Remove from history",
+  "menu": {
+    "close": "Close",
+    "removeFromHistory": "Remove from history",
+    "pin": "Pin",
+    "unpin": "Unpin",
+    "copyPath": "Copy path",
+    "revealInSystem": "Reveal in Finder"
+  },
+  "switcher": {
+    "placeholder": "Switch vault…",
+    "group": {
+      "open": "Open",
+      "recent": "Recent",
+      "new": "Other"
+    },
+    "action": {
+      "openNew": "Open vault folder…"
+    },
+    "activeTag": "active"
+  }
+}

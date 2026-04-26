@@ -1,0 +1,22 @@
+{
+  "contextMenu": {
+    "newFile": "New file",
+    "newFolder": "New folder",
+    "rename": "Rename",
+    "copyPath": "Copy path",
+    "revealInFinder": "Reveal in Finder",
+    "delete": "Move to Trash",
+    "selectedCount": "{{count}} items"
+  },
+  "empty": "Empty",
+  "unsupportedFileType": "Unsupported file type",
+  "rename": {
+    "emptyName": "Name cannot be empty",
+    "dotForbidden": "'.' is not allowed",
+    "dotDotForbidden": "'..' is not allowed",
+    "forbiddenChars": "\\ / : * ? \" < > | are not allowed",
+    "windowsReserved": "Windows reserved name (con, prn, com1, etc.)",
+    "trailingDotOrSpace": "Name cannot end with a dot or space",
+    "duplicateName": "A file with this name already exists"
+  }
+}

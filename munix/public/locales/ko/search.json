@@ -1,0 +1,28 @@
+{
+  "placeholder": {
+    "normal": "전체 검색…",
+    "regex": "정규식… (예: foo|bar)"
+  },
+  "regex": {
+    "ariaToggle": "정규식 모드 전환",
+    "titleOn": "정규식 모드 (켜짐)",
+    "titleOff": "정규식 모드 (꺼짐)",
+    "error": "정규식 오류: {{message}}"
+  },
+  "index": {
+    "rebuildAria": "인덱스 재구성",
+    "building": "인덱스 구성 중…"
+  },
+  "result": {
+    "empty": "검색어를 입력하세요",
+    "count": "{{count}}건"
+  },
+  "status": {
+    "errorPrefix": "오류: {{message}}",
+    "unknownError": "알 수 없음"
+  },
+  "group": {
+    "root": "(루트)",
+    "count": "{{count}}건"
+  }
+}

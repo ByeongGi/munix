@@ -1,0 +1,52 @@
+{
+  "commands": {
+    "newFile": { "title": "New file" },
+    "newFolder": { "title": "New folder" },
+    "save": { "title": "Save" },
+    "closeTab": { "title": "Close current tab" },
+    "closeAllTabs": { "title": "Close all tabs" },
+    "nextTab": { "title": "Next tab" },
+    "prevTab": { "title": "Previous tab" },
+    "sidebarFiles": { "title": "Sidebar: Files" },
+    "sidebarSearch": { "title": "Sidebar: Search" },
+    "pickVault": { "title": "Open vault" },
+    "themeSystem": { "title": "Theme: System default" },
+    "themeLight": { "title": "Theme: Light" },
+    "themeDark": { "title": "Theme: Dark" },
+    "shortcuts": { "title": "Keyboard shortcuts" },
+    "settings": { "title": "Settings" },
+    "vaultResetHistory": { "title": "Vault: Clear closed vault history" },
+    "vaultResetAll": {
+      "title": "Vault: Reset all vault data",
+      "confirm": "Close all vaults and clear munix.json history. Continue?"
+    },
+    "workspaceSplitRight": { "title": "Pane: Split right" },
+    "workspaceSplitDown": { "title": "Pane: Split down" },
+    "workspaceClosePane": { "title": "Pane: Close current pane" }
+  },
+  "placeholder": {
+    "search": "Search commands…",
+    "fileSearch": "Search file names…",
+    "prefix": {
+      "command": "Search commands…",
+      "heading": "Search headings in current file…",
+      "tag": "Search tags…",
+      "file": "Search files…",
+      "line": "Enter line number…"
+    }
+  },
+  "empty": {
+    "noResults": "No results",
+    "indexNotReady": "Index not ready",
+    "indexing": "Indexing…"
+  },
+  "action": {
+    "jumpToLine": "Jump to line {{line}}"
+  },
+  "footer": {
+    "navigate": "↑↓ Navigate",
+    "open": "Enter Run",
+    "dismiss": "Esc Close",
+    "prefixHint": "Type files  > commands  # tags  @ headings  : line"
+  }
+}

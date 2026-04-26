@@ -1,0 +1,35 @@
+{
+  "description": {
+    "choosePrompt": "vault로 사용할 폴더를 선택하세요."
+  },
+  "button": {
+    "openFolder": "폴더 열기"
+  },
+  "sample": {
+    "create": "샘플 vault 만들기",
+    "creating": "샘플 생성 중...",
+    "files": {
+      "welcome": "---\ntags:\n  - munix\nstatus: draft\n---\n\n# Munix에 오신 것을 환영합니다\n\nMunix는 로컬 Markdown 파일을 블록 기반 에디터로 다루는 노트앱입니다.\n\n## 바로 해볼 것\n\n- 왼쪽 파일 트리에서 노트를 열기\n- 제목을 바꿔 파일명을 변경하기\n- `---` 입력 후 Enter로 속성 패널 만들기\n- `#munix` 같은 태그로 검색하기\n\n> 이 샘플 vault는 Documents 폴더 아래에 만들어졌습니다.\n",
+      "markdown": "# Markdown basics\n\n## 체크리스트\n\n- [ ] 링크 만들기: [Munix roadmap](../Projects/Munix%20roadmap.md)\n- [ ] 태그 추가하기: #guide\n- [ ] 코드 블록 쓰기\n\n```ts\nconst app = \"Munix\";\n```\n\n## 표\n\n| 기능 | 상태 |\n| --- | --- |\n| 파일 트리 | 사용 가능 |\n| 속성 | 사용 가능 |\n| 검색 | 사용 가능 |\n",
+      "roadmap": "---\ntags:\n  - roadmap\npriority: 1\n---\n\n# Munix roadmap\n\n## v1.0\n\n- 온보딩\n- Command Palette prefix 모드\n- 수동 검증\n\n## v1.1 후보\n\n- 플러그인 시스템\n- 터미널 플러그인\n- 그래프 뷰\n"
+    }
+  },
+  "history": {
+    "heading": "최근 vault",
+    "removeAria": "{{name}} 히스토리에서 제거",
+    "removeTitle": "히스토리에서 제거",
+    "clear": "기록 정리",
+    "clearTitle": "닫힌 vault 기록 모두 정리",
+    "brokenTag": "없음",
+    "brokenTitle": "경로를 찾을 수 없음"
+  },
+  "reset": {
+    "title": "Munix 의 vault 등록 정보 초기화",
+    "action": "모든 vault 데이터 초기화",
+    "confirm": "모든 vault 를 닫고 munix.json 의 기록을 비웁니다. 계속할까요?"
+  },
+  "trust": {
+    "openTitle": "Vault 신뢰",
+    "openPrompt": "이 폴더를 vault 로 신뢰하시겠습니까?\n\n{{path}}\n\n.munix/ 메타데이터 폴더가 자동으로 만들어집니다."
+  }
+}

@@ -1,0 +1,190 @@
+{
+  "title": "설정",
+  "section": {
+    "general": "일반",
+    "appearance": "모양",
+    "editor": "에디터",
+    "shortcuts": "단축키",
+    "advanced": "고급 — 사용자 CSS",
+    "about": "정보",
+    "vault": "Vault: {{name}}"
+  },
+  "vaultScope": {
+    "groupGlobal": "글로벌",
+    "groupVault": "Vault 별",
+    "description": "이 vault 에서만 적용. 빈 항목은 글로벌 값을 사용합니다.",
+    "noActive": "활성 vault 가 없습니다.",
+    "globalLabel": "글로벌:",
+    "usingGlobal": "글로벌 값 사용 중",
+    "overrideActive": "이 vault 전용",
+    "resetToGlobal": "글로벌 값으로 재설정"
+  },
+  "theme": {
+    "label": "테마",
+    "system": "시스템",
+    "light": "라이트",
+    "dark": "다크"
+  },
+  "fontSize": {
+    "label": "본문 크기",
+    "sm": "작게",
+    "base": "기본",
+    "lg": "크게",
+    "xl": "더 크게"
+  },
+  "editorWidth": {
+    "label": "에디터 너비",
+    "narrow": "좁게",
+    "default": "기본",
+    "wide": "넓게",
+    "full": "최대"
+  },
+  "autoSave": {
+    "label": "자동 저장 간격",
+    "ms500": "0.5초",
+    "ms750": "0.75초",
+    "ms1500": "1.5초",
+    "ms3000": "3초"
+  },
+  "language": {
+    "label": "언어",
+    "description": "표시 언어를 선택합니다. \"시스템\"은 OS 설정을 따릅니다.",
+    "auto": "시스템",
+    "ko": "한국어",
+    "en": "English"
+  },
+  "customCss": {
+    "description": "앱 전체에 추가로 적용할 CSS. 변경 즉시 반영. 빈 값이면 비활성.",
+    "placeholder": "/* 예: */\n.tiptap p { line-height: 1.8; }"
+  },
+  "about": {
+    "tagline": "Munix — 로컬 퍼스트 마크다운 노트 앱",
+    "meta": "version 0.1.0 · Obsidian 호환 · 라이선스 MIT"
+  },
+  "shortcuts": {
+    "settings": {
+      "hint": "전역 단축키만 변경 가능. 에디터 내부 키(굵게/기울임 등)와 트리/검색 기본키는 v1.2 이후 지원 예정.",
+      "resetAll": "전체 기본값 복원",
+      "resetAllConfirm": "모든 단축키를 기본값으로 되돌릴까요? 현재 사용자 정의는 모두 사라집니다.",
+      "readOnlyTag": "(기본 전용)",
+      "conflictLabel": "충돌",
+      "change": "변경",
+      "resetOneTitle": "기본값으로"
+    },
+    "dialog": {
+      "title": "단축키",
+      "searchPlaceholder": "단축키나 동작 검색…",
+      "clear": "지우기",
+      "noResults": "\"{{query}}\" 일치 항목 없음"
+    },
+    "groups": {
+      "file": "파일",
+      "navigation": "네비게이션",
+      "help": "도움",
+      "search": "검색",
+      "editor": "에디터",
+      "block": "블록",
+      "fileTree": "파일 트리",
+      "tabs": "탭",
+      "vault": "Vault",
+      "workspace": "워크스페이스",
+      "table": "표",
+      "codeBlock": "코드 블록",
+      "markdownExt": "Markdown 확장",
+      "slashMenu": "슬래시 메뉴",
+      "inFileSearch": "검색 결과 (인파일)"
+    },
+    "commands": {
+      "global.newFile": { "description": "새 파일 (현재 탭에)" },
+      "global.save": { "description": "저장" },
+      "global.closeTab": { "description": "현재 탭 닫기" },
+      "global.closeAllTabs": { "description": "모든 탭 닫기" },
+      "global.quickOpen": { "description": "파일 빠른 열기" },
+      "global.commandPalette": { "description": "명령 팔레트" },
+      "global.searchInVault": { "description": "Vault 전체 검색" },
+      "global.nextTab": { "description": "다음 탭" },
+      "global.prevTab": { "description": "이전 탭" },
+      "global.shortcuts": { "description": "단축키 치트시트" },
+      "global.settings": { "description": "설정 다이얼로그" },
+      "editor.findInFile": { "description": "현재 파일 검색" },
+      "editor.bold": { "description": "굵게" },
+      "editor.italic": { "description": "기울임" },
+      "editor.strikethrough": { "description": "취소선" },
+      "editor.inlineCode": { "description": "인라인 코드" },
+      "editor.undo": { "description": "되돌리기" },
+      "editor.redo": { "description": "다시 실행" },
+      "editor.moveBlockUp": { "description": "현재 블록 위로 이동" },
+      "editor.moveBlockDown": { "description": "현재 블록 아래로 이동" },
+      "editor.duplicateBlock": { "description": "현재 블록 복제" },
+      "editor.deleteBlock": { "description": "현재 블록 삭제" },
+      "editor.selectBlock": { "description": "현재 블록 노드 선택" },
+      "tree.rename": { "description": "이름 변경" },
+      "global.openVault": { "description": "Vault 열기 (새 탭)" },
+      "global.closeVault": { "description": "현재 Vault 닫기" },
+      "global.nextVault": { "description": "다음 Vault" },
+      "global.prevVault": { "description": "이전 Vault" },
+      "global.toggleVaultDock": { "description": "Vault Dock 토글" },
+      "global.vaultSwitcher": { "description": "Vault Switcher 팔레트" },
+      "workspace.splitRight": { "description": "현재 탭을 오른쪽으로 분할" },
+      "workspace.splitDown": { "description": "현재 탭을 아래로 분할" },
+      "workspace.closePane": { "description": "현재 패널 닫기" },
+      "workspace.moveTabRight": { "description": "현재 탭을 오른쪽 패널로 이동" },
+      "workspace.moveTabLeft": { "description": "현재 탭을 왼쪽 패널로 이동" }
+    },
+    "static": {
+      "tabs.nthTab": { "keys": "{{mod}}1~9", "action": "n번째 탭으로" },
+      "vault.nthVault": { "keys": "{{mod}}+Alt+1~9", "action": "n번째 Vault 로" },
+      "fileTree.move": { "keys": "↑ / ↓", "action": "항목 이동" },
+      "fileTree.expand": { "keys": "→", "action": "폴더 펼치기 / 자식으로" },
+      "fileTree.collapse": { "keys": "←", "action": "폴더 접기 / 부모로" },
+      "fileTree.openOrToggle": { "keys": "Enter", "action": "열기 / 토글" },
+      "table.selectAll": { "keys": "Esc", "action": "표 전체 선택" },
+      "table.cellMove": { "keys": "Tab / Shift+Tab", "action": "셀 이동" },
+      "table.cellMenu": {
+        "keys": "셀 안 커서",
+        "action": "Floating 메뉴 (행/열 추가·삭제, 헤더 토글)"
+      },
+      "codeBlock.indent": {
+        "keys": "Tab",
+        "action": "2 공백 들여쓰기 (코드 블록 안)"
+      },
+      "codeBlock.outdent": {
+        "keys": "Shift+Tab",
+        "action": "줄 시작 공백 제거 (최대 2)"
+      },
+      "codeBlock.copy": {
+        "keys": "호버 → 복사 버튼",
+        "action": "클립보드로 코드 복사"
+      },
+      "markdownExt.highlight": {
+        "keys": "==text==",
+        "action": "Highlight (==..==)"
+      },
+      "markdownExt.wikilink": {
+        "keys": "[[Title]]",
+        "action": "Wikilink + 자동완성 팝업"
+      },
+      "markdownExt.inlineKatex": {
+        "keys": "$x^2$",
+        "action": "인라인 KaTeX 수식"
+      },
+      "markdownExt.blockKatex": {
+        "keys": "$$\\n..\\n$$",
+        "action": "블록 KaTeX 수식 (자체 라인)"
+      },
+      "markdownExt.footnote": {
+        "keys": "[^id]",
+        "action": "각주 참조 (정의: [^id]: text)"
+      },
+      "slashMenu.open": { "keys": "/", "action": "슬래시 메뉴 (블록 삽입)" },
+      "slashMenu.move": { "keys": "↑ / ↓", "action": "메뉴 항목 이동" },
+      "slashMenu.select": { "keys": "Enter / Tab", "action": "선택" },
+      "slashMenu.close": { "keys": "Esc", "action": "닫기" },
+      "inFileSearch.next": {
+        "keys": "Enter / Shift+Enter",
+        "action": "다음 / 이전 매치"
+      },
+      "inFileSearch.close": { "keys": "Esc", "action": "검색 닫기" }
+    }
+  }
+}

@@ -1,0 +1,52 @@
+{
+  "commands": {
+    "newFile": { "title": "새 파일" },
+    "newFolder": { "title": "새 폴더" },
+    "save": { "title": "저장" },
+    "closeTab": { "title": "현재 탭 닫기" },
+    "closeAllTabs": { "title": "모든 탭 닫기" },
+    "nextTab": { "title": "다음 탭" },
+    "prevTab": { "title": "이전 탭" },
+    "sidebarFiles": { "title": "사이드바: 파일" },
+    "sidebarSearch": { "title": "사이드바: 검색" },
+    "pickVault": { "title": "Vault 열기" },
+    "themeSystem": { "title": "테마: 시스템 기본" },
+    "themeLight": { "title": "테마: 라이트" },
+    "themeDark": { "title": "테마: 다크" },
+    "shortcuts": { "title": "단축키 치트시트" },
+    "settings": { "title": "설정" },
+    "vaultResetHistory": { "title": "Vault: 닫힌 vault 기록 정리" },
+    "vaultResetAll": {
+      "title": "Vault: 모든 vault 데이터 초기화",
+      "confirm": "모든 vault 를 닫고 munix.json 의 기록을 비웁니다. 계속할까요?"
+    },
+    "workspaceSplitRight": { "title": "패널: 오른쪽으로 분할" },
+    "workspaceSplitDown": { "title": "패널: 아래로 분할" },
+    "workspaceClosePane": { "title": "패널: 현재 패널 닫기" }
+  },
+  "placeholder": {
+    "search": "명령 검색…",
+    "fileSearch": "파일 이름 검색…",
+    "prefix": {
+      "command": "명령 검색…",
+      "heading": "현재 파일 제목 검색…",
+      "tag": "태그 검색…",
+      "file": "파일 검색…",
+      "line": "이동할 줄 번호 입력…"
+    }
+  },
+  "empty": {
+    "noResults": "결과 없음",
+    "indexNotReady": "인덱스 준비 중",
+    "indexing": "인덱싱 중…"
+  },
+  "action": {
+    "jumpToLine": "{{line}}번 줄로 이동"
+  },
+  "footer": {
+    "navigate": "↑↓ 이동",
+    "open": "Enter 실행",
+    "dismiss": "Esc 닫기",
+    "prefixHint": "그냥 입력: 파일  > 명령  # 태그  @ 제목  : 줄"
+  }
+}

@@ -1,0 +1,31 @@
+{
+  "outline": {
+    "title": "목차",
+    "empty": "헤딩 없음",
+    "emptyTitle": "(빈 제목)",
+    "selectFile": "파일을 선택하세요.",
+    "backlinks": "백링크",
+    "indexing": "인덱싱 중…",
+    "building": "준비 중…",
+    "noBacklinks": "이 파일을 참조하는 다른 파일 없음"
+  },
+  "tags": {
+    "indexing": "태그 인덱싱 중…",
+    "empty": "태그 없음 — `#tag` 또는 frontmatter `tags:` 사용",
+    "backToList": "태그 목록으로",
+    "count": "{{count}}개"
+  },
+  "statusBar": {
+    "words": "단어",
+    "chars": "자",
+    "save": {
+      "idle": "변경 없음",
+      "dirty": "저장 대기",
+      "saving": "저장 중…",
+      "saved": "저장됨",
+      "error": "저장 오류",
+      "conflict": "충돌"
+    },
+    "indexing": "인덱싱 중…"
+  }
+}

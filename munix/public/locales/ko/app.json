@@ -1,0 +1,71 @@
+{
+  "header": {
+    "newFolder": "새 폴더",
+    "newFile": "새 파일"
+  },
+  "sidebar": {
+    "files": "파일",
+    "search": "검색",
+    "outline": "목차",
+    "tags": "태그",
+    "settings": "설정",
+    "collapse": "사이드바 접기",
+    "expand": "사이드바 펼치기"
+  },
+  "delete": {
+    "confirmPrompt": "\"{{name}}\"을(를) 휴지통으로 보낼까요?",
+    "confirmManyPrompt": "{{count}}개 항목을 휴지통으로 보낼까요?",
+    "errorAlert": "삭제 실패: {{reason}}"
+  },
+  "copyPath": {
+    "errorAlert": "경로 복사 실패: {{reason}}"
+  },
+  "reveal": {
+    "errorAlert": "열기 실패: {{reason}}"
+  },
+  "trust": {
+    "revealPrompt": "이 vault를 신뢰하고 시스템 파일 관리자에서 항목을 열까요? 신뢰하면 이 vault 안의 항목에 대해 Finder/Explorer 열기 같은 시스템 연동이 허용됩니다."
+  },
+  "move": {
+    "replacePrompt": "\"{{name}}\"이(가) 이미 있습니다. 대치할까요?",
+    "replaceManyPrompt": "{{count}}개의 대상이 이미 있습니다. 대치할까요?",
+    "invalidTarget": "자기 자신이나 하위 폴더 안으로는 이동할 수 없습니다.",
+    "duplicateTarget": "이동 대상 중 같은 이름이 겹칩니다. 이름을 바꾼 뒤 다시 시도하세요.",
+    "errorAlert": "이동 실패: {{reason}}"
+  },
+  "rename": {
+    "errorAlert": "이름 변경 실패: {{reason}}"
+  },
+  "themeToggle": {
+    "title": "테마: {{label}} (클릭해 전환)"
+  },
+  "window": {
+    "close": "창 닫기",
+    "minimize": "창 최소화",
+    "maximize": "창 최대화",
+    "drag": "창 이동"
+  },
+  "workspace": {
+    "quickOpen": "빠른 열기",
+    "more": "작업 영역 더 보기"
+  },
+  "emptyPane": {
+    "newFile": "새 파일 생성하기 (Mod+T)",
+    "quickOpen": "파일로 이동하기 (Mod+P)",
+    "close": "닫기"
+  },
+  "pane": {
+    "activatePrompt": "클릭하여 활성화",
+    "empty": "—",
+    "loadingEditor": "문서를 여는 중…",
+    "editorError": "문서를 열 수 없습니다",
+    "editorSaveError": "저장하지 못했습니다. 내용을 확인한 뒤 다시 시도해 주세요.",
+    "editorConflict": "다른 변경과 충돌했습니다. 활성 탭에서 다시 열어 확인해 주세요."
+  },
+  "keyCapture": {
+    "prompt": "키를 누르세요…",
+    "errorInvalidCombo": "올바른 키 조합을 입력하세요",
+    "errorNeedsModifier": "modifier(Mod/Alt) 와 함께 누르거나 F1~F12, 화살표 등을 사용",
+    "ariaLabel": "새 단축키 입력"
+  }
+}

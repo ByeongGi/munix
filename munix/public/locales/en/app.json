@@ -1,0 +1,71 @@
+{
+  "header": {
+    "newFolder": "New Folder",
+    "newFile": "New File"
+  },
+  "sidebar": {
+    "files": "Files",
+    "search": "Search",
+    "outline": "Outline",
+    "tags": "Tags",
+    "settings": "Settings",
+    "collapse": "Collapse sidebar",
+    "expand": "Expand sidebar"
+  },
+  "delete": {
+    "confirmPrompt": "Move \"{{name}}\" to Trash?",
+    "confirmManyPrompt": "Move {{count}} items to Trash?",
+    "errorAlert": "Delete failed: {{reason}}"
+  },
+  "copyPath": {
+    "errorAlert": "Copy path failed: {{reason}}"
+  },
+  "reveal": {
+    "errorAlert": "Open failed: {{reason}}"
+  },
+  "trust": {
+    "revealPrompt": "Trust this vault and reveal the item in your system file manager? Trusting allows system integrations such as Finder/Explorer reveal for items inside this vault."
+  },
+  "move": {
+    "replacePrompt": "\"{{name}}\" already exists. Replace it?",
+    "replaceManyPrompt": "{{count}} destinations already exist. Replace them?",
+    "invalidTarget": "You cannot move an item into itself or one of its descendants.",
+    "duplicateTarget": "Some move targets have the same name. Rename them and try again.",
+    "errorAlert": "Move failed: {{reason}}"
+  },
+  "rename": {
+    "errorAlert": "Rename failed: {{reason}}"
+  },
+  "themeToggle": {
+    "title": "Theme: {{label}} (click to cycle)"
+  },
+  "window": {
+    "close": "Close window",
+    "minimize": "Minimize window",
+    "maximize": "Maximize window",
+    "drag": "Move window"
+  },
+  "workspace": {
+    "quickOpen": "Quick open",
+    "more": "More workspace actions"
+  },
+  "emptyPane": {
+    "newFile": "Create new file (Mod+T)",
+    "quickOpen": "Go to file (Mod+P)",
+    "close": "Close"
+  },
+  "pane": {
+    "activatePrompt": "Click to activate",
+    "empty": "—",
+    "loadingEditor": "Opening document…",
+    "editorError": "Could not open document",
+    "editorSaveError": "Could not save changes. Check the content and try again.",
+    "editorConflict": "This pane has a conflicting change. Reopen it as the active tab to resolve."
+  },
+  "keyCapture": {
+    "prompt": "Press a key…",
+    "errorInvalidCombo": "Enter a valid key combination",
+    "errorNeedsModifier": "Use a modifier (Mod/Alt) or F1~F12, arrow keys, etc.",
+    "ariaLabel": "Enter new shortcut"
+  }
+}

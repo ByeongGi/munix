@@ -1,0 +1,42 @@
+{
+  "contextMenu": {
+    "splitRight": "우측 분할",
+    "splitDown": "하단 분할",
+    "close": "닫기",
+    "closeOthers": "다른 탭들 닫기",
+    "closeTabsAfter": "뒤 탭들 닫기",
+    "closeAll": "모두 닫기",
+    "pin": "고정",
+    "unpin": "고정 해제",
+    "copyLink": "탭으로 링크...",
+    "copyRelativePath": "상대 경로 복사",
+    "revealInFileTree": "파일 트리에서 보기",
+    "moveToNewWindow": "새 창으로 이동",
+    "copyPath": "경로 복사",
+    "revealInSystem": "Finder 에서 보기"
+  },
+  "softLimit": {
+    "tooltip": "탭이 {{limit}}개를 넘었습니다 ({{count}}). 너무 많이 열면 성능에 영향이 있을 수 있어요."
+  },
+  "aria": {
+    "closeTab": "탭 닫기",
+    "newTab": "새 탭"
+  },
+  "tooltip": {
+    "newTab": "새 탭 (Mod+T)"
+  },
+  "emptyTab": {
+    "title": "새 탭"
+  },
+  "paneMenu": {
+    "label": "패널 메뉴",
+    "closePane": "패널 닫기"
+  },
+  "dropZone": {
+    "moveTab": "탭 이동",
+    "splitLeft": "좌측 분할",
+    "splitRight": "우측 분할",
+    "splitTop": "상단 분할",
+    "splitBottom": "하단 분할"
+  }
+}
