@@ -1,0 +1,35 @@
+# macOS
+.DS_Store
+
+# Logs
+*.log
+
+# Editor
+.vscode/*
+!.vscode/extensions.json
+.idea/
+.claude/settings.local.json
+
+# Local app/vault metadata
+**/.munix/
+**/.obsidian/
+
+# Node
+node_modules/
+dist/
+dist-ssr/
+*.local
+
+# Local scratch
+tests2/
+
+# Rust / Tauri
+target/
+**/target/
+
+# Tauri build artifacts
+src-tauri/gen/schemas/
+
+# Env
+.env
+.env.local
