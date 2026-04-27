@@ -34,6 +34,10 @@ type InactiveEditorStatus =
   | "saveError"
   | "conflict";
 
+function canRequestInactiveEditorSave(status: InactiveEditorStatus): boolean {
+  return status !== "conflict" && status !== "loading" && status !== "loadError";
+}
+
 export function InactivePaneEditor({
   path,
   titleDraft,
@@ -134,13 +138,7 @@ export function InactivePaneEditor({
   const doSave = useCallback(async () => {
     const expectedModified = baseModifiedRef.current;
     if (!editor || editor.isDestroyed || expectedModified == null) return;
-    if (
-      statusRef.current === "conflict" ||
-      statusRef.current === "loading" ||
-      statusRef.current === "loadError"
-    ) {
-      return;
-    }
+    if (!canRequestInactiveEditorSave(statusRef.current)) return;
 
     if (inFlightRef.current) {
       pendingRef.current = true;
@@ -194,13 +192,7 @@ export function InactivePaneEditor({
 
   const requestSave = useCallback(
     (flush = false) => {
-      if (
-        statusRef.current === "conflict" ||
-        statusRef.current === "loading" ||
-        statusRef.current === "loadError"
-      ) {
-        return;
-      }
+      if (!canRequestInactiveEditorSave(statusRef.current)) return;
       setStatus("dirty");
       debouncedSave();
       if (flush) debouncedSave.flush();
@@ -266,13 +258,7 @@ export function InactivePaneEditor({
     if (!editor) return;
 
     const onUpdate = () => {
-      if (
-        statusRef.current === "conflict" ||
-        statusRef.current === "loading" ||
-        statusRef.current === "loadError"
-      ) {
-        return;
-      }
+      if (!canRequestInactiveEditorSave(statusRef.current)) return;
       setStatus("dirty");
       debouncedSave();
     };
@@ -308,13 +294,7 @@ export function InactivePaneEditor({
 
   return (
     <div className="relative min-h-0 flex-1 overflow-y-auto bg-[var(--color-bg-primary)]">
-      {(status === "conflict" || status === "saveError") && (
-        <div className="sticky top-0 z-10 border-b border-[var(--color-border-primary)] bg-[var(--color-bg-secondary)] px-3 py-2 text-xs text-[var(--color-danger)]">
-          {status === "conflict"
-            ? t("app:pane.editorConflict")
-            : t("app:pane.editorSaveError")}
-        </div>
-      )}
+      <InactivePaneEditorStatusBanner status={status} />
       <InactivePaneTitleInput
         path={path}
         titleDraft={titleDraft}
@@ -331,4 +311,21 @@ export function InactivePaneEditor({
 
 function basenameWithoutMd(path: string): string {
   return (path.split("/").pop() ?? path).replace(/\.md$/i, "");
+}
+
+function InactivePaneEditorStatusBanner({
+  status,
+}: {
+  status: InactiveEditorStatus;
+}) {
+  const { t } = useTranslation(["app"]);
+  if (status !== "conflict" && status !== "saveError") return null;
+
+  return (
+    <div className="sticky top-0 z-10 border-b border-[var(--color-border-primary)] bg-[var(--color-bg-secondary)] px-3 py-2 text-xs text-[var(--color-danger)]">
+      {status === "conflict"
+        ? t("app:pane.editorConflict")
+        : t("app:pane.editorSaveError")}
+    </div>
+  );
 }
