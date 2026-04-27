@@ -43,6 +43,10 @@ import {
   PaneActionsButton,
   PaneActionsMenu,
 } from "@/components/workspace/pane-context-menu";
+import {
+  classifyDropZone,
+  dropZoneLabelKey,
+} from "./drop-zone";
 import { EmptyPanePlaceholder } from "./empty-pane-placeholder";
 import { InactivePaneEditor } from "./inactive-pane-editor";
 
@@ -67,36 +71,6 @@ interface TabMenuState {
 }
 
 type Translate = (key: string) => string;
-
-/** edge 25% / center 50%+ 임계값 (workspace-split-spec §6.2). */
-const EDGE_THRESHOLD = 0.25;
-
-function classifyZone(
-  rect: DOMRect,
-  clientX: number,
-  clientY: number,
-): DropZone {
-  const relX = (clientX - rect.left) / rect.width;
-  const relY = (clientY - rect.top) / rect.height;
-  const distLeft = relX;
-  const distRight = 1 - relX;
-  const distTop = relY;
-  const distBottom = 1 - relY;
-  const minDist = Math.min(distLeft, distRight, distTop, distBottom);
-  if (minDist > EDGE_THRESHOLD) return "center";
-  if (minDist === distLeft) return "left";
-  if (minDist === distRight) return "right";
-  if (minDist === distTop) return "top";
-  return "bottom";
-}
-
-function dropZoneLabelKey(zone: DropZone): string {
-  if (zone === "center") return "tabs:dropZone.moveTab";
-  if (zone === "left") return "tabs:dropZone.splitLeft";
-  if (zone === "right") return "tabs:dropZone.splitRight";
-  if (zone === "top") return "tabs:dropZone.splitTop";
-  return "tabs:dropZone.splitBottom";
-}
 
 export function Pane({
   pane,
@@ -231,7 +205,7 @@ export function Pane({
       return "center";
     }
     const rect = e.currentTarget.getBoundingClientRect();
-    return classifyZone(rect, e.clientX, e.clientY);
+    return classifyDropZone(rect, e.clientX, e.clientY);
   }, []);
 
   const isTabDragOverPaneContent = useCallback(

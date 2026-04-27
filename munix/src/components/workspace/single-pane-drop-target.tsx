@@ -6,43 +6,15 @@ import { useActiveWorkspaceStore } from "@/lib/active-vault";
 import { cn } from "@/lib/cn";
 import { TAB_DND_MIME, parseTabPayload } from "@/lib/dnd-mime";
 import { useVaultDockStore } from "@/store/vault-dock-store";
-import type { DropZone } from "@/store/workspace-types";
+import {
+  classifyDropZone,
+  dropZoneLabelKey,
+  toEdgeZone,
+  type EdgeZone,
+} from "./drop-zone";
 
 interface SinglePaneDropTargetProps {
   children: React.ReactNode;
-}
-
-const EDGE_THRESHOLD = 0.25;
-type EdgeZone = Exclude<DropZone, "center">;
-
-function classifyZone(
-  rect: DOMRect,
-  clientX: number,
-  clientY: number,
-): DropZone {
-  const relX = (clientX - rect.left) / rect.width;
-  const relY = (clientY - rect.top) / rect.height;
-  const distLeft = relX;
-  const distRight = 1 - relX;
-  const distTop = relY;
-  const distBottom = 1 - relY;
-  const minDist = Math.min(distLeft, distRight, distTop, distBottom);
-  if (minDist > EDGE_THRESHOLD) return "center";
-  if (minDist === distLeft) return "left";
-  if (minDist === distRight) return "right";
-  if (minDist === distTop) return "top";
-  return "bottom";
-}
-
-function dropZoneLabelKey(zone: EdgeZone): string {
-  if (zone === "left") return "tabs:dropZone.splitLeft";
-  if (zone === "right") return "tabs:dropZone.splitRight";
-  if (zone === "top") return "tabs:dropZone.splitTop";
-  return "tabs:dropZone.splitBottom";
-}
-
-function toEdgeZone(zone: DropZone): EdgeZone | null {
-  return zone === "center" ? null : zone;
 }
 
 export function SinglePaneDropTarget({ children }: SinglePaneDropTargetProps) {
@@ -56,7 +28,7 @@ export function SinglePaneDropTarget({ children }: SinglePaneDropTargetProps) {
     const targetEl = e.target as HTMLElement | null;
     if (targetEl?.closest?.("[data-no-edge-drop]")) return null;
     const rect = e.currentTarget.getBoundingClientRect();
-    return toEdgeZone(classifyZone(rect, e.clientX, e.clientY));
+    return toEdgeZone(classifyDropZone(rect, e.clientX, e.clientY));
   }, []);
 
   const updateDropZone = useCallback(
