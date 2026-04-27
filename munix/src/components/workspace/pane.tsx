@@ -22,7 +22,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useStore } from "zustand";
 import { useTranslation } from "react-i18next";
-import { MoreHorizontal, Pin, Plus, X } from "lucide-react";
+import { Pin, Plus, X } from "lucide-react";
 
 import { useActiveWorkspaceStore } from "@/lib/active-vault";
 import { cn } from "@/lib/cn";
@@ -35,6 +35,13 @@ import {
 import { useVaultDockStore } from "@/store/vault-dock-store";
 import type { DropZone, PaneNode } from "@/store/workspace-types";
 import { ipc } from "@/lib/ipc";
+import {
+  ContextMenuItem,
+  ContextMenuSeparator,
+  ContextMenuSurface,
+  PaneActionsButton,
+  PaneActionsMenu,
+} from "@/components/workspace/pane-context-menu";
 import { EmptyPanePlaceholder } from "./empty-pane-placeholder";
 import { InactivePaneEditor } from "./inactive-pane-editor";
 
@@ -568,24 +575,14 @@ export function Pane({
         >
           <Plus className="h-3.5 w-3.5" />
         </button>
-        <button
-          type="button"
-          data-pane-menu="true"
-          onMouseDown={(e) => e.stopPropagation()}
+        <PaneActionsButton
+          label={t("tabs:paneMenu.label")}
           onClick={(e) => {
             e.stopPropagation();
             const rect = e.currentTarget.getBoundingClientRect();
             setPaneMenu({ x: rect.left, y: rect.bottom + 4 });
           }}
-          className={cn(
-            "ml-1 flex h-6 w-6 items-center justify-center rounded",
-            "text-[var(--color-text-tertiary)] hover:bg-[var(--color-bg-hover)]",
-          )}
-          aria-label={t("tabs:paneMenu.label")}
-          title={t("tabs:paneMenu.label")}
-        >
-          <MoreHorizontal className="h-3.5 w-3.5" />
-        </button>
+        />
       </div>
       {paneMenu && (
         <PaneActionsMenu
@@ -704,48 +701,6 @@ function DropZoneOverlay({
   );
 }
 
-function PaneActionsMenu({
-  x,
-  y,
-  t,
-  onSplitRight,
-  onSplitDown,
-  onClosePane,
-}: {
-  x: number;
-  y: number;
-  t: Translate;
-  onSplitRight: () => void;
-  onSplitDown: () => void;
-  onClosePane: () => void;
-}) {
-  return (
-    <div
-      role="menu"
-      onClick={(e) => e.stopPropagation()}
-      className={cn(
-        "fixed z-50 min-w-[112px] rounded-md border p-1 shadow-lg",
-        "border-[var(--color-border-primary)] bg-[var(--color-bg-secondary)]",
-      )}
-      style={{ top: y, left: x }}
-    >
-      <PaneMenuItem
-        label={t("tabs:contextMenu.splitRight")}
-        onClick={onSplitRight}
-      />
-      <PaneMenuItem
-        label={t("tabs:contextMenu.splitDown")}
-        onClick={onSplitDown}
-      />
-      <div className="my-1 h-px bg-[var(--color-border-secondary)]" />
-      <PaneMenuItem
-        label={t("tabs:paneMenu.closePane")}
-        onClick={onClosePane}
-      />
-    </div>
-  );
-}
-
 function TabActionsMenu({
   x,
   y,
@@ -784,98 +739,64 @@ function TabActionsMenu({
   pinned: boolean;
 }) {
   return (
-    <div
-      role="menu"
-      onClick={(e) => e.stopPropagation()}
-      className={cn(
-        "fixed z-50 min-w-[180px] rounded-md border p-1 shadow-lg",
-        "border-[var(--color-border-primary)] bg-[var(--color-bg-secondary)]",
-      )}
-      style={{ top: y, left: x }}
-    >
-      <PaneMenuItem label={t("tabs:contextMenu.close")} onClick={onClose} />
-      <PaneMenuItem
+    <ContextMenuSurface x={x} y={y}>
+      <ContextMenuItem label={t("tabs:contextMenu.close")} onClick={onClose} />
+      <ContextMenuItem
         label={t("tabs:contextMenu.closeOthers")}
         onClick={onCloseOthers}
       />
-      <PaneMenuItem
+      <ContextMenuItem
         label={t("tabs:contextMenu.closeTabsAfter")}
         onClick={onCloseTabsAfter}
       />
-      <div className="my-1 h-px bg-[var(--color-border-secondary)]" />
-      <PaneMenuItem
+      <ContextMenuSeparator />
+      <ContextMenuItem
         label={t(pinned ? "tabs:contextMenu.unpin" : "tabs:contextMenu.pin")}
         onClick={onTogglePinned}
       />
-      <PaneMenuItem
+      <ContextMenuItem
         label={t("tabs:contextMenu.copyLink")}
         disabled={!hasPath}
         onClick={onCopyLink}
       />
-      <div className="my-1 h-px bg-[var(--color-border-secondary)]" />
-      <PaneMenuItem label={t("tabs:contextMenu.moveToNewWindow")} disabled />
-      <div className="my-1 h-px bg-[var(--color-border-secondary)]" />
+      <ContextMenuSeparator />
+      <ContextMenuItem label={t("tabs:contextMenu.moveToNewWindow")} disabled />
+      <ContextMenuSeparator />
       {hasPath && (
         <>
-          <PaneMenuItem
+          <ContextMenuItem
             label={t("tabs:contextMenu.copyPath")}
             onClick={onCopyPath}
           />
-          <PaneMenuItem
+          <ContextMenuItem
             label={t("tabs:contextMenu.copyRelativePath")}
             onClick={onCopyRelativePath}
           />
-          <PaneMenuItem
+          <ContextMenuItem
             label={t("tabs:contextMenu.revealInFileTree")}
             onClick={onRevealInFileTree}
           />
-          <PaneMenuItem
+          <ContextMenuItem
             label={t("tabs:contextMenu.revealInSystem")}
             onClick={onRevealInSystem}
           />
-          <div className="my-1 h-px bg-[var(--color-border-secondary)]" />
+          <ContextMenuSeparator />
         </>
       )}
-      <PaneMenuItem
+      <ContextMenuItem
         label={t("tabs:contextMenu.splitRight")}
         onClick={onSplitRight}
       />
-      <PaneMenuItem
+      <ContextMenuItem
         label={t("tabs:contextMenu.splitDown")}
         onClick={onSplitDown}
       />
-      <div className="my-1 h-px bg-[var(--color-border-secondary)]" />
-      <PaneMenuItem
+      <ContextMenuSeparator />
+      <ContextMenuItem
         label={t("tabs:contextMenu.closeAll")}
         onClick={onCloseAll}
       />
-    </div>
-  );
-}
-
-function PaneMenuItem({
-  label,
-  onClick,
-  disabled = false,
-}: {
-  label: string;
-  onClick?: () => void;
-  disabled?: boolean;
-}) {
-  return (
-    <button
-      type="button"
-      disabled={disabled}
-      onClick={onClick}
-      className={cn(
-        "flex w-full items-center rounded px-2 py-1.5 text-left text-xs",
-        disabled
-          ? "cursor-default text-[var(--color-text-tertiary)] opacity-60"
-          : "text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-hover)]",
-      )}
-    >
-      {label}
-    </button>
+    </ContextMenuSurface>
   );
 }
 

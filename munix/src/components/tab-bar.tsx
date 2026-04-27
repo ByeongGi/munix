@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useStore } from "zustand";
-import { X, Plus, AlertTriangle, MoreHorizontal, Pin } from "lucide-react";
+import { X, Plus, AlertTriangle, Pin } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useTabStore, type Tab, TAB_SOFT_LIMIT } from "@/store/tab-store";
 import { useEditorStore } from "@/store/editor-store";
@@ -14,6 +14,13 @@ import {
   parseTabPayload,
   serializeTabPayload,
 } from "@/lib/dnd-mime";
+import {
+  ContextMenuItem,
+  ContextMenuSeparator,
+  ContextMenuSurface,
+  PaneActionsButton,
+  PaneActionsMenu,
+} from "@/components/workspace/pane-context-menu";
 
 interface TabBarProps {
   onNewFile: () => void;
@@ -29,8 +36,6 @@ interface PaneMenuState {
   x: number;
   y: number;
 }
-
-type Translate = (key: string) => string;
 
 export function TabBar({ onNewFile }: TabBarProps) {
   const tabs = useTabStore((s) => s.tabs);
@@ -445,16 +450,8 @@ export function TabBar({ onNewFile }: TabBarProps) {
       </div>
 
       {menu && (
-        <div
-          role="menu"
-          onClick={(e) => e.stopPropagation()}
-          className={cn(
-            "fixed z-50 min-w-[180px] rounded-md border p-1 shadow-lg",
-            "border-[var(--color-border-primary)] bg-[var(--color-bg-secondary)]",
-          )}
-          style={{ top: menu.y, left: menu.x }}
-        >
-          <MenuItem
+        <ContextMenuSurface x={menu.x} y={menu.y}>
+          <ContextMenuItem
             label={t("tabs:contextMenu.close")}
             shortcut="⌘W"
             onClick={() => {
@@ -463,22 +460,22 @@ export function TabBar({ onNewFile }: TabBarProps) {
               setMenu(null);
             }}
           />
-          <MenuItem
+          <ContextMenuItem
             label={t("tabs:contextMenu.closeOthers")}
             onClick={() => {
               closeOthers(menu.tab.id);
               setMenu(null);
             }}
           />
-          <MenuItem
+          <ContextMenuItem
             label={t("tabs:contextMenu.closeTabsAfter")}
             onClick={() => {
               closeTabsAfter(menu.tab.id);
               setMenu(null);
             }}
           />
-          <div className="my-1 h-px bg-[var(--color-border-secondary)]" />
-          <MenuItem
+          <ContextMenuSeparator />
+          <ContextMenuItem
             label={t(
               menu.tab.pinned
                 ? "tabs:contextMenu.unpin"
@@ -490,7 +487,7 @@ export function TabBar({ onNewFile }: TabBarProps) {
               setMenu(null);
             }}
           />
-          <MenuItem
+          <ContextMenuItem
             label={t("tabs:contextMenu.copyLink")}
             disabled={!menu.tab.path}
             onClick={() => {
@@ -498,45 +495,48 @@ export function TabBar({ onNewFile }: TabBarProps) {
               setMenu(null);
             }}
           />
-          <div className="my-1 h-px bg-[var(--color-border-secondary)]" />
-          <MenuItem label={t("tabs:contextMenu.moveToNewWindow")} disabled />
-          <div className="my-1 h-px bg-[var(--color-border-secondary)]" />
+          <ContextMenuSeparator />
+          <ContextMenuItem
+            label={t("tabs:contextMenu.moveToNewWindow")}
+            disabled
+          />
+          <ContextMenuSeparator />
           {menu.tab.path && (
             <>
-              <MenuItem
+              <ContextMenuItem
                 label={t("tabs:contextMenu.copyPath")}
                 onClick={() => {
                   void copyTabPath(menu.tab);
                   setMenu(null);
                 }}
               />
-              <MenuItem
+              <ContextMenuItem
                 label={t("tabs:contextMenu.copyRelativePath")}
                 onClick={() => {
                   void copyTabRelativePath(menu.tab);
                   setMenu(null);
                 }}
               />
-              <MenuItem
+              <ContextMenuItem
                 label={t("tabs:contextMenu.revealInFileTree")}
                 onClick={() => {
                   revealInFileTree(menu.tab);
                   setMenu(null);
                 }}
               />
-              <MenuItem
+              <ContextMenuItem
                 label={t("tabs:contextMenu.revealInSystem")}
                 onClick={() => {
                   void revealTab(menu.tab);
                   setMenu(null);
                 }}
               />
-              <div className="my-1 h-px bg-[var(--color-border-secondary)]" />
+              <ContextMenuSeparator />
             </>
           )}
           {menu.tab.id !== "__empty-tab__" && (
             <>
-              <MenuItem
+              <ContextMenuItem
                 label={t("tabs:contextMenu.splitRight")}
                 shortcut="⌘\\"
                 onClick={() => {
@@ -544,7 +544,7 @@ export function TabBar({ onNewFile }: TabBarProps) {
                   setMenu(null);
                 }}
               />
-              <MenuItem
+              <ContextMenuItem
                 label={t("tabs:contextMenu.splitDown")}
                 shortcut="⌘⇧\\"
                 onClick={() => {
@@ -552,17 +552,17 @@ export function TabBar({ onNewFile }: TabBarProps) {
                   setMenu(null);
                 }}
               />
-              <div className="my-1 h-px bg-[var(--color-border-secondary)]" />
+              <ContextMenuSeparator />
             </>
           )}
-          <MenuItem
+          <ContextMenuItem
             label={t("tabs:contextMenu.closeAll")}
             onClick={() => {
               closeAll();
               setMenu(null);
             }}
           />
-        </div>
+        </ContextMenuSurface>
       )}
       {paneMenu && (
         <PaneActionsMenu
@@ -585,95 +585,5 @@ export function TabBar({ onNewFile }: TabBarProps) {
         />
       )}
     </>
-  );
-}
-
-function PaneActionsButton({
-  label,
-  onClick,
-}: {
-  label: string;
-  onClick: (e: React.MouseEvent<HTMLButtonElement>) => void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={cn(
-        "ml-1 flex h-6 w-6 items-center justify-center rounded",
-        "text-[var(--color-text-tertiary)] hover:bg-[var(--color-bg-hover)]",
-      )}
-      aria-label={label}
-      title={label}
-    >
-      <MoreHorizontal className="h-3.5 w-3.5" />
-    </button>
-  );
-}
-
-function PaneActionsMenu({
-  x,
-  y,
-  t,
-  onSplitRight,
-  onSplitDown,
-  onClosePane,
-}: {
-  x: number;
-  y: number;
-  t: Translate;
-  onSplitRight: () => void;
-  onSplitDown: () => void;
-  onClosePane: () => void;
-}) {
-  return (
-    <div
-      role="menu"
-      onClick={(e) => e.stopPropagation()}
-      className={cn(
-        "fixed z-50 min-w-[112px] rounded-md border p-1 shadow-lg",
-        "border-[var(--color-border-primary)] bg-[var(--color-bg-secondary)]",
-      )}
-      style={{ top: y, left: x }}
-    >
-      <MenuItem
-        label={t("tabs:contextMenu.splitRight")}
-        onClick={onSplitRight}
-      />
-      <MenuItem label={t("tabs:contextMenu.splitDown")} onClick={onSplitDown} />
-      <div className="my-1 h-px bg-[var(--color-border-secondary)]" />
-      <MenuItem label={t("tabs:paneMenu.closePane")} onClick={onClosePane} />
-    </div>
-  );
-}
-
-function MenuItem({
-  label,
-  shortcut,
-  onClick,
-  disabled = false,
-}: {
-  label: string;
-  shortcut?: string;
-  onClick?: () => void;
-  disabled?: boolean;
-}) {
-  return (
-    <button
-      type="button"
-      disabled={disabled}
-      onClick={onClick}
-      className={cn(
-        "flex w-full items-center justify-between gap-3 rounded px-2 py-1.5 text-left text-xs",
-        disabled
-          ? "cursor-default text-[var(--color-text-tertiary)] opacity-60"
-          : "text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-hover)]",
-      )}
-    >
-      <span>{label}</span>
-      {shortcut && (
-        <span className="text-[var(--color-text-tertiary)]">{shortcut}</span>
-      )}
-    </button>
   );
 }
