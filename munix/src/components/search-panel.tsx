@@ -1,11 +1,13 @@
 import { useEffect, useRef } from "react";
 import { Loader2, RefreshCw, Search, Regex } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import type { TFunction } from "i18next";
 import { useSearchStore } from "@/store/search-store";
 import { useVaultStore } from "@/store/vault-store";
 import type { SearchHit } from "@/lib/search-index";
 import { cn } from "@/lib/cn";
 import { SearchResultsGrouped } from "@/components/search-results-grouped";
+import type { IndexStatus } from "@/store/slices/search-slice";
 
 interface SearchPanelProps {
   onSelect: (hit: SearchHit, query: string) => void;
@@ -61,7 +63,7 @@ export function SearchPanel({ onSelect }: SearchPanelProps) {
         />
         <button
           type="button"
-          onClick={() => setUseRegex(!useRegex)}
+          onClick={() => setUseRegex(!useSearchStore.getState().useRegex)}
           aria-label={t("search:regex.ariaToggle")}
           aria-pressed={useRegex}
           title={
@@ -92,24 +94,14 @@ export function SearchPanel({ onSelect }: SearchPanelProps) {
       </div>
 
       <div className="border-b border-[var(--color-border-primary)] px-3 pb-2 text-xs text-[var(--color-text-tertiary)]">
-        {status === "building" && t("search:index.building")}
-        {status === "ready" &&
-          regexError == null &&
-          (query
-            ? t("search:result.count", { count: results.length })
-            : t("search:result.empty"))}
-        {regexError && (
-          <span className="text-[var(--color-danger)]">
-            {t("search:regex.error", { message: regexError })}
-          </span>
-        )}
-        {status === "error" && (
-          <span className="text-[var(--color-danger)]">
-            {t("search:status.errorPrefix", {
-              message: error ?? t("search:status.unknownError"),
-            })}
-          </span>
-        )}
+        <SearchStatusText
+          status={status}
+          query={query}
+          resultCount={results.length}
+          regexError={regexError}
+          error={error}
+          t={t}
+        />
       </div>
 
       <SearchResultsGrouped
@@ -118,5 +110,53 @@ export function SearchPanel({ onSelect }: SearchPanelProps) {
         onSelect={onSelect}
       />
     </div>
+  );
+}
+
+interface SearchStatusTextProps {
+  status: IndexStatus;
+  query: string;
+  resultCount: number;
+  regexError: string | null;
+  error: string | null;
+  t: TFunction<["search", "common"]>;
+}
+
+function SearchStatusText({
+  status,
+  query,
+  resultCount,
+  regexError,
+  error,
+  t,
+}: SearchStatusTextProps) {
+  if (status === "building") return <>{t("search:index.building")}</>;
+
+  if (regexError !== null) {
+    return (
+      <span className="text-[var(--color-danger)]">
+        {t("search:regex.error", { message: regexError })}
+      </span>
+    );
+  }
+
+  if (status === "error") {
+    return (
+      <span className="text-[var(--color-danger)]">
+        {t("search:status.errorPrefix", {
+          message: error ?? t("search:status.unknownError"),
+        })}
+      </span>
+    );
+  }
+
+  if (status !== "ready") return null;
+
+  return (
+    <>
+      {query
+        ? t("search:result.count", { count: resultCount })
+        : t("search:result.empty")}
+    </>
   );
 }

@@ -11,6 +11,7 @@ import type { FileNode } from "@/types/ipc";
 import { useActiveWorkspaceStore } from "@/lib/active-vault";
 import { cn } from "@/lib/cn";
 import { collectPanes } from "@/store/workspace-types";
+import { readFileDragPaths } from "./dnd";
 import { RenameInput } from "./rename-input";
 import { DND_MIME } from "./types";
 import type { FlatNode } from "./flatten";
@@ -110,26 +111,16 @@ export function FlatTreeRow({
       e.dataTransfer.setDragImage(preview, 12, 12);
       window.requestAnimationFrame(() => preview.remove());
     }
-    console.debug("[tree-dnd] dragstart", { path: node.path });
   };
 
   const handleDragEnd = (e: React.DragEvent) => {
-    console.debug("[tree-dnd] dragend", {
-      path: node.path,
-      dropEffect: e.dataTransfer.dropEffect,
-    });
+    if (e.dataTransfer.dropEffect === "none") setDragOverRoot(false);
   };
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
     e.dataTransfer.dropEffect = "move";
-    if (dragOverPath !== targetFolderForDrop) {
-      console.debug("[tree-dnd] dragover row", {
-        over: node.path,
-        target: targetFolderForDrop,
-      });
-    }
     if (targetFolderForDrop === "") {
       // root 영역 강조
       if (dragOverPath !== null) setDragOverPath(null);
@@ -183,46 +174,21 @@ export function FlatTreeRow({
       window.clearTimeout(expandTimerRef.current.id);
       expandTimerRef.current = null;
     }
-    const raw = e.dataTransfer.getData(DND_MIME);
-    let paths: string[] = [];
-    if (raw) {
-      try {
-        const parsed = JSON.parse(raw) as { paths?: unknown };
-        if (Array.isArray(parsed.paths)) {
-          paths = parsed.paths.filter(
-            (p): p is string => typeof p === "string",
-          );
-        }
-      } catch {
-        paths = [];
-      }
-    }
-    const fallback = e.dataTransfer.getData("text/plain");
-    if (paths.length === 0 && fallback) paths = [fallback];
-    if (paths.length === 0) {
-      console.debug("[tree-dnd] drop without source");
-      return;
-    }
+    const paths = readFileDragPaths(e.dataTransfer);
+    if (paths.length === 0) return;
     const target = targetFolderForDrop;
     const movable = paths.filter(
       (src) =>
         src !== node.path && target !== src && !target.startsWith(`${src}/`),
     );
-    if (movable.length === 0) {
-      console.debug("[tree-dnd] no movable sources", { paths, target });
-      return;
-    }
+    if (movable.length === 0) return;
     const changed = movable.filter((src) => {
       const srcParent = src.includes("/")
         ? src.substring(0, src.lastIndexOf("/"))
         : "";
       return srcParent !== target;
     });
-    if (changed.length === 0) {
-      console.debug("[tree-dnd] same parent, skip", { paths, target });
-      return;
-    }
-    console.debug("[tree-dnd] move", { paths: changed, target });
+    if (changed.length === 0) return;
     if (changed.length === 1) onMove(changed[0]!, target);
     else onMoveMany(changed, target);
   };

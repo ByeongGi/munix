@@ -11,17 +11,12 @@ import { Virtuoso, type VirtuosoHandle } from "react-virtuoso";
 import type { FileNode } from "@/types/ipc";
 import { cn } from "@/lib/cn";
 import { ContextMenu } from "./context-menu";
+import { readFileDragPaths } from "./dnd";
 import { FlatTreeRow } from "./file-tree-inner";
 import { flatten } from "./flatten";
-import {
-  DND_MIME,
-  type Action,
-  type ContextMenuState,
-  type FileListProps,
-} from "./types";
+import { type Action, type ContextMenuState, type FileListProps } from "./types";
 
 export function FileList(props: FileListProps) {
-  const { t } = useTranslation("tree");
   const [menu, setMenu] = useState<ContextMenuState | null>(null);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [focusedPath, setFocusedPath] = useState<string | null>(null);
@@ -86,9 +81,11 @@ export function FileList(props: FileListProps) {
 
   const selectedNodes = useMemo(() => {
     const selected = new Set(selectedPaths);
-    return flat
-      .map((item) => item.node)
-      .filter((node) => selected.has(node.path));
+    const nodes: FileNode[] = [];
+    for (const item of flat) {
+      if (selected.has(item.node.path)) nodes.push(item.node);
+    }
+    return nodes;
   }, [flat, selectedPaths]);
 
   const openMenu = useCallback(
@@ -271,7 +268,6 @@ export function FileList(props: FileListProps) {
     e.preventDefault();
     e.dataTransfer.dropEffect = "move";
     if (!dragOverRoot) {
-      console.debug("[tree-dnd] dragover root");
       setDragOverRoot(true);
     }
   };
@@ -284,17 +280,10 @@ export function FileList(props: FileListProps) {
   const handleRootDrop = (e: React.DragEvent) => {
     e.preventDefault();
     setDragOverRoot(false);
-    const paths = readDragPaths(e.dataTransfer);
-    if (paths.length === 0) {
-      console.debug("[tree-dnd] root drop without source");
-      return;
-    }
+    const paths = readFileDragPaths(e.dataTransfer);
+    if (paths.length === 0) return;
     const movable = paths.filter((src) => src.includes("/"));
-    if (movable.length === 0) {
-      console.debug("[tree-dnd] root drop already at root", { paths });
-      return;
-    }
-    console.debug("[tree-dnd] root drop", { paths: movable });
+    if (movable.length === 0) return;
     if (movable.length === 1) props.onMove(movable[0]!, "");
     else props.onMoveMany(movable, "");
   };
@@ -354,11 +343,7 @@ export function FileList(props: FileListProps) {
             );
           }}
           components={{
-            EmptyPlaceholder: () => (
-              <div className="px-3 py-2 text-xs text-[var(--color-text-tertiary)]">
-                {t("empty")}
-              </div>
-            ),
+            EmptyPlaceholder: FileTreeEmptyPlaceholder,
           }}
         />
       </div>
@@ -367,18 +352,12 @@ export function FileList(props: FileListProps) {
   );
 }
 
-function readDragPaths(dataTransfer: DataTransfer): string[] {
-  const raw = dataTransfer.getData(DND_MIME);
-  if (raw) {
-    try {
-      const parsed = JSON.parse(raw) as { paths?: unknown };
-      if (Array.isArray(parsed.paths)) {
-        return parsed.paths.filter((p): p is string => typeof p === "string");
-      }
-    } catch {
-      // fall through
-    }
-  }
-  const fallback = dataTransfer.getData("text/plain");
-  return fallback ? [fallback] : [];
+function FileTreeEmptyPlaceholder() {
+  const { t } = useTranslation("tree");
+
+  return (
+    <div className="px-3 py-2 text-xs text-[var(--color-text-tertiary)]">
+      {t("empty")}
+    </div>
+  );
 }
