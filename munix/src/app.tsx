@@ -1,36 +1,17 @@
-import { type MouseEvent, useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { open } from "@tauri-apps/plugin-dialog";
-import { getCurrentWindow } from "@tauri-apps/api/window";
-import {
-  Plus,
-  FolderPlus,
-  Files,
-  Search,
-  Settings,
-  PanelLeftClose,
-  PanelLeftOpen,
-  List,
-  Hash,
-  MoreHorizontal,
-} from "lucide-react";
 import { useVaultStore } from "@/store/vault-store";
 import { useEditorStore } from "@/store/editor-store";
 import { useTabStore } from "@/store/tab-store";
 import { useVaultDockStore } from "@/store/vault-dock-store";
-import { VaultDock } from "@/components/vault-dock";
 import { useRecentStore } from "@/store/recent-store";
 import { useSearchStore } from "@/store/search-store";
 import { useVaultWatcher } from "@/hooks/use-vault-watcher";
 import type { FileNode } from "@/types/ipc";
-import { FileList } from "@/components/file-tree";
 import { VaultPicker } from "@/components/vault-picker";
-import { SearchPanel } from "@/components/search-panel";
-import { OutlinePanel } from "@/components/outline-panel";
-import { TagPanel } from "@/components/tag-panel";
 import { TabBar } from "@/components/tab-bar";
 import { StatusBar } from "@/components/status-bar";
-import { SidebarResizer } from "@/components/sidebar-resizer";
 import { ShortcutsDialog } from "@/components/shortcuts-dialog";
 import { SettingsDialog } from "@/components/settings-dialog";
 import { QuickOpen } from "@/components/palette/quick-open";
@@ -39,178 +20,26 @@ import { CommandPalette } from "@/components/palette/command-palette";
 import { EditorView } from "@/components/editor/editor-view";
 import { WorkspaceRoot } from "@/components/workspace/workspace-root";
 import { EmptyPanePlaceholder } from "@/components/workspace/empty-pane-placeholder";
+import { AppTitleBar } from "@/components/app-shell/window-title-bar";
+import { WorkspaceHeader } from "@/components/app-shell/workspace-header";
+import { AppSidebar } from "@/components/app-shell/app-sidebar";
+import type { SidebarTab } from "@/components/app-shell/types";
 import { closeActivePane, splitActivePane } from "@/lib/workspace-commands";
 import { ConflictDialog } from "@/components/editor/conflict-dialog";
 import { ipc } from "@/lib/ipc";
 import { cn } from "@/lib/cn";
-import { iconButton } from "@/lib/ui-variants";
 import { useKeymapMatcher } from "@/hooks/use-keymap";
 import { usePropertyTypesStore } from "@/store/property-types-store";
-
-type SidebarTab = "files" | "search" | "outline" | "tags";
-
-function startWindowDrag(e: MouseEvent<HTMLElement>): void {
-  if (e.button !== 0) return;
-  e.preventDefault();
-  void getCurrentWindow().startDragging().catch(() => undefined);
-}
-
-function CustomTitleBar({
-  sidebarCollapsed,
-  sidebarWidth,
-  title,
-  subtitle,
-  onToggleSidebar,
-}: {
-  sidebarCollapsed?: boolean;
-  sidebarWidth?: number;
-  title?: string;
-  subtitle?: string;
-  onToggleSidebar?: () => void;
-}) {
-  const { t } = useTranslation("app");
-  const win = getCurrentWindow();
-  const sidebarToggleLabel = sidebarCollapsed
-    ? t("sidebar.expand")
-    : t("sidebar.collapse");
-  const isFullWidth = sidebarCollapsed || !onToggleSidebar;
-
-  return (
-    <div
-      className={cn(
-        "z-30 flex h-9 shrink-0 items-center",
-        isFullWidth
-          ? "border-b border-border bg-bg"
-          : "absolute left-0 top-0",
-      )}
-      style={{
-        width: isFullWidth
-          ? "100%"
-          : sidebarWidth,
-      }}
-      title={t("window.drag")}
-      data-tauri-drag-region
-      onMouseDown={startWindowDrag}
-      onDoubleClick={() => void win.toggleMaximize()}
-    >
-      <div
-        className="flex w-[84px] shrink-0 items-center gap-2 px-3.5"
-        data-tauri-drag-region
-      >
-        <WindowControl
-          label={t("window.close")}
-          className="bg-[var(--color-window-close)]"
-          onClick={() => void win.close()}
-        />
-        <WindowControl
-          label={t("window.minimize")}
-          className="bg-[var(--color-window-minimize)]"
-          onClick={() => void win.minimize()}
-        />
-        <WindowControl
-          label={t("window.maximize")}
-          className="bg-[var(--color-window-maximize)]"
-          onClick={() => void win.toggleMaximize()}
-        />
-      </div>
-      {onToggleSidebar ? (
-        <button
-          type="button"
-          onMouseDown={(e) => e.stopPropagation()}
-          onClick={onToggleSidebar}
-          title={sidebarToggleLabel}
-          aria-label={sidebarToggleLabel}
-          className={cn(iconButton({ size: "sm" }), "ml-0.5")}
-        >
-          {sidebarCollapsed ? (
-            <PanelLeftOpen className="h-3.5 w-3.5" />
-          ) : (
-            <PanelLeftClose className="h-3.5 w-3.5" />
-          )}
-        </button>
-      ) : null}
-      {sidebarCollapsed && title ? (
-        <div className="ml-3 flex min-w-0 items-center gap-2 text-xs">
-          <span className="max-w-[34vw] truncate font-medium text-text">
-            {title}
-          </span>
-          {subtitle ? (
-            <span className="max-w-40 truncate text-text-subtle">
-              {subtitle}
-            </span>
-          ) : null}
-        </div>
-      ) : null}
-      <div
-        className="h-full flex-1"
-        data-tauri-drag-region
-      />
-    </div>
-  );
-}
-
-function WindowControl({
-  label,
-  className,
-  onClick,
-}: {
-  label: string;
-  className: string;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      aria-label={label}
-      title={label}
-      onMouseDown={(e) => e.stopPropagation()}
-      onClick={onClick}
-      className={cn(
-        "h-3 w-3 rounded-full border border-[var(--color-window-control-border)]",
-        "shadow-[inset_0_0_0_0.5px_rgb(255_255_255_/_0.22)]",
-        "transition duration-100 brightness-100 hover:brightness-110 active:brightness-90",
-        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus/40",
-        className,
-      )}
-    />
-  );
-}
-
-function parentDir(relPath: string): string {
-  const i = relPath.lastIndexOf("/");
-  return i < 0 ? "" : relPath.slice(0, i);
-}
-
-function joinPath(parent: string, name: string): string {
-  return parent ? `${parent}/${name}` : name;
-}
-
-function titleFromPath(path: string | null): string {
-  if (!path) return "Munix";
-  const slashIdx = path.lastIndexOf("/");
-  const name = slashIdx < 0 ? path : path.slice(slashIdx + 1);
-  return name.replace(/\.md$/i, "");
-}
-
-function getMoveTarget(
-  fromPath: string,
-  toFolderPath: string,
-): {
-  name: string;
-  newRel: string;
-} {
-  const slashIdx = fromPath.lastIndexOf("/");
-  const name = slashIdx < 0 ? fromPath : fromPath.slice(slashIdx + 1);
-  const newRel = toFolderPath ? `${toFolderPath}/${name}` : name;
-  return { name, newRel };
-}
-
-function isMoveIntoOwnDescendant(
-  fromPath: string,
-  toFolderPath: string,
-): boolean {
-  return toFolderPath === fromPath || toFolderPath.startsWith(`${fromPath}/`);
-}
+import {
+  dedupeNestedPaths,
+  findNodeByPath,
+  getMoveTarget,
+  isMoveIntoOwnDescendant,
+  joinPath,
+  parentDir,
+  titleFromPath,
+  uniqueName,
+} from "@/lib/app-path-utils";
 
 function App() {
   const { t } = useTranslation("app");
@@ -773,7 +602,7 @@ function App() {
   if (!info) {
     return (
       <div className="munix-window-shell relative flex h-full flex-col">
-        <CustomTitleBar />
+        <AppTitleBar variant="full" />
         <div className="min-h-0 flex-1 overflow-hidden pt-9">
           <VaultPicker onPick={handlePickFolder} />
         </div>
@@ -792,7 +621,8 @@ function App() {
 
   return (
     <div className="munix-window-shell relative flex h-full flex-col">
-      <CustomTitleBar
+      <AppTitleBar
+        variant="workspace"
         sidebarCollapsed={sidebarCollapsed}
         sidebarWidth={sidebarWidth}
         title={titleFromPath(currentPath)}
@@ -806,137 +636,36 @@ function App() {
           sidebarCollapsed ? "min-h-0 flex-1" : "h-full",
         )}
       >
-        {sidebarCollapsed ? (
-          null
-        ) : (
-          <>
-            <aside
-              style={{ width: sidebarWidth }}
-              className="munix-sidebar-surface flex shrink-0 flex-col gap-6 bg-sidebar px-2 pb-2 pt-11"
-            >
-              <VaultDock onOpenSwitcher={() => setVaultSwitcherOpen(true)} />
-              <div className="grid h-8 grid-cols-[auto_1fr_auto] items-center gap-2">
-                <div
-                  className="flex h-7 items-center gap-0.5 rounded-lg bg-sidebar-item-bg p-0.5"
-                  role="tablist"
-                  aria-label={t("sidebar.label", "Sidebar")}
-                >
-                  <SidebarTabButton
-                    icon={Files}
-                    label={t("sidebar.files")}
-                    active={sidebarTab === "files"}
-                    onClick={() => setSidebarTab("files")}
-                  />
-                  <SidebarTabButton
-                    icon={Search}
-                    label={t("sidebar.search")}
-                    active={sidebarTab === "search"}
-                    onClick={() => setSidebarTab("search")}
-                  />
-                  <SidebarTabButton
-                    icon={List}
-                    label={t("sidebar.outline")}
-                    active={sidebarTab === "outline"}
-                    onClick={() => setSidebarTab("outline")}
-                  />
-                  <SidebarTabButton
-                    icon={Hash}
-                    label={t("sidebar.tags")}
-                    active={sidebarTab === "tags"}
-                    onClick={() => setSidebarTab("tags")}
-                  />
-                </div>
-                <h2 className="min-w-0 truncate text-sm font-medium leading-none text-sidebar-text">
-                  {sidebarTitle}
-                </h2>
-                {sidebarTab === "files" && (
-                  <div className="flex items-center gap-0.5">
-                    <button
-                      type="button"
-                      onClick={() => void handleCreateFileAt("")}
-                      title={t("header.newFile")}
-                      aria-label={t("header.newFile")}
-                      className={iconButton({ size: "sm" })}
-                    >
-                      <Plus className="h-3.5 w-3.5" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => void handleCreateFolderAt("")}
-                      title={t("header.newFolder")}
-                      aria-label={t("header.newFolder")}
-                      className={iconButton({ size: "sm" })}
-                    >
-                      <FolderPlus className="h-3.5 w-3.5" />
-                    </button>
-                  </div>
-                )}
-              </div>
-              <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg bg-sidebar-item-bg/70 py-1">
-                {sidebarTab === "files" ? (
-                  <nav className="flex min-h-0 flex-1 flex-col">
-                    <FileList
-                      files={files}
-                      currentPath={currentPath}
-                      onSelect={(relPath) => openTab(relPath)}
-                      onAction={handleAction}
-                      onMove={(from, to) => void handleMove(from, to)}
-                      onMoveMany={(from, to) => void handleMoveMany(from, to)}
-                      onDeleteMany={handleDeleteMany}
-                      renaming={renaming}
-                      revealPath={revealPath}
-                      onRenameSubmit={(node, name) =>
-                        void handleRenameSubmit(node, name)
-                      }
-                      onRenameCancel={() => setRenaming(null)}
-                    />
-                  </nav>
-                ) : sidebarTab === "search" ? (
-                  <SearchPanel
-                    onSelect={(hit, query) => {
-                      useEditorStore.getState().setPendingSearchQuery(query);
-                      if (hit.matchedLine > 0) {
-                        useEditorStore
-                          .getState()
-                          .setPendingJumpLine(hit.matchedLine);
-                      }
-                      openTab(hit.path);
-                    }}
-                  />
-                ) : sidebarTab === "outline" ? (
-                  <div className="munix-sidebar-scroll flex-1 overflow-y-auto">
-                    <OutlinePanel />
-                  </div>
-                ) : (
-                  <div className="munix-sidebar-scroll flex-1 overflow-y-auto">
-                    <TagPanel />
-                  </div>
-                )}
-              </div>
-              <div className="flex h-8 shrink-0 items-center">
-                <button
-                  type="button"
-                  onClick={() => setSettingsOpen(true)}
-                  title={t("sidebar.settings")}
-                  aria-label={t("sidebar.settings")}
-                  className={cn(
-                    "flex h-9 items-center gap-2.5 rounded-lg px-2.5 text-[15px] font-medium",
-                    "text-sidebar-text-muted transition-colors hover:bg-sidebar-item-hovered hover:text-sidebar-text",
-                  )}
-                >
-                  <Settings className="h-5 w-5 shrink-0" />
-                  <span>{t("sidebar.settings")}</span>
-                </button>
-              </div>
-            </aside>
-
-            <SidebarResizer
-              width={sidebarWidth}
-              onWidthChange={setSidebarWidth}
-              min={180}
-              max={560}
-            />
-          </>
+        {sidebarCollapsed ? null : (
+          <AppSidebar
+            width={sidebarWidth}
+            sidebarTab={sidebarTab}
+            sidebarTitle={sidebarTitle}
+            files={files}
+            currentPath={currentPath}
+            renaming={renaming}
+            revealPath={revealPath}
+            onWidthChange={setSidebarWidth}
+            onOpenVaultSwitcher={() => setVaultSwitcherOpen(true)}
+            onSwitchTab={setSidebarTab}
+            onCreateFile={() => void handleCreateFileAt("")}
+            onCreateFolder={() => void handleCreateFolderAt("")}
+            onSelectFile={openTab}
+            onFileAction={handleAction}
+            onMove={(from, to) => void handleMove(from, to)}
+            onMoveMany={(from, to) => void handleMoveMany(from, to)}
+            onDeleteMany={handleDeleteMany}
+            onRenameSubmit={(node, name) => void handleRenameSubmit(node, name)}
+            onRenameCancel={() => setRenaming(null)}
+            onSearchSelect={(hit, query) => {
+              useEditorStore.getState().setPendingSearchQuery(query);
+              if (hit.matchedLine > 0) {
+                useEditorStore.getState().setPendingJumpLine(hit.matchedLine);
+              }
+              openTab(hit.path);
+            }}
+            onOpenSettings={() => setSettingsOpen(true)}
+          />
         )}
 
         <section
@@ -1013,139 +742,6 @@ function isVaultErrorType(error: unknown, type: string): boolean {
     error !== null &&
     "type" in error &&
     (error as { type?: unknown }).type === type
-  );
-}
-
-function dedupeNestedPaths(paths: string[]): string[] {
-  const sorted = [...new Set(paths)].sort((a, b) => a.length - b.length);
-  const result: string[] = [];
-  for (const path of sorted) {
-    if (result.some((parent) => path.startsWith(`${parent}/`))) continue;
-    result.push(path);
-  }
-  return result;
-}
-
-function findNodeByPath(nodes: FileNode[], path: string): FileNode | null {
-  for (const node of nodes) {
-    if (node.path === path) return node;
-    if (node.children) {
-      const found = findNodeByPath(node.children, path);
-      if (found) return found;
-    }
-  }
-  return null;
-}
-
-function uniqueName(
-  files: FileNode[],
-  parent: string,
-  base: string,
-  ext: string,
-): string {
-  const existing = new Set<string>();
-  const collect = (nodes: FileNode[]) => {
-    for (const n of nodes) {
-      if (parentDir(n.path) === parent) existing.add(n.name);
-      if (n.children) collect(n.children);
-    }
-  };
-  collect(files);
-  let name = `${base}${ext}`;
-  let i = 2;
-  while (existing.has(name)) {
-    name = `${base} ${i}${ext}`;
-    i += 1;
-  }
-  return name;
-}
-
-function WorkspaceHeader({
-  title,
-  subtitle,
-  onQuickOpen,
-  onNewFile,
-}: {
-  title: string;
-  subtitle: string;
-  onQuickOpen: () => void;
-  onNewFile: () => void;
-}) {
-  const { t } = useTranslation("app");
-
-  return (
-    <div
-      className="flex h-9 shrink-0 items-center gap-2 border-b border-border bg-workspace px-3"
-      data-tauri-drag-region
-      onMouseDown={startWindowDrag}
-    >
-      <div className="flex min-w-0 flex-1 items-center gap-2 text-xs">
-        <span className="min-w-0 truncate font-medium text-text">{title}</span>
-        <span className="shrink-0 text-text-subtle">{subtitle}</span>
-      </div>
-      <div
-        className="flex shrink-0 items-center gap-1"
-        onMouseDown={(e) => e.stopPropagation()}
-      >
-        <button
-          type="button"
-          onClick={onQuickOpen}
-          title={t("workspace.quickOpen")}
-          aria-label={t("workspace.quickOpen")}
-          className={iconButton({ size: "sm" })}
-        >
-          <Search className="h-3.5 w-3.5" />
-        </button>
-        <button
-          type="button"
-          onClick={onNewFile}
-          title={t("header.newFile")}
-          aria-label={t("header.newFile")}
-          className={iconButton({ size: "sm" })}
-        >
-          <Plus className="h-3.5 w-3.5" />
-        </button>
-        <button
-          type="button"
-          title={t("workspace.more")}
-          aria-label={t("workspace.more")}
-          className={iconButton({ size: "sm" })}
-        >
-          <MoreHorizontal className="h-3.5 w-3.5" />
-        </button>
-      </div>
-    </div>
-  );
-}
-
-function SidebarTabButton({
-  icon: Icon,
-  label,
-  active = false,
-  onClick,
-}: {
-  icon: typeof Files;
-  label: string;
-  active?: boolean;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      role="tab"
-      aria-selected={active}
-      onClick={onClick}
-      title={label}
-      aria-label={label}
-      className={cn(
-        "flex h-6 w-6 items-center justify-center rounded-md transition-colors",
-        active
-          ? "bg-sidebar-item-selected text-sidebar-text shadow-[inset_0_0_0_1px_rgb(255_255_255_/_0.08)]"
-          : "text-sidebar-text-muted hover:bg-sidebar-item-hovered hover:text-sidebar-text",
-      )}
-    >
-      <Icon className="h-3.5 w-3.5" />
-    </button>
   );
 }
 
