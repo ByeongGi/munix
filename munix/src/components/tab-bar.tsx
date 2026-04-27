@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { useStore } from "zustand";
-import { Plus } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useTabStore, type Tab } from "@/store/tab-store";
 import { makeTabId } from "@/store/slices/tab-slice";
@@ -38,6 +37,7 @@ import { TabContextMenu } from "@/components/tab/tab-context-menu";
 import { TabSoftLimitBadge } from "@/components/tab/tab-soft-limit-badge";
 import { ActiveTabItem } from "@/components/tab/active-tab-item";
 import { EmptyTabItem } from "@/components/tab/empty-tab-item";
+import { NewTabButton } from "@/components/tab/new-tab-button";
 
 interface TabBarProps {
   onNewFile: () => void;
@@ -132,18 +132,11 @@ export function TabBar({ onNewFile }: TabBarProps) {
             });
           }}
         />
-        <button
-          type="button"
+        <NewTabButton
+          label={t("tabs:aria.newTab")}
+          tooltip={t("tabs:tooltip.newTab")}
           onClick={onNewFile}
-          className={cn(
-            "ml-1 flex h-6 w-6 items-center justify-center rounded",
-            "text-[var(--color-text-tertiary)] hover:bg-[var(--color-bg-hover)]",
-          )}
-          aria-label={t("tabs:aria.newTab")}
-          title={t("tabs:tooltip.newTab")}
-        >
-          <Plus className="h-3.5 w-3.5" />
-        </button>
+        />
         <PaneActionsButton
           label={t("tabs:paneMenu.label")}
           onClick={(e) => {
@@ -315,18 +308,11 @@ export function TabBar({ onNewFile }: TabBarProps) {
           })}
         </div>
         <TabSoftLimitBadge count={tabs.length} t={t} />
-        <button
-          type="button"
+        <NewTabButton
+          label={t("tabs:aria.newTab")}
+          tooltip={t("tabs:tooltip.newTab")}
           onClick={onNewFile}
-          className={cn(
-            "ml-1 flex h-6 w-6 items-center justify-center rounded",
-            "text-[var(--color-text-tertiary)] hover:bg-[var(--color-bg-hover)]",
-          )}
-          aria-label={t("tabs:aria.newTab")}
-          title={t("tabs:tooltip.newTab")}
-        >
-          <Plus className="h-3.5 w-3.5" />
-        </button>
+        />
         <PaneActionsButton
           label={t("tabs:paneMenu.label")}
           onClick={(e) => {
