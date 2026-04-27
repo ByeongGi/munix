@@ -29,6 +29,7 @@ import { ConflictDialog } from "@/components/editor/conflict-dialog";
 import { ipc } from "@/lib/ipc";
 import { cn } from "@/lib/cn";
 import { useKeymapMatcher } from "@/hooks/use-keymap";
+import { useFileTreeReveal } from "@/hooks/app/use-file-tree-reveal";
 import { usePersistentSidebarState } from "@/hooks/app/use-persistent-sidebar-state";
 import { usePropertyTypesStore } from "@/store/property-types-store";
 import {
@@ -71,7 +72,6 @@ function App() {
   const closeAllTabs = useTabStore((s) => s.closeAll);
 
   const [renaming, setRenaming] = useState<string | null>(null);
-  const [revealPath, setRevealPath] = useState<string | null>(null);
   const [sidebarTab, setSidebarTab] = useState<SidebarTab>("files");
   const {
     sidebarCollapsed,
@@ -84,6 +84,10 @@ function App() {
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const revealPath = useFileTreeReveal({
+    setSidebarCollapsed,
+    setSidebarTab,
+  });
 
   useVaultWatcher();
 
@@ -107,20 +111,6 @@ function App() {
         .catch(() => undefined);
     }
   }, [activeVaultId, info, resetTabs]);
-
-  useEffect(() => {
-    const onReveal = (event: Event) => {
-      const detail = (event as CustomEvent<{ path?: string }>).detail;
-      if (!detail?.path) return;
-      setSidebarCollapsed(false);
-      setSidebarTab("files");
-      setRevealPath(detail.path);
-    };
-    window.addEventListener("munix:reveal-file-tree", onReveal);
-    return () => {
-      window.removeEventListener("munix:reveal-file-tree", onReveal);
-    };
-  }, [setSidebarCollapsed]);
 
   const handleCreateFileAt = useCallback(
     async (parent: string) => {
