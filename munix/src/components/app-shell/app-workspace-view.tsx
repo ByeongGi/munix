@@ -8,7 +8,7 @@ import { WorkspaceHeader } from "@/components/app-shell/workspace-header";
 import { EmptyPanePlaceholder } from "@/components/workspace/pane/empty-pane-placeholder";
 import { WorkspaceRoot } from "@/components/workspace/root/workspace-root";
 import { StatusBar } from "@/components/status-bar";
-import { TabBar } from "@/components/tab-bar";
+import { TabBar } from "@/components/tab/tab-bar";
 import { cn } from "@/lib/cn";
 import { titleFromPath } from "@/lib/app-path-utils";
 import type { FileNode, VaultInfo } from "@/types/ipc";
