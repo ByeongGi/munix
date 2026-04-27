@@ -3,44 +3,29 @@ import { useTranslation } from "react-i18next";
 import {
   Command,
   FileText,
-  FilePlus,
-  FolderPlus,
-  Save,
-  X,
   Search,
-  Files,
-  FolderOpen,
-  ChevronLeft,
-  ChevronRight,
-  Settings as SettingsIcon,
   Hash,
   Heading1,
   Heading2,
   Heading3,
   Heading,
   ArrowRight,
-  Trash2,
-  RotateCcw,
-  Columns2,
-  Rows2,
-  PanelLeftClose,
   type LucideIcon,
 } from "lucide-react";
-import { Moon, Sun, Monitor } from "lucide-react";
 import { useEditorStore } from "@/store/editor-store";
 import { useRecentStore } from "@/store/recent-store";
 import { useSearchStore } from "@/store/search-store";
 import { useTabStore } from "@/store/tab-store";
-import { useThemeStore } from "@/store/theme-store";
 import { useTagStore } from "@/store/tag-store";
 import { useVaultStore } from "@/store/vault-store";
-import { useVaultDockStore } from "@/store/vault-dock-store";
-import { ipc } from "@/lib/ipc";
 import { cn } from "@/lib/cn";
 import { CommandDialog } from "@/components/ui/command-dialog";
-import { closeActivePane, splitActivePane } from "@/lib/workspace-commands";
 import type { SearchHit } from "@/lib/search-index";
 import { extractHeadings, parseMode } from "./command-palette-utils";
+import {
+  usePaletteCommands,
+  type PaletteCommand,
+} from "./use-palette-commands";
 
 // ──────────────────────────────────────────────
 // Types
@@ -56,15 +41,6 @@ interface CommandPaletteProps {
   onShowShortcuts: () => void;
   onOpenSettings: () => void;
   onSearchTag: (tag: string) => void;
-}
-
-interface Cmd {
-  id: string;
-  title: string;
-  icon: LucideIcon;
-  shortcut?: string;
-  keywords?: string[];
-  run: () => void;
 }
 
 interface HeadingItem {
@@ -87,7 +63,7 @@ interface LineItem {
 
 interface CommandItem {
   kind: "command";
-  cmd: Cmd;
+  cmd: PaletteCommand;
 }
 
 interface FileItem {
@@ -119,7 +95,7 @@ export function CommandPalette({
   onOpenSettings,
   onSearchTag,
 }: CommandPaletteProps) {
-  const { t, i18n } = useTranslation(["palette", "common"]);
+  const { t } = useTranslation(["palette", "common"]);
   const [query, setQuery] = useState("");
   const [selectedIdx, setSelectedIdx] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -156,252 +132,16 @@ export function CommandPalette({
       void buildSearchIndex(vaultInfo.root, vaultFiles);
   }, [open, vaultInfo, vaultFiles, searchStatus, buildSearchIndex]);
 
-  const commands = useMemo<Cmd[]>(
-    () => [
-      {
-        id: "new-file",
-        title: t("palette:commands.newFile.title"),
-        icon: FilePlus,
-        shortcut: "⌘T",
-        keywords: ["new", "file", "note"],
-        run: () => {
-          onClose();
-          onNewFile();
-        },
-      },
-      {
-        id: "new-folder",
-        title: t("palette:commands.newFolder.title"),
-        icon: FolderPlus,
-        keywords: ["new", "folder", "directory"],
-        run: () => {
-          onClose();
-          onNewFolder();
-        },
-      },
-      {
-        id: "save",
-        title: t("palette:commands.save.title"),
-        icon: Save,
-        shortcut: "⌘S",
-        keywords: ["save"],
-        run: () => {
-          onClose();
-          const flush = useEditorStore.getState().flushSave;
-          if (flush) void flush();
-        },
-      },
-      {
-        id: "close-tab",
-        title: t("palette:commands.closeTab.title"),
-        icon: X,
-        shortcut: "⌘W",
-        keywords: ["close", "tab"],
-        run: () => {
-          onClose();
-          const { activeId, closeTab } = useTabStore.getState();
-          if (activeId) closeTab(activeId);
-        },
-      },
-      {
-        id: "close-all-tabs",
-        title: t("palette:commands.closeAllTabs.title"),
-        icon: X,
-        shortcut: "⌘⇧W",
-        keywords: ["close", "all", "tab"],
-        run: () => {
-          onClose();
-          useTabStore.getState().closeAll();
-        },
-      },
-      {
-        id: "next-tab",
-        title: t("palette:commands.nextTab.title"),
-        icon: ChevronRight,
-        shortcut: "⌘⇧]",
-        keywords: ["next", "tab"],
-        run: () => {
-          onClose();
-          useTabStore.getState().activateNext();
-        },
-      },
-      {
-        id: "prev-tab",
-        title: t("palette:commands.prevTab.title"),
-        icon: ChevronLeft,
-        shortcut: "⌘⇧[",
-        keywords: ["prev", "tab"],
-        run: () => {
-          onClose();
-          useTabStore.getState().activatePrev();
-        },
-      },
-      {
-        id: "sidebar-files",
-        title: t("palette:commands.sidebarFiles.title"),
-        icon: Files,
-        keywords: ["sidebar", "tree", "file"],
-        run: () => {
-          onClose();
-          onSwitchSidebar("files");
-        },
-      },
-      {
-        id: "sidebar-search",
-        title: t("palette:commands.sidebarSearch.title"),
-        icon: Search,
-        shortcut: "⌘⇧F",
-        keywords: ["sidebar", "search"],
-        run: () => {
-          onClose();
-          onSwitchSidebar("search");
-        },
-      },
-      {
-        id: "pick-vault",
-        title: t("palette:commands.pickVault.title"),
-        icon: FolderOpen,
-        keywords: ["vault", "open", "folder"],
-        run: () => {
-          onClose();
-          onPickVault();
-        },
-      },
-      {
-        id: "theme-system",
-        title: t("palette:commands.themeSystem.title"),
-        icon: Monitor,
-        keywords: ["theme", "system", "auto"],
-        run: () => {
-          onClose();
-          useThemeStore.getState().set("system");
-        },
-      },
-      {
-        id: "theme-light",
-        title: t("palette:commands.themeLight.title"),
-        icon: Sun,
-        keywords: ["theme", "light"],
-        run: () => {
-          onClose();
-          useThemeStore.getState().set("light");
-        },
-      },
-      {
-        id: "theme-dark",
-        title: t("palette:commands.themeDark.title"),
-        icon: Moon,
-        keywords: ["theme", "dark"],
-        run: () => {
-          onClose();
-          useThemeStore.getState().set("dark");
-        },
-      },
-      {
-        id: "shortcuts",
-        title: t("palette:commands.shortcuts.title"),
-        icon: Command,
-        shortcut: "⌘/",
-        keywords: ["help", "shortcut", "keyboard"],
-        run: () => {
-          onClose();
-          onShowShortcuts();
-        },
-      },
-      {
-        id: "settings",
-        title: t("palette:commands.settings.title"),
-        icon: SettingsIcon,
-        shortcut: "⌘,",
-        keywords: ["settings", "preferences"],
-        run: () => {
-          onClose();
-          onOpenSettings();
-        },
-      },
-      {
-        id: "workspace-split-right",
-        title: t("palette:commands.workspaceSplitRight.title"),
-        icon: Columns2,
-        shortcut: "⌘\\",
-        keywords: ["split", "right", "pane", "분할", "오른쪽"],
-        run: () => {
-          onClose();
-          splitActivePane("right");
-        },
-      },
-      {
-        id: "workspace-split-down",
-        title: t("palette:commands.workspaceSplitDown.title"),
-        icon: Rows2,
-        shortcut: "⌘⇧\\",
-        keywords: ["split", "down", "pane", "분할", "아래"],
-        run: () => {
-          onClose();
-          splitActivePane("bottom");
-        },
-      },
-      {
-        id: "workspace-close-pane",
-        title: t("palette:commands.workspaceClosePane.title"),
-        icon: PanelLeftClose,
-        shortcut: "⌘⌥⇧W",
-        keywords: ["close", "pane", "패널", "닫기"],
-        run: () => {
-          onClose();
-          closeActivePane();
-        },
-      },
-      {
-        id: "vault-reset-history",
-        title: t("palette:commands.vaultResetHistory.title"),
-        icon: Trash2,
-        keywords: ["vault", "history", "clear", "reset", "닫힌"],
-        run: () => {
-          onClose();
-          void ipc.vaultRegistryClearClosed();
-        },
-      },
-      {
-        id: "vault-reset-all",
-        title: t("palette:commands.vaultResetAll.title"),
-        icon: RotateCcw,
-        keywords: ["vault", "reset", "registry", "all", "초기화"],
-        run: () => {
-          onClose();
-          void (async () => {
-            const ok = window.confirm(
-              t("palette:commands.vaultResetAll.confirm"),
-            );
-            if (!ok) return;
-            // 열린 vault 모두 닫기 → 그 후 registry clear
-            const dock = useVaultDockStore.getState();
-            const ids = dock.vaults.map((v) => v.id);
-            for (const id of ids) {
-              try {
-                await dock.closeVault(id);
-              } catch {
-                // ignore
-              }
-            }
-            await ipc.vaultRegistryClear();
-          })();
-        },
-      },
-    ],
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [
-      t,
-      i18n.language,
-      onClose,
-      onNewFile,
-      onNewFolder,
-      onPickVault,
-      onSwitchSidebar,
-      onShowShortcuts,
-      onOpenSettings,
-    ],
-  );
+  const commands = usePaletteCommands({
+    t,
+    onClose,
+    onNewFile,
+    onNewFolder,
+    onPickVault,
+    onSwitchSidebar,
+    onShowShortcuts,
+    onOpenSettings,
+  });
 
   const { mode, text } = useMemo(() => parseMode(query), [query]);
 
