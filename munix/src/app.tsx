@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useVaultStore } from "@/store/vault-store";
 import { useEditorStore } from "@/store/editor-store";
@@ -21,10 +21,8 @@ import { AppTitleBar } from "@/components/app-shell/window-title-bar";
 import { WorkspaceHeader } from "@/components/app-shell/workspace-header";
 import { AppSidebar } from "@/components/app-shell/app-sidebar";
 import type { SidebarTab } from "@/components/app-shell/types";
-import { closeActivePane, splitActivePane } from "@/lib/workspace-commands";
 import { ConflictDialog } from "@/components/editor/conflict-dialog";
 import { cn } from "@/lib/cn";
-import { useKeymapMatcher } from "@/hooks/use-keymap";
 import { useActiveVaultEffects } from "@/hooks/app/use-active-vault-effects";
 import { useAppOverlays } from "@/hooks/app/use-app-overlays";
 import { useFileCreateActions } from "@/hooks/app/use-file-create-actions";
@@ -34,6 +32,7 @@ import { useFileRenameAction } from "@/hooks/app/use-file-rename-action";
 import { useFileSystemActions } from "@/hooks/app/use-file-system-actions";
 import { useFileTreeActionDispatcher } from "@/hooks/app/use-file-tree-action-dispatcher";
 import { useFileTreeReveal } from "@/hooks/app/use-file-tree-reveal";
+import { useGlobalShortcuts } from "@/hooks/app/use-global-shortcuts";
 import { usePersistentSidebarState } from "@/hooks/app/use-persistent-sidebar-state";
 import { useVaultPickerAction } from "@/hooks/app/use-vault-picker-action";
 import { titleFromPath } from "@/lib/app-path-utils";
@@ -128,150 +127,21 @@ function App() {
     updatePath,
   });
 
-  const matchGlobal = useKeymapMatcher("global");
-  useEffect(() => {
-    const onKeyDown = (e: KeyboardEvent) => {
-      // 1. registry 기반 명령부터 디스패치 (사용자 override 적용).
-      const id = matchGlobal(e);
-      if (id) {
-        e.preventDefault();
-        switch (id) {
-          case "global.save": {
-            const flush = useEditorStore.getState().flushSave;
-            if (flush) void flush();
-            return;
-          }
-          case "global.searchInVault":
-            setSidebarTab("search");
-            return;
-          case "global.quickOpen":
-            setQuickOpen(true);
-            return;
-          case "global.commandPalette":
-            setPaletteOpen(true);
-            return;
-          case "global.shortcuts":
-            setShortcutsOpen(true);
-            return;
-          case "global.settings":
-            setSettingsOpen(true);
-            return;
-          case "global.newFile":
-            void handleCreateFileAt("");
-            return;
-          case "global.closeTab":
-            closeActive();
-            return;
-          case "global.closeAllTabs":
-            closeAllTabs();
-            return;
-          case "global.nextTab":
-            activateNext();
-            return;
-          case "global.prevTab":
-            activatePrev();
-            return;
-
-          // ── Vault (ADR-031) ─────────────────────────────────
-          case "global.openVault": {
-            void handlePickFolder();
-            return;
-          }
-          case "global.closeVault": {
-            const dock = useVaultDockStore.getState();
-            const id = dock.activeVaultId;
-            if (!id) return;
-            if (dock.vaults.length <= 1) {
-              // 마지막 vault — vault-store.close 가 dock 까지 정리
-              void useVaultStore.getState().close();
-            } else {
-              void dock.closeVault(id);
-            }
-            return;
-          }
-          case "global.nextVault": {
-            const dock = useVaultDockStore.getState();
-            if (dock.vaults.length === 0) return;
-            const idx = dock.vaults.findIndex(
-              (v) => v.id === dock.activeVaultId,
-            );
-            const nextIdx = idx < 0 ? 0 : (idx + 1) % dock.vaults.length;
-            const target = dock.vaults[nextIdx];
-            if (target) void dock.setActive(target.id);
-            return;
-          }
-          case "global.prevVault": {
-            const dock = useVaultDockStore.getState();
-            if (dock.vaults.length === 0) return;
-            const idx = dock.vaults.findIndex(
-              (v) => v.id === dock.activeVaultId,
-            );
-            const prevIdx =
-              idx < 0 ? 0 : (idx - 1 + dock.vaults.length) % dock.vaults.length;
-            const target = dock.vaults[prevIdx];
-            if (target) void dock.setActive(target.id);
-            return;
-          }
-          case "global.toggleVaultDock":
-            useVaultDockStore.getState().toggleVisible();
-            return;
-          case "global.vaultSwitcher":
-            setVaultSwitcherOpen(true);
-            return;
-
-          // ── Workspace Split (workspace-split-spec §10) ───────
-          case "workspace.splitRight":
-            splitActivePane("right");
-            return;
-          case "workspace.splitDown":
-            splitActivePane("bottom");
-            return;
-          case "workspace.closePane":
-            closeActivePane();
-            return;
-          // moveTabRight / moveTabLeft 는 Phase B 에서 구현. 지금은 no-op
-          // (단축키 충돌 방지를 위해 등록만 해 둔다).
-          case "workspace.moveTabRight":
-          case "workspace.moveTabLeft":
-            return;
-        }
-        return;
-      }
-
-      // 2. registry 외 동적 단축키.
-      const mod = e.metaKey || e.ctrlKey;
-      // 2-a. 파일 탭 1~9
-      if (mod && !e.shiftKey && !e.altKey && /^[1-9]$/.test(e.key)) {
-        e.preventDefault();
-        activateIndex(parseInt(e.key, 10) - 1);
-        return;
-      }
-      // 2-b. Vault 탭 1~9 (mod+alt+N)
-      if (mod && e.altKey && !e.shiftKey && /^[1-9]$/.test(e.key)) {
-        e.preventDefault();
-        const dock = useVaultDockStore.getState();
-        const target = dock.vaults[parseInt(e.key, 10) - 1];
-        if (target) void dock.setActive(target.id);
-        return;
-      }
-    };
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [
-    matchGlobal,
+  useGlobalShortcuts({
     handleCreateFileAt,
+    handlePickFolder,
     closeActive,
     closeAllTabs,
+    activateIndex,
     activateNext,
     activatePrev,
-    activateIndex,
-    handlePickFolder,
-    setPaletteOpen,
+    setSidebarTab,
     setQuickOpen,
-    setSettingsOpen,
+    setPaletteOpen,
     setShortcutsOpen,
+    setSettingsOpen,
     setVaultSwitcherOpen,
-  ]);
+  });
 
   const handleAction = useFileTreeActionDispatcher({
     setRenaming,
