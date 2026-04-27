@@ -5,7 +5,6 @@ import { useVaultStore } from "@/store/vault-store";
 import { useEditorStore } from "@/store/editor-store";
 import { useTabStore } from "@/store/tab-store";
 import { useVaultDockStore } from "@/store/vault-dock-store";
-import { useRecentStore } from "@/store/recent-store";
 import { useSearchStore } from "@/store/search-store";
 import { useVaultWatcher } from "@/hooks/use-vault-watcher";
 import type { FileNode } from "@/types/ipc";
@@ -29,11 +28,11 @@ import { ConflictDialog } from "@/components/editor/conflict-dialog";
 import { ipc } from "@/lib/ipc";
 import { cn } from "@/lib/cn";
 import { useKeymapMatcher } from "@/hooks/use-keymap";
+import { useActiveVaultEffects } from "@/hooks/app/use-active-vault-effects";
 import { useAppOverlays } from "@/hooks/app/use-app-overlays";
 import { useFileCreateActions } from "@/hooks/app/use-file-create-actions";
 import { useFileTreeReveal } from "@/hooks/app/use-file-tree-reveal";
 import { usePersistentSidebarState } from "@/hooks/app/use-persistent-sidebar-state";
-import { usePropertyTypesStore } from "@/store/property-types-store";
 import {
   dedupeNestedPaths,
   findNodeByPath,
@@ -102,23 +101,11 @@ function App() {
   // 최초 마운트 시 자동 reopen 은 main.tsx 의 bootstrapVaultRegistry 가 담당
   // (ADR-032). 여기선 별도 처리 안 함.
 
-  // vault 변경 시 최근 파일 로드 + 속성 타입 로드.
-  // 부팅 bootstrap 중에는 workspace hydrate 가 먼저 끝나고 legacy vault-store
-  // info 가 뒤늦게 채워질 수 있다. 이 사이의 info=null 상태에서 resetTabs 를
-  // 호출하면 `.munix/workspace.json` 에서 복원한 탭을 지워버린다.
-  useEffect(() => {
-    if (!info) {
-      if (!activeVaultId) resetTabs();
-      useRecentStore.getState().setVault(null);
-    } else {
-      useRecentStore.getState().setVault(info.root);
-      // property types (.obsidian/types.json) 로드 — 실패해도 조용히
-      void usePropertyTypesStore
-        .getState()
-        .load()
-        .catch(() => undefined);
-    }
-  }, [activeVaultId, info, resetTabs]);
+  useActiveVaultEffects({
+    activeVaultId,
+    info,
+    resetTabs,
+  });
 
   const { handleCreateFileAt, handleCreateFolderAt } = useFileCreateActions({
     info,
