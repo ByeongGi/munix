@@ -32,6 +32,7 @@ import { useAppOverlays } from "@/hooks/app/use-app-overlays";
 import { useFileCreateActions } from "@/hooks/app/use-file-create-actions";
 import { useFileDeleteActions } from "@/hooks/app/use-file-delete-actions";
 import { useFileRenameAction } from "@/hooks/app/use-file-rename-action";
+import { useFileSystemActions } from "@/hooks/app/use-file-system-actions";
 import { useFileTreeReveal } from "@/hooks/app/use-file-tree-reveal";
 import { usePersistentSidebarState } from "@/hooks/app/use-persistent-sidebar-state";
 import { useVaultPickerAction } from "@/hooks/app/use-vault-picker-action";
@@ -126,6 +127,7 @@ function App() {
     refreshFiles,
     removeByPath,
   });
+  const { copyPath, reveal } = useFileSystemActions();
 
   const matchGlobal = useKeymapMatcher("global");
   useEffect(() => {
@@ -292,54 +294,11 @@ function App() {
         return;
       }
       if (action === "copy-path") {
-        void (async () => {
-          try {
-            const abs = await ipc.absPath(node.path);
-            await ipc.copyText(abs);
-          } catch (e) {
-            console.error("copy-path failed", e);
-            window.alert(
-              t("copyPath.errorAlert", {
-                reason: e instanceof Error ? e.message : JSON.stringify(e),
-              }),
-            );
-          }
-        })();
+        copyPath(node);
         return;
       }
       if (action === "reveal") {
-        void (async () => {
-          try {
-            await ipc.revealInSystem(node.path);
-          } catch (e) {
-            if (isVaultErrorType(e, "PermissionRequired")) {
-              const ok = window.confirm(t("trust.revealPrompt"));
-              if (!ok) return;
-              try {
-                await ipc.trustCurrentVault();
-                await ipc.revealInSystem(node.path);
-                return;
-              } catch (retryError) {
-                console.error("reveal after trust failed", retryError);
-                window.alert(
-                  t("reveal.errorAlert", {
-                    reason:
-                      retryError instanceof Error
-                        ? retryError.message
-                        : JSON.stringify(retryError),
-                  }),
-                );
-                return;
-              }
-            }
-            console.error("reveal failed", e);
-            window.alert(
-              t("reveal.errorAlert", {
-                reason: e instanceof Error ? e.message : JSON.stringify(e),
-              }),
-            );
-          }
-        })();
+        reveal(node);
         return;
       }
       const parent =
@@ -347,7 +306,13 @@ function App() {
       if (action === "new-file") void handleCreateFileAt(parent);
       else if (action === "new-folder") void handleCreateFolderAt(parent);
     },
-    [t, handleCreateFileAt, handleCreateFolderAt, handleDelete],
+    [
+      copyPath,
+      handleCreateFileAt,
+      handleCreateFolderAt,
+      handleDelete,
+      reveal,
+    ],
   );
 
   const handleMove = useCallback(
@@ -600,15 +565,6 @@ function App() {
         }}
       />
     </div>
-  );
-}
-
-function isVaultErrorType(error: unknown, type: string): boolean {
-  return (
-    typeof error === "object" &&
-    error !== null &&
-    "type" in error &&
-    (error as { type?: unknown }).type === type
   );
 }
 
