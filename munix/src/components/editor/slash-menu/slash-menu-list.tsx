@@ -5,6 +5,7 @@ import {
   useMemo,
   useRef,
   useState,
+  type PointerEvent,
 } from "react";
 import { useTranslation } from "react-i18next";
 import type { SlashItem, SlashGroup } from "./commands";
@@ -31,6 +32,7 @@ export const SlashMenuList = forwardRef<
 
   useEffect(() => {
     setSelectedIndex(0);
+    scrollRef.current?.scrollTo({ top: 0 });
   }, [items]);
 
   useEffect(() => {
@@ -55,6 +57,14 @@ export const SlashMenuList = forwardRef<
   const selectItem = (index: number) => {
     const item = items[index];
     if (item) command(item);
+  };
+
+  const selectItemOnPointerMove = (
+    index: number,
+    event: PointerEvent<HTMLButtonElement>,
+  ) => {
+    if (event.movementX === 0 && event.movementY === 0) return;
+    setSelectedIndex(index);
   };
 
   useImperativeHandle(ref, () => ({
@@ -133,7 +143,9 @@ export const SlashMenuList = forwardRef<
                 }}
                 type="button"
                 onClick={() => selectItem(flatIndex)}
-                onMouseEnter={() => setSelectedIndex(flatIndex)}
+                onPointerMove={(event) =>
+                  selectItemOnPointerMove(flatIndex, event)
+                }
                 className={cn(
                   "flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-sm",
                   active
