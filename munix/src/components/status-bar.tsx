@@ -91,7 +91,7 @@ export function StatusBar() {
   const chars = currentPath ? body.length : null;
 
   return (
-    <div className="flex h-7 shrink-0 items-center gap-3 border-t border-[var(--color-border-primary)] bg-[var(--color-bg-secondary)] px-3 text-[11px] text-[var(--color-text-tertiary)]">
+    <div className="relative z-20 flex h-7 shrink-0 items-center gap-3 border-t border-[var(--color-border-primary)] bg-[var(--color-bg-secondary)] px-3 text-[11px] text-[var(--color-text-tertiary)] shadow-[0_-1px_0_rgb(0_0_0_/_0.12)]">
       <span
         className="flex shrink-0 items-center gap-1 font-medium text-[var(--color-text-secondary)]"
         title={info.root}

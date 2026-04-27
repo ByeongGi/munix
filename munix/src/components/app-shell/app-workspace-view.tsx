@@ -120,7 +120,7 @@ export function AppWorkspaceView({
 
         <section
           className={cn(
-            "flex flex-1 flex-col overflow-hidden bg-workspace",
+            "flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-workspace",
             !sidebarCollapsed &&
               "-ml-px rounded-l-xl border-l border-border shadow-[inset_1px_0_0_rgb(255_255_255_/_0.04)]",
           )}
