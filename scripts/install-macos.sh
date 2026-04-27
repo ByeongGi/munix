@@ -61,6 +61,9 @@ DMG_PATH="$WORK_DIR/$ASSET_NAME"
 
 if [ -z "$EXPECTED_SHA256" ] && [ "$ARCH" = "aarch64" ]; then
   case "$VERSION" in
+    0.1.3)
+      EXPECTED_SHA256="84775dd3b927be5ab063e9c580161a348c2c2fe6248662017f122566792138bd"
+      ;;
     0.1.2)
       EXPECTED_SHA256="1aeceeb5c62d379cae574e2f81d02bf8e2e2ce6673711f5914859ec3c4fc7a05"
       ;;
