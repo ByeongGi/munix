@@ -30,6 +30,7 @@ import { useKeymapMatcher } from "@/hooks/use-keymap";
 import { useActiveVaultEffects } from "@/hooks/app/use-active-vault-effects";
 import { useAppOverlays } from "@/hooks/app/use-app-overlays";
 import { useFileCreateActions } from "@/hooks/app/use-file-create-actions";
+import { useFileRenameAction } from "@/hooks/app/use-file-rename-action";
 import { useFileTreeReveal } from "@/hooks/app/use-file-tree-reveal";
 import { usePersistentSidebarState } from "@/hooks/app/use-persistent-sidebar-state";
 import { useVaultPickerAction } from "@/hooks/app/use-vault-picker-action";
@@ -38,7 +39,6 @@ import {
   findNodeByPath,
   getMoveTarget,
   isMoveIntoOwnDescendant,
-  joinPath,
   parentDir,
   titleFromPath,
 } from "@/lib/app-path-utils";
@@ -114,6 +114,11 @@ function App() {
     refreshFiles,
     openTab,
     promoteActiveEmptyTab,
+    setRenaming,
+  });
+  const handleRenameSubmit = useFileRenameAction({
+    refreshFiles,
+    updatePath,
     setRenaming,
   });
 
@@ -500,32 +505,6 @@ function App() {
       })();
     },
     [t, refreshFiles, removeByPath],
-  );
-
-  const handleRenameSubmit = useCallback(
-    async (node: FileNode, rawName: string) => {
-      setRenaming(null);
-      const parent = parentDir(node.path);
-      let newName = rawName.trim();
-      if (!newName || newName === node.name) return;
-      if (node.kind === "file" && !/\.md$/i.test(newName)) {
-        newName = `${newName}.md`;
-      }
-      const newRel = joinPath(parent, newName);
-      try {
-        await ipc.renameEntry(node.path, newRel);
-      } catch (e) {
-        window.alert(
-          t("rename.errorAlert", {
-            reason: e instanceof Error ? e.message : String(e),
-          }),
-        );
-        return;
-      }
-      updatePath(node.path, newRel);
-      await refreshFiles();
-    },
-    [t, refreshFiles, updatePath],
   );
 
   if (!info) {
