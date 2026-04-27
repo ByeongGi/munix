@@ -8,15 +8,13 @@ import {
   ArrowRight,
   type LucideIcon,
 } from "lucide-react";
-import { useEditorStore } from "@/store/editor-store";
-import { useTabStore } from "@/store/tab-store";
 import { CommandDialog } from "@/components/ui/command-dialog";
 import { parseMode } from "./command-palette-utils";
-import type { PaletteItem } from "./palette-items";
 import { PaletteItemList } from "./palette-item-list";
 import { usePaletteCommands } from "./use-palette-commands";
 import { usePaletteIndexes } from "./use-palette-indexes";
 import { usePaletteItems } from "./use-palette-items";
+import { usePaletteRunItem } from "./use-palette-run-item";
 
 // ──────────────────────────────────────────────
 // Types
@@ -82,6 +80,10 @@ export function CommandPalette({
     mode,
     text,
   });
+  const runItem = usePaletteRunItem({
+    onClose,
+    onSearchTag,
+  });
 
   useEffect(() => {
     setSelectedIdx(0);
@@ -96,35 +98,6 @@ export function CommandPalette({
   }, [selectedIdx, open]);
 
   if (!open) return null;
-
-  function runItem(item: PaletteItem) {
-    if (item.kind === "command") {
-      item.cmd.run();
-      return;
-    }
-    if (item.kind === "file") {
-      onClose();
-      const tabs = useTabStore.getState();
-      if (!tabs.promoteActiveEmptyTab(item.hit.path)) {
-        tabs.openTab(item.hit.path);
-      }
-      return;
-    }
-    if (item.kind === "tag") {
-      onClose();
-      onSearchTag(item.tag);
-      return;
-    }
-    if (item.kind === "heading") {
-      onClose();
-      useEditorStore.getState().setPendingJumpHeading(item.text);
-      return;
-    }
-    if (item.kind === "line") {
-      onClose();
-      useEditorStore.getState().setPendingJumpLine(item.lineNum);
-    }
-  }
 
   const onKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "ArrowDown") {
