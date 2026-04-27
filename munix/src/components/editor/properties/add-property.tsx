@@ -8,9 +8,14 @@ import { KNOWN_PROPERTY_TYPES, type PropertyType } from "@/types/frontmatter";
 interface AddPropertyProps {
   existingKeys: string[];
   onAdd: (key: string, type: PropertyType) => void;
+  enablePendingFocus?: boolean;
 }
 
-export function AddProperty({ existingKeys, onAdd }: AddPropertyProps) {
+export function AddProperty({
+  existingKeys,
+  onAdd,
+  enablePendingFocus = true,
+}: AddPropertyProps) {
   const { t } = useTranslation(["properties"]);
   const [editingName, setEditingName] = useState(false);
   const [typeMenuOpen, setTypeMenuOpen] = useState(false);
@@ -25,12 +30,13 @@ export function AddProperty({ existingKeys, onAdd }: AddPropertyProps) {
   );
 
   useEffect(() => {
+    if (!enablePendingFocus) return;
     if (pendingPropertyFocus) {
       setEditingName(true);
       setTypeMenuOpen(true);
       setPendingPropertyFocus(false);
     }
-  }, [pendingPropertyFocus, setPendingPropertyFocus]);
+  }, [enablePendingFocus, pendingPropertyFocus, setPendingPropertyFocus]);
 
   const commit = () => {
     const key = draft.trim();

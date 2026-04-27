@@ -3,21 +3,23 @@ import { EditorContent, useEditor } from "@tiptap/react";
 import { useDebouncedCallback } from "use-debounce";
 import { useTranslation } from "react-i18next";
 import { useStore } from "zustand";
-import { Plus, X } from "lucide-react";
+import { X } from "lucide-react";
 
 import { createEditorExtensions } from "@/components/editor/extensions";
+import { AddProperty } from "@/components/editor/properties/add-property";
 import { PropertyRow } from "@/components/editor/properties/property-row";
 import { useActiveWorkspaceStore } from "@/lib/active-vault";
 import { preprocessMarkdown } from "@/lib/editor-preprocess";
 import { ipc } from "@/lib/ipc";
 import { parseDocument, serializeDocument } from "@/lib/markdown";
 import { cn } from "@/lib/cn";
+import { defaultValueForPropertyType } from "@/lib/property-defaults";
 import { useBacklinkStore } from "@/store/backlink-store";
 import { usePropertyTypesStore } from "@/store/property-types-store";
 import { useSearchStore } from "@/store/search-store";
 import { useSettingsStore } from "@/store/settings-store";
 import { useTagStore } from "@/store/tag-store";
-import { KNOWN_PROPERTY_TYPES, type PropertyType } from "@/types/frontmatter";
+import type { PropertyType } from "@/types/frontmatter";
 
 interface InactivePaneEditorProps {
   path: string;
@@ -26,23 +28,6 @@ interface InactivePaneEditorProps {
 
 interface MarkdownStorage {
   markdown: { getMarkdown: () => string };
-}
-
-function defaultValueForPropertyType(type: PropertyType): unknown {
-  switch (type) {
-    case "number":
-      return null;
-    case "checkbox":
-      return false;
-    case "multitext":
-    case "tags":
-    case "aliases":
-      return [];
-    case "date":
-    case "datetime":
-    case "text":
-      return "";
-  }
 }
 
 type InactiveEditorStatus =
@@ -538,10 +523,6 @@ function InactivePanePropertiesPanel({
   const { t } = useTranslation(["properties"]);
   const resolve = usePropertyTypesStore((s) => s.resolve);
   const setType = usePropertyTypesStore((s) => s.setType);
-  const [adding, setAdding] = useState(false);
-  const [typeMenuOpen, setTypeMenuOpen] = useState(false);
-  const [draftKey, setDraftKey] = useState("");
-  const [draftType, setDraftType] = useState<PropertyType>("text");
   const entries = useMemo(
     () => Object.entries(frontmatter ?? {}) as [string, unknown][],
     [frontmatter],
@@ -559,21 +540,9 @@ function InactivePanePropertiesPanel({
     onChange(Object.keys(next).length === 0 ? null : next, true);
   };
 
-  const handleAdd = () => {
-    const key = draftKey.trim();
-    if (!key || key in fm) {
-      setDraftKey("");
-      setDraftType("text");
-      setAdding(false);
-      setTypeMenuOpen(false);
-      return;
-    }
-    onChange({ ...fm, [key]: defaultValueForPropertyType(draftType) }, true);
-    void setType(key, draftType);
-    setDraftKey("");
-    setDraftType("text");
-    setAdding(false);
-    setTypeMenuOpen(false);
+  const handleAdd = (key: string, type: PropertyType) => {
+    onChange({ ...fm, [key]: defaultValueForPropertyType(type) }, true);
+    void setType(key, type);
   };
 
   const handleDeletePanel = () => {
@@ -655,109 +624,12 @@ function InactivePanePropertiesPanel({
             : "px-1.5 py-1",
         )}
       >
-        {!adding ? (
-          <button
-            type="button"
-            onClick={() => {
-              setAdding(true);
-              setTypeMenuOpen(true);
-            }}
-            className={cn(
-              "flex h-7 w-full items-center gap-1.5 rounded px-1.5 text-xs",
-              "border border-dashed border-[var(--color-border-secondary)]",
-              "text-[var(--color-text-tertiary)] hover:border-[var(--color-border-primary)] hover:bg-[var(--color-bg-hover)]",
-              "hover:text-[var(--color-text-secondary)]",
-            )}
-          >
-            <Plus className="h-3.5 w-3.5" />
-            {t("properties:add")}
-          </button>
-        ) : (
-          <div className="relative flex h-7 items-center gap-1.5 px-1.5">
-            <button
-              type="button"
-              onMouseDown={(e) => e.preventDefault()}
-              onClick={() => setTypeMenuOpen((v) => !v)}
-              className={cn(
-                "rounded border border-[var(--color-border-secondary)] px-1.5 py-0.5 text-[11px]",
-                "text-[var(--color-text-tertiary)] hover:border-[var(--color-accent)] hover:text-[var(--color-text-secondary)]",
-              )}
-            >
-              {t(`properties:types.${draftType}`, { defaultValue: draftType })}
-            </button>
-            {typeMenuOpen && (
-              <InactivePropertyTypeMenu
-                current={draftType}
-                onSelect={(next) => {
-                  setDraftType(next);
-                  setTypeMenuOpen(false);
-                }}
-              />
-            )}
-            <input
-              autoFocus
-              type="text"
-              value={draftKey}
-              onChange={(e) => setDraftKey(e.currentTarget.value)}
-              onBlur={handleAdd}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  e.preventDefault();
-                  handleAdd();
-                }
-                if (e.key === "Escape") {
-                  e.preventDefault();
-                  setDraftKey("");
-                  setAdding(false);
-                  setTypeMenuOpen(false);
-                }
-              }}
-              placeholder={t("properties:placeholder.newKey")}
-              className={cn(
-                "h-6 flex-1 rounded border px-1.5 text-xs outline-none",
-                "border-[var(--color-accent)] bg-[var(--color-bg-tertiary)]",
-                "focus:border-[var(--color-accent)]",
-              )}
-            />
-          </div>
-        )}
+        <AddProperty
+          existingKeys={entries.map(([key]) => key)}
+          onAdd={handleAdd}
+          enablePendingFocus={false}
+        />
       </div>
-    </div>
-  );
-}
-
-function InactivePropertyTypeMenu({
-  current,
-  onSelect,
-}: {
-  current: PropertyType;
-  onSelect: (type: PropertyType) => void;
-}) {
-  const { t } = useTranslation(["properties"]);
-
-  return (
-    <div
-      className={cn(
-        "absolute left-1.5 top-7 z-50 w-36 rounded-md border p-1 shadow-lg",
-        "border-[var(--color-border-primary)] bg-[var(--color-bg-secondary)]",
-      )}
-    >
-      {KNOWN_PROPERTY_TYPES.map((item) => (
-        <button
-          key={item}
-          type="button"
-          onMouseDown={(e) => e.preventDefault()}
-          onClick={() => onSelect(item)}
-          className={cn(
-            "flex h-7 w-full items-center rounded px-2 text-left text-xs",
-            current === item
-              ? "bg-[var(--color-bg-hover)] text-[var(--color-text-primary)]"
-              : "text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-hover)]",
-          )}
-        >
-          {t(`properties:types.${item}`, { defaultValue: item })}
-        </button>
-      ))}
     </div>
   );
 }

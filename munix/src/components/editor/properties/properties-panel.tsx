@@ -7,25 +7,9 @@ import type { PropertyType } from "@/types/frontmatter";
 import { PropertyRow } from "./property-row";
 import { AddProperty } from "./add-property";
 import { cn } from "@/lib/cn";
+import { defaultValueForPropertyType } from "@/lib/property-defaults";
 
 type FmRecord = Record<string, unknown>;
-
-function defaultValueForType(type: PropertyType): unknown {
-  switch (type) {
-    case "number":
-      return null;
-    case "checkbox":
-      return false;
-    case "multitext":
-    case "tags":
-    case "aliases":
-      return [];
-    case "date":
-    case "datetime":
-    case "text":
-      return "";
-  }
-}
 
 function triggerSave() {
   const store = useEditorStore.getState();
@@ -69,11 +53,7 @@ export function PropertiesPanel() {
 
   const fm = (frontmatter ?? {}) as FmRecord;
 
-  const handleValueChange = (
-    key: string,
-    raw: unknown,
-    flush: boolean,
-  ) => {
+  const handleValueChange = (key: string, raw: unknown, flush: boolean) => {
     const next: FmRecord = { ...fm };
     next[key] = raw;
     setFrontmatter(next);
@@ -94,7 +74,7 @@ export function PropertiesPanel() {
 
   const handleAdd = (key: string, type: PropertyType) => {
     const next: FmRecord = { ...fm };
-    next[key] = defaultValueForType(type);
+    next[key] = defaultValueForPropertyType(type);
     setFrontmatter(next);
     void setType(key, type);
     triggerSave();
@@ -178,10 +158,7 @@ export function PropertiesPanel() {
             : "px-1.5 py-1",
         )}
       >
-        <AddProperty
-          existingKeys={entries.map(([k]) => k)}
-          onAdd={handleAdd}
-        />
+        <AddProperty existingKeys={entries.map(([k]) => k)} onAdd={handleAdd} />
       </div>
     </div>
   );
