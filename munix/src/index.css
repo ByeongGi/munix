@@ -232,6 +232,7 @@
 .tiptap {
   min-width: 0;
   font-size: var(--editor-font-size);
+  tab-size: 4;
   color: var(--color-text-primary);
   caret-color: var(--color-text-primary);
   overflow-wrap: anywhere;
@@ -275,6 +276,7 @@
 
 .tiptap.prose :where(p, li, blockquote, h1, h2, h3, h4, h5, h6) {
   max-width: 100%;
+  white-space: pre-wrap;
 }
 
 .tiptap.prose :where(pre, table, img, video, iframe, .munix-math-block-wrapper) {
