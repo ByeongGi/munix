@@ -10,6 +10,14 @@ import { useVaultDockStore } from "@/store/vault-dock-store";
 import { cn } from "@/lib/cn";
 import { ipc } from "@/lib/ipc";
 import {
+  getReorderIndex,
+  getTabDropTargetIndex,
+  getTabHoverSide,
+  shouldShowLeftDropIndicator,
+  shouldShowRightDropIndicator,
+  type TabHoverSide,
+} from "@/components/tab/tab-dnd";
+import {
   LEGACY_TAB_DND_MIME,
   TAB_DND_MIME,
   parseTabPayload,
@@ -62,7 +70,7 @@ export function TabBar({ onNewFile }: TabBarProps) {
   const [paneMenu, setPaneMenu] = useState<PaneMenuState | null>(null);
   const [dragIndex, setDragIndex] = useState<number | null>(null);
   const [hoverIndex, setHoverIndex] = useState<number | null>(null);
-  const [hoverSide, setHoverSide] = useState<"left" | "right">("left");
+  const [hoverSide, setHoverSide] = useState<TabHoverSide>("left");
 
   const splitTab = (tab: Tab, zone: "right" | "bottom") => {
     splitPane(activePaneId, zone, {
@@ -250,16 +258,18 @@ export function TabBar({ onNewFile }: TabBarProps) {
             const active = tab.id === activeId;
             const dirty = isDirty(tab);
             const isHovered = dragIndex !== null && hoverIndex === index;
-            const showLeftIndicator =
-              isHovered &&
-              hoverSide === "left" &&
-              dragIndex !== index &&
-              dragIndex !== index - 1;
-            const showRightIndicator =
-              isHovered &&
-              hoverSide === "right" &&
-              dragIndex !== index &&
-              dragIndex !== index + 1;
+            const showLeftIndicator = shouldShowLeftDropIndicator({
+              isHovered,
+              hoverSide,
+              dragIndex,
+              index,
+            });
+            const showRightIndicator = shouldShowRightDropIndicator({
+              isHovered,
+              hoverSide,
+              dragIndex,
+              index,
+            });
             return (
               <div
                 key={tab.id}
@@ -293,8 +303,7 @@ export function TabBar({ onNewFile }: TabBarProps) {
                   const rect = (
                     e.currentTarget as HTMLElement
                   ).getBoundingClientRect();
-                  const side: "left" | "right" =
-                    e.clientX - rect.left < rect.width / 2 ? "left" : "right";
+                  const side = getTabHoverSide(rect, e.clientX);
                   if (hoverIndex !== index) setHoverIndex(index);
                   if (hoverSide !== side) setHoverSide(side);
                 }}
@@ -315,8 +324,10 @@ export function TabBar({ onNewFile }: TabBarProps) {
                       payload.fromPaneId !== activePaneId
                     ) {
                       e.preventDefault();
-                      const targetIdx =
-                        hoverSide === "left" ? index : index + 1;
+                      const targetIdx = getTabDropTargetIndex(
+                        index,
+                        hoverSide,
+                      );
                       movePaneTab(
                         payload.fromPaneId,
                         payload.tabId,
@@ -336,9 +347,8 @@ export function TabBar({ onNewFile }: TabBarProps) {
                     10,
                   );
                   if (!Number.isNaN(from)) {
-                    const targetIdx = hoverSide === "left" ? index : index + 1;
-                    const adjusted =
-                      from < targetIdx ? targetIdx - 1 : targetIdx;
+                    const targetIdx = getTabDropTargetIndex(index, hoverSide);
+                    const adjusted = getReorderIndex(from, targetIdx);
                     if (adjusted !== from) reorder(from, adjusted);
                   }
                   setDragIndex(null);
