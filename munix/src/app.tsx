@@ -19,7 +19,7 @@ import { VaultSwitcher } from "@/components/palette/vault-switcher";
 import { CommandPalette } from "@/components/palette/command-palette";
 import { EditorView } from "@/components/editor/editor-view";
 import { WorkspaceRoot } from "@/components/workspace/workspace-root";
-import { EmptyPanePlaceholder } from "@/components/workspace/empty-pane-placeholder";
+import { EmptyPanePlaceholder } from "@/components/workspace/pane/empty-pane-placeholder";
 import { AppTitleBar } from "@/components/app-shell/window-title-bar";
 import { WorkspaceHeader } from "@/components/app-shell/workspace-header";
 import { AppSidebar } from "@/components/app-shell/app-sidebar";
