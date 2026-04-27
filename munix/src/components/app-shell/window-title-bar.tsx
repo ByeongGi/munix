@@ -4,7 +4,7 @@ import { PanelLeftClose, PanelLeftOpen } from "lucide-react";
 
 import { IconButton } from "@/components/ui/icon-button";
 import { cn } from "@/lib/cn";
-import { startWindowDrag } from "@/lib/window-drag";
+import { handleWindowTitleMouseDown } from "@/lib/window-drag";
 
 function WindowControl({
   label,
@@ -67,8 +67,7 @@ export function AppTitleBar(props: AppTitleBarProps) {
       }}
       title={t("window.drag")}
       data-tauri-drag-region
-      onMouseDown={startWindowDrag}
-      onDoubleClick={() => void win.toggleMaximize()}
+      onMouseDown={handleWindowTitleMouseDown}
     >
       <div
         className="flex w-[84px] shrink-0 items-center gap-2 px-3.5"

@@ -92,7 +92,7 @@
   /* Semantic surfaces (dark default) */
   --color-bg-primary: #111416;
   --color-bg-secondary: #171c1f;
-  --color-bg-sidebar: rgb(28 48 61 / 0.58);
+  --color-bg-sidebar: rgb(28 48 61 / 0.42);
   --color-sidebar-item: rgb(255 255 255 / 0.08);
   --color-sidebar-item-hover: rgb(255 255 255 / 0.12);
   --color-sidebar-item-active: rgb(255 255 255 / 0.18);
@@ -298,7 +298,7 @@
   :root:not([data-theme="dark"]) {
     --color-bg-primary: #ffffff;
     --color-bg-secondary: #fafafa;
-    --color-bg-sidebar: rgb(243 246 248 / 0.62);
+    --color-bg-sidebar: rgb(243 246 248 / 0.48);
     --color-sidebar-item: rgb(15 23 42 / 0.05);
     --color-sidebar-item-hover: rgb(15 23 42 / 0.08);
     --color-sidebar-item-active: rgb(15 118 110 / 0.14);
@@ -379,7 +379,7 @@
 :root[data-theme="light"] {
   --color-bg-primary: #ffffff;
   --color-bg-secondary: #fafafa;
-  --color-bg-sidebar: rgb(243 246 248 / 0.62);
+  --color-bg-sidebar: rgb(243 246 248 / 0.48);
   --color-sidebar-item: rgb(15 23 42 / 0.05);
   --color-sidebar-item-hover: rgb(15 23 42 / 0.08);
   --color-sidebar-item-active: rgb(15 118 110 / 0.14);
@@ -461,7 +461,10 @@ html,
 body,
 #root {
   height: 100%;
+  width: 100%;
   margin: 0;
+  overflow: hidden;
+  overscroll-behavior: none;
   background: transparent;
 }
 
@@ -503,8 +506,8 @@ body {
 }
 
 .munix-sidebar-surface {
-  -webkit-backdrop-filter: blur(24px) saturate(120%) brightness(0.72);
-  backdrop-filter: blur(24px) saturate(120%) brightness(0.72);
+  -webkit-backdrop-filter: blur(26px) saturate(125%) brightness(0.78);
+  backdrop-filter: blur(26px) saturate(125%) brightness(0.78);
   text-shadow: 0 1px 2px rgb(0 0 0 / 0.22);
 }
 

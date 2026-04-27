@@ -2,7 +2,7 @@ import { useTranslation } from "react-i18next";
 import { MoreHorizontal, Plus, Search } from "lucide-react";
 
 import { IconButton } from "@/components/ui/icon-button";
-import { startWindowDrag } from "@/lib/window-drag";
+import { handleWindowTitleMouseDown } from "@/lib/window-drag";
 
 export function WorkspaceHeader({
   title,
@@ -21,7 +21,7 @@ export function WorkspaceHeader({
     <div
       className="flex h-9 shrink-0 items-center gap-2 border-b border-border bg-workspace px-3"
       data-tauri-drag-region
-      onMouseDown={startWindowDrag}
+      onMouseDown={handleWindowTitleMouseDown}
     >
       <div className="flex min-w-0 flex-1 items-center gap-2 text-xs">
         <span className="min-w-0 truncate font-medium text-text">{title}</span>
