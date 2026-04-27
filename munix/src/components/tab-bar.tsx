@@ -13,10 +13,6 @@ import {
   revealTabInFileTree,
   revealTabInSystem,
 } from "@/components/tab/tab-actions";
-import {
-  PaneActionsButton,
-  PaneActionsMenu,
-} from "@/components/workspace/pane/pane-context-menu";
 import { TabBarShell } from "@/components/tab/tab-bar-shell";
 import { TabContextMenu } from "@/components/tab/tab-context-menu";
 import { TabSoftLimitBadge } from "@/components/tab/tab-soft-limit-badge";
@@ -24,6 +20,7 @@ import { ActiveTabItem } from "@/components/tab/active-tab-item";
 import { EmptyTabItem } from "@/components/tab/empty-tab-item";
 import { NewTabButton } from "@/components/tab/new-tab-button";
 import { useTabDndHandlers } from "@/components/tab/use-tab-dnd-handlers";
+import { TabPaneActions } from "@/components/tab/tab-pane-actions";
 
 interface TabBarProps {
   onNewFile: () => void;
@@ -33,11 +30,6 @@ interface TabContextMenuState {
   x: number;
   y: number;
   tab: Tab;
-}
-
-interface PaneMenuState {
-  x: number;
-  y: number;
 }
 
 export function TabBar({ onNewFile }: TabBarProps) {
@@ -61,7 +53,6 @@ export function TabBar({ onNewFile }: TabBarProps) {
   const { t } = useTranslation(["tabs", "common"]);
 
   const [menu, setMenu] = useState<TabContextMenuState | null>(null);
-  const [paneMenu, setPaneMenu] = useState<PaneMenuState | null>(null);
   const { getTabDndProps } = useTabDndHandlers({
     activePaneId,
     movePaneTab,
@@ -90,19 +81,21 @@ export function TabBar({ onNewFile }: TabBarProps) {
     );
   };
 
+  const closeActivePane = () => {
+    if (activePaneId) closePane(activePaneId);
+    else closeAll();
+  };
+
   useEffect(() => {
-    if (!menu && !paneMenu) return;
-    const close = () => {
-      setMenu(null);
-      setPaneMenu(null);
-    };
+    if (!menu) return;
+    const close = () => setMenu(null);
     window.addEventListener("click", close);
     window.addEventListener("contextmenu", close, { once: true });
     return () => {
       window.removeEventListener("click", close);
       window.removeEventListener("contextmenu", close);
     };
-  }, [menu, paneMenu]);
+  }, [menu]);
 
   if (tabs.length === 0) {
     return (
@@ -126,34 +119,13 @@ export function TabBar({ onNewFile }: TabBarProps) {
           tooltip={t("tabs:tooltip.newTab")}
           onClick={onNewFile}
         />
-        <PaneActionsButton
+        <TabPaneActions
           label={t("tabs:paneMenu.label")}
-          onClick={(e) => {
-            e.stopPropagation();
-            const rect = e.currentTarget.getBoundingClientRect();
-            setPaneMenu({ x: rect.left, y: rect.bottom + 4 });
-          }}
+          t={t}
+          onSplitRight={() => splitCurrentTab("right")}
+          onSplitDown={() => splitCurrentTab("bottom")}
+          onClosePane={closeActivePane}
         />
-        {paneMenu && (
-          <PaneActionsMenu
-            x={paneMenu.x}
-            y={paneMenu.y}
-            t={t}
-            onSplitRight={() => {
-              splitCurrentTab("right");
-              setPaneMenu(null);
-            }}
-            onSplitDown={() => {
-              splitCurrentTab("bottom");
-              setPaneMenu(null);
-            }}
-            onClosePane={() => {
-              if (activePaneId) closePane(activePaneId);
-              else closeAll();
-              setPaneMenu(null);
-            }}
-          />
-        )}
       </TabBarShell>
     );
   }
@@ -210,13 +182,12 @@ export function TabBar({ onNewFile }: TabBarProps) {
           tooltip={t("tabs:tooltip.newTab")}
           onClick={onNewFile}
         />
-        <PaneActionsButton
+        <TabPaneActions
           label={t("tabs:paneMenu.label")}
-          onClick={(e) => {
-            e.stopPropagation();
-            const rect = e.currentTarget.getBoundingClientRect();
-            setPaneMenu({ x: rect.left, y: rect.bottom + 4 });
-          }}
+          t={t}
+          onSplitRight={() => splitCurrentTab("right")}
+          onSplitDown={() => splitCurrentTab("bottom")}
+          onClosePane={closeActivePane}
         />
       </TabBarShell>
 
@@ -274,26 +245,6 @@ export function TabBar({ onNewFile }: TabBarProps) {
           onCloseAll={() => {
             closeAll();
             setMenu(null);
-          }}
-        />
-      )}
-      {paneMenu && (
-        <PaneActionsMenu
-          x={paneMenu.x}
-          y={paneMenu.y}
-          t={t}
-          onSplitRight={() => {
-            splitCurrentTab("right");
-            setPaneMenu(null);
-          }}
-          onSplitDown={() => {
-            splitCurrentTab("bottom");
-            setPaneMenu(null);
-          }}
-          onClosePane={() => {
-            if (activePaneId) closePane(activePaneId);
-            else closeAll();
-            setPaneMenu(null);
           }}
         />
       )}
