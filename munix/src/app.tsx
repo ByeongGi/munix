@@ -6,7 +6,6 @@ import { useTabStore } from "@/store/tab-store";
 import { useVaultDockStore } from "@/store/vault-dock-store";
 import { useSearchStore } from "@/store/search-store";
 import { useVaultWatcher } from "@/hooks/use-vault-watcher";
-import type { FileNode } from "@/types/ipc";
 import { VaultPicker } from "@/components/vault-picker";
 import { TabBar } from "@/components/tab-bar";
 import { StatusBar } from "@/components/status-bar";
@@ -33,13 +32,11 @@ import { useFileDeleteActions } from "@/hooks/app/use-file-delete-actions";
 import { useFileMoveActions } from "@/hooks/app/use-file-move-actions";
 import { useFileRenameAction } from "@/hooks/app/use-file-rename-action";
 import { useFileSystemActions } from "@/hooks/app/use-file-system-actions";
+import { useFileTreeActionDispatcher } from "@/hooks/app/use-file-tree-action-dispatcher";
 import { useFileTreeReveal } from "@/hooks/app/use-file-tree-reveal";
 import { usePersistentSidebarState } from "@/hooks/app/use-persistent-sidebar-state";
 import { useVaultPickerAction } from "@/hooks/app/use-vault-picker-action";
-import {
-  parentDir,
-  titleFromPath,
-} from "@/lib/app-path-utils";
+import { titleFromPath } from "@/lib/app-path-utils";
 
 function App() {
   const { t } = useTranslation("app");
@@ -276,46 +273,14 @@ function App() {
     setVaultSwitcherOpen,
   ]);
 
-  const handleAction = useCallback(
-    (
-      action:
-        | "new-file"
-        | "new-folder"
-        | "rename"
-        | "delete"
-        | "copy-path"
-        | "reveal",
-      node: FileNode,
-    ) => {
-      if (action === "rename") {
-        setRenaming(node.path);
-        return;
-      }
-      if (action === "delete") {
-        handleDelete(node);
-        return;
-      }
-      if (action === "copy-path") {
-        copyPath(node);
-        return;
-      }
-      if (action === "reveal") {
-        reveal(node);
-        return;
-      }
-      const parent =
-        node.kind === "directory" ? node.path : parentDir(node.path);
-      if (action === "new-file") void handleCreateFileAt(parent);
-      else if (action === "new-folder") void handleCreateFolderAt(parent);
-    },
-    [
-      copyPath,
-      handleCreateFileAt,
-      handleCreateFolderAt,
-      handleDelete,
-      reveal,
-    ],
-  );
+  const handleAction = useFileTreeActionDispatcher({
+    setRenaming,
+    handleCreateFileAt,
+    handleCreateFolderAt,
+    handleDelete,
+    copyPath,
+    reveal,
+  });
 
   if (!info) {
     return (
