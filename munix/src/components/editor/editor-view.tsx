@@ -16,6 +16,7 @@ import { DragHandle } from "@tiptap/extension-drag-handle-react";
 import { GripVertical } from "lucide-react";
 import { useKeymapMatcher } from "@/hooks/use-keymap";
 import { preprocessMarkdown } from "@/lib/editor-preprocess";
+import { focusEditorStartOnNextFrame } from "@/components/editor/editor-focus";
 
 interface EditorViewProps {
   className?: string;
@@ -122,8 +123,7 @@ export function EditorView({ className }: EditorViewProps) {
     [editor],
   );
   const focusEditorStart = useCallback(() => {
-    if (!editor || editor.isDestroyed) return;
-    editor.chain().focus("start").run();
+    focusEditorStartOnNextFrame(editor);
   }, [editor]);
 
   const jumpToSourceLine = useCallback(

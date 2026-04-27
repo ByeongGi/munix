@@ -10,6 +10,7 @@ import { InactivePaneTitleInput } from "./inactive-pane-title-input";
 import { useInactivePaneAutosave } from "./use-inactive-pane-autosave";
 import { useInactivePaneDocumentLoader } from "./use-inactive-pane-document-loader";
 import { useInactivePaneRename } from "./use-inactive-pane-rename";
+import { focusEditorStartOnNextFrame } from "@/components/editor/editor-focus";
 
 interface InactivePaneEditorProps {
   path: string;
@@ -101,8 +102,7 @@ export function InactivePaneEditor({
     [editor],
   );
   const focusEditorStart = useCallback(() => {
-    if (!editor || editor.isDestroyed) return;
-    editor.chain().focus("start").run();
+    focusEditorStartOnNextFrame(editor);
   }, [editor]);
 
   const handleRename = useInactivePaneRename({ path, waitForIdleSave });

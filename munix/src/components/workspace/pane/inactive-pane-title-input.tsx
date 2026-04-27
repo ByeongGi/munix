@@ -160,10 +160,8 @@ export function InactivePaneTitleInput({
           userLeavingTitleRef.current = true;
           keepTitleFocusRef.current = false;
           requestRename(event.currentTarget.value);
-          requestAnimationFrame(() => {
-            event.currentTarget.blur();
-            onSubmitTitle?.();
-          });
+          event.currentTarget.blur();
+          onSubmitTitle?.();
         }
         if (event.key === "Tab") {
           userLeavingTitleRef.current = true;

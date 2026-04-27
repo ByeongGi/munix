@@ -180,10 +180,8 @@ export function EditorTitleInput({
           userLeavingTitleRef.current = true;
           keepTitleFocusRef.current = false;
           requestRename(e.currentTarget.value);
-          requestAnimationFrame(() => {
-            e.currentTarget.blur();
-            onSubmitTitle?.();
-          });
+          e.currentTarget.blur();
+          onSubmitTitle?.();
         }
         if (e.key === "Tab") {
           userLeavingTitleRef.current = true;
