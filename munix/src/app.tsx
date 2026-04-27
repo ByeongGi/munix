@@ -30,6 +30,7 @@ import { ipc } from "@/lib/ipc";
 import { cn } from "@/lib/cn";
 import { useKeymapMatcher } from "@/hooks/use-keymap";
 import { useAppOverlays } from "@/hooks/app/use-app-overlays";
+import { useFileCreateActions } from "@/hooks/app/use-file-create-actions";
 import { useFileTreeReveal } from "@/hooks/app/use-file-tree-reveal";
 import { usePersistentSidebarState } from "@/hooks/app/use-persistent-sidebar-state";
 import { usePropertyTypesStore } from "@/store/property-types-store";
@@ -41,7 +42,6 @@ import {
   joinPath,
   parentDir,
   titleFromPath,
-  uniqueName,
 } from "@/lib/app-path-utils";
 
 function App() {
@@ -120,32 +120,14 @@ function App() {
     }
   }, [activeVaultId, info, resetTabs]);
 
-  const handleCreateFileAt = useCallback(
-    async (parent: string) => {
-      if (!info) return;
-      const name = uniqueName(files, parent, "Untitled", ".md");
-      const rel = joinPath(parent, name);
-      await ipc.createFile(rel, "");
-      await refreshFiles();
-      if (!promoteActiveEmptyTab(rel)) {
-        openTab(rel);
-      }
-      setRenaming(rel);
-    },
-    [info, files, refreshFiles, openTab, promoteActiveEmptyTab],
-  );
-
-  const handleCreateFolderAt = useCallback(
-    async (parent: string) => {
-      if (!info) return;
-      const name = uniqueName(files, parent, "새 폴더", "");
-      const rel = joinPath(parent, name);
-      await ipc.createFolder(rel);
-      await refreshFiles();
-      setRenaming(rel);
-    },
-    [info, files, refreshFiles],
-  );
+  const { handleCreateFileAt, handleCreateFolderAt } = useFileCreateActions({
+    info,
+    files,
+    refreshFiles,
+    openTab,
+    promoteActiveEmptyTab,
+    setRenaming,
+  });
 
   const matchGlobal = useKeymapMatcher("global");
   useEffect(() => {
