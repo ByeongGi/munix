@@ -24,12 +24,10 @@ import {
   parseTabPayload,
 } from "@/lib/dnd-mime";
 import {
-  ContextMenuItem,
-  ContextMenuSeparator,
-  ContextMenuSurface,
   PaneActionsButton,
   PaneActionsMenu,
 } from "@/components/workspace/pane/pane-context-menu";
+import { TabContextMenu } from "@/components/tab/tab-context-menu";
 
 interface TabBarProps {
   onNewFile: () => void;
@@ -455,119 +453,61 @@ export function TabBar({ onNewFile }: TabBarProps) {
       </div>
 
       {menu && (
-        <ContextMenuSurface x={menu.x} y={menu.y}>
-          <ContextMenuItem
-            label={t("tabs:contextMenu.close")}
-            shortcut="⌘W"
-            onClick={() => {
-              if (menu.tab.id === "__empty-tab__") closeAll();
-              else closeTab(menu.tab.id);
-              setMenu(null);
-            }}
-          />
-          <ContextMenuItem
-            label={t("tabs:contextMenu.closeOthers")}
-            onClick={() => {
-              closeOthers(menu.tab.id);
-              setMenu(null);
-            }}
-          />
-          <ContextMenuItem
-            label={t("tabs:contextMenu.closeTabsAfter")}
-            onClick={() => {
-              closeTabsAfter(menu.tab.id);
-              setMenu(null);
-            }}
-          />
-          <ContextMenuSeparator />
-          <ContextMenuItem
-            label={t(
-              menu.tab.pinned
-                ? "tabs:contextMenu.unpin"
-                : "tabs:contextMenu.pin",
-            )}
-            disabled={menu.tab.id === "__empty-tab__"}
-            onClick={() => {
-              togglePinned(menu.tab.id);
-              setMenu(null);
-            }}
-          />
-          <ContextMenuItem
-            label={t("tabs:contextMenu.copyLink")}
-            disabled={!menu.tab.path}
-            onClick={() => {
-              void copyTabLink(menu.tab);
-              setMenu(null);
-            }}
-          />
-          <ContextMenuSeparator />
-          <ContextMenuItem
-            label={t("tabs:contextMenu.moveToNewWindow")}
-            disabled
-          />
-          <ContextMenuSeparator />
-          {menu.tab.path && (
-            <>
-              <ContextMenuItem
-                label={t("tabs:contextMenu.copyPath")}
-                onClick={() => {
-                  void copyTabPath(menu.tab);
-                  setMenu(null);
-                }}
-              />
-              <ContextMenuItem
-                label={t("tabs:contextMenu.copyRelativePath")}
-                onClick={() => {
-                  void copyTabRelativePath(menu.tab);
-                  setMenu(null);
-                }}
-              />
-              <ContextMenuItem
-                label={t("tabs:contextMenu.revealInFileTree")}
-                onClick={() => {
-                  revealInFileTree(menu.tab);
-                  setMenu(null);
-                }}
-              />
-              <ContextMenuItem
-                label={t("tabs:contextMenu.revealInSystem")}
-                onClick={() => {
-                  void revealTab(menu.tab);
-                  setMenu(null);
-                }}
-              />
-              <ContextMenuSeparator />
-            </>
-          )}
-          {menu.tab.id !== "__empty-tab__" && (
-            <>
-              <ContextMenuItem
-                label={t("tabs:contextMenu.splitRight")}
-                shortcut="⌘\\"
-                onClick={() => {
-                  splitTab(menu.tab, "right");
-                  setMenu(null);
-                }}
-              />
-              <ContextMenuItem
-                label={t("tabs:contextMenu.splitDown")}
-                shortcut="⌘⇧\\"
-                onClick={() => {
-                  splitTab(menu.tab, "bottom");
-                  setMenu(null);
-                }}
-              />
-              <ContextMenuSeparator />
-            </>
-          )}
-          <ContextMenuItem
-            label={t("tabs:contextMenu.closeAll")}
-            onClick={() => {
-              closeAll();
-              setMenu(null);
-            }}
-          />
-        </ContextMenuSurface>
+        <TabContextMenu
+          x={menu.x}
+          y={menu.y}
+          tab={menu.tab}
+          t={t}
+          onClose={() => {
+            if (menu.tab.id === "__empty-tab__") closeAll();
+            else closeTab(menu.tab.id);
+            setMenu(null);
+          }}
+          onCloseOthers={() => {
+            closeOthers(menu.tab.id);
+            setMenu(null);
+          }}
+          onCloseTabsAfter={() => {
+            closeTabsAfter(menu.tab.id);
+            setMenu(null);
+          }}
+          onTogglePinned={() => {
+            togglePinned(menu.tab.id);
+            setMenu(null);
+          }}
+          onCopyLink={() => {
+            void copyTabLink(menu.tab);
+            setMenu(null);
+          }}
+          onCopyPath={() => {
+            void copyTabPath(menu.tab);
+            setMenu(null);
+          }}
+          onCopyRelativePath={() => {
+            void copyTabRelativePath(menu.tab);
+            setMenu(null);
+          }}
+          onRevealInFileTree={() => {
+            revealInFileTree(menu.tab);
+            setMenu(null);
+          }}
+          onRevealInSystem={() => {
+            void revealTab(menu.tab);
+            setMenu(null);
+          }}
+          onSplitRight={() => {
+            splitTab(menu.tab, "right");
+            setMenu(null);
+          }}
+          onSplitDown={() => {
+            splitTab(menu.tab, "bottom");
+            setMenu(null);
+          }}
+          onCloseAll={() => {
+            closeAll();
+            setMenu(null);
+          }}
+        />
       )}
       {paneMenu && (
         <PaneActionsMenu
