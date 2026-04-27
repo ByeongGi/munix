@@ -6,16 +6,6 @@ import { makeTabId } from "@/store/slices/tab-slice";
 import { useEditorStore } from "@/store/editor-store";
 import { useActiveWorkspaceStore } from "@/lib/active-vault";
 import { useVaultDockStore } from "@/store/vault-dock-store";
-import { cn } from "@/lib/cn";
-import {
-  getReorderIndex,
-  getTabDropTargetIndex,
-  getTabHoverSide,
-  setTabDragData,
-  shouldShowLeftDropIndicator,
-  shouldShowRightDropIndicator,
-  type TabHoverSide,
-} from "@/components/tab/tab-dnd";
 import {
   copyTabLink,
   copyTabPath,
@@ -23,11 +13,6 @@ import {
   revealTabInFileTree,
   revealTabInSystem,
 } from "@/components/tab/tab-actions";
-import {
-  LEGACY_TAB_DND_MIME,
-  TAB_DND_MIME,
-  parseTabPayload,
-} from "@/lib/dnd-mime";
 import {
   PaneActionsButton,
   PaneActionsMenu,
@@ -38,6 +23,7 @@ import { TabSoftLimitBadge } from "@/components/tab/tab-soft-limit-badge";
 import { ActiveTabItem } from "@/components/tab/active-tab-item";
 import { EmptyTabItem } from "@/components/tab/empty-tab-item";
 import { NewTabButton } from "@/components/tab/new-tab-button";
+import { useTabDndHandlers } from "@/components/tab/use-tab-dnd-handlers";
 
 interface TabBarProps {
   onNewFile: () => void;
@@ -76,9 +62,12 @@ export function TabBar({ onNewFile }: TabBarProps) {
 
   const [menu, setMenu] = useState<TabContextMenuState | null>(null);
   const [paneMenu, setPaneMenu] = useState<PaneMenuState | null>(null);
-  const [dragIndex, setDragIndex] = useState<number | null>(null);
-  const [hoverIndex, setHoverIndex] = useState<number | null>(null);
-  const [hoverSide, setHoverSide] = useState<TabHoverSide>("left");
+  const { getTabDndProps } = useTabDndHandlers({
+    activePaneId,
+    movePaneTab,
+    reorder,
+    vaultId: vaultId ?? null,
+  });
 
   const splitTab = (tab: Tab, zone: "right" | "bottom") => {
     splitPane(activePaneId, zone, {
@@ -185,108 +174,16 @@ export function TabBar({ onNewFile }: TabBarProps) {
           {tabs.map((tab, index) => {
             const active = tab.id === activeId;
             const dirty = isDirty(tab);
-            const isHovered = dragIndex !== null && hoverIndex === index;
-            const showLeftIndicator = shouldShowLeftDropIndicator({
-              isHovered,
-              hoverSide,
-              dragIndex,
-              index,
-            });
-            const showRightIndicator = shouldShowRightDropIndicator({
-              isHovered,
-              hoverSide,
-              dragIndex,
-              index,
-            });
+            const dndProps = getTabDndProps(tab, index);
             return (
               <ActiveTabItem
                 key={tab.id}
                 tab={tab}
                 active={active}
                 dirty={dirty}
-                dragging={dragIndex === index}
                 emptyTitle={t("tabs:emptyTab.title")}
                 closeLabel={t("tabs:aria.closeTab")}
-                showLeftIndicator={showLeftIndicator}
-                showRightIndicator={showRightIndicator}
-                onDragStart={(e) => {
-                  setTabDragData({
-                    dataTransfer: e.dataTransfer,
-                    index,
-                    vaultId: vaultId ?? null,
-                    tabId: tab.id,
-                    fromPaneId: activePaneId,
-                    path: tab.path,
-                  });
-                  setDragIndex(index);
-                }}
-                onDragOver={(e) => {
-                  const types = e.dataTransfer.types;
-                  if (
-                    !types.includes(LEGACY_TAB_DND_MIME) &&
-                    !types.includes(TAB_DND_MIME)
-                  )
-                    return;
-                  e.preventDefault();
-                  e.dataTransfer.dropEffect = "move";
-                  const rect = (
-                    e.currentTarget as HTMLElement
-                  ).getBoundingClientRect();
-                  const side = getTabHoverSide(rect, e.clientX);
-                  if (hoverIndex !== index) setHoverIndex(index);
-                  if (hoverSide !== side) setHoverSide(side);
-                }}
-                onDragLeave={() => {
-                  if (hoverIndex === index) setHoverIndex(null);
-                }}
-                onDrop={(e) => {
-                  const types = e.dataTransfer.types;
-                  // cross-pane payload 우선 — 다른 pane 에서 끌어왔는지 확인.
-                  if (types.includes(TAB_DND_MIME)) {
-                    const payload = parseTabPayload(
-                      e.dataTransfer.getData(TAB_DND_MIME),
-                    );
-                    if (
-                      payload &&
-                      activePaneId &&
-                      payload.fromPaneId &&
-                      payload.fromPaneId !== activePaneId
-                    ) {
-                      e.preventDefault();
-                      const targetIdx = getTabDropTargetIndex(
-                        index,
-                        hoverSide,
-                      );
-                      movePaneTab(
-                        payload.fromPaneId,
-                        payload.tabId,
-                        activePaneId,
-                        targetIdx,
-                      );
-                      setDragIndex(null);
-                      setHoverIndex(null);
-                      return;
-                    }
-                  }
-                  // 같은 pane 안 reorder.
-                  if (!types.includes(LEGACY_TAB_DND_MIME)) return;
-                  e.preventDefault();
-                  const from = parseInt(
-                    e.dataTransfer.getData(LEGACY_TAB_DND_MIME),
-                    10,
-                  );
-                  if (!Number.isNaN(from)) {
-                    const targetIdx = getTabDropTargetIndex(index, hoverSide);
-                    const adjusted = getReorderIndex(from, targetIdx);
-                    if (adjusted !== from) reorder(from, adjusted);
-                  }
-                  setDragIndex(null);
-                  setHoverIndex(null);
-                }}
-                onDragEnd={() => {
-                  setDragIndex(null);
-                  setHoverIndex(null);
-                }}
+                {...dndProps}
                 onClick={() => activate(tab.id)}
                 onAuxClick={(e) => {
                   if (e.button === 1) {
