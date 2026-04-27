@@ -13,6 +13,7 @@ import {
   getReorderIndex,
   getTabDropTargetIndex,
   getTabHoverSide,
+  setTabDragData,
   shouldShowLeftDropIndicator,
   shouldShowRightDropIndicator,
   type TabHoverSide,
@@ -21,7 +22,6 @@ import {
   LEGACY_TAB_DND_MIME,
   TAB_DND_MIME,
   parseTabPayload,
-  serializeTabPayload,
 } from "@/lib/dnd-mime";
 import {
   ContextMenuItem,
@@ -275,20 +275,14 @@ export function TabBar({ onNewFile }: TabBarProps) {
                 key={tab.id}
                 draggable
                 onDragStart={(e) => {
-                  // 같은 pane 안 reorder 용 인덱스 (legacy MIME).
-                  e.dataTransfer.setData(LEGACY_TAB_DND_MIME, String(index));
-                  // cross-pane 이동 (workspace-split-spec §6.1) 용 spec payload.
-                  e.dataTransfer.setData(
-                    TAB_DND_MIME,
-                    serializeTabPayload({
-                      type: "munix/tab",
-                      vaultId: vaultId ?? null,
-                      tabId: tab.id,
-                      fromPaneId: activePaneId,
-                      path: tab.path,
-                    }),
-                  );
-                  e.dataTransfer.effectAllowed = "move";
+                  setTabDragData({
+                    dataTransfer: e.dataTransfer,
+                    index,
+                    vaultId: vaultId ?? null,
+                    tabId: tab.id,
+                    fromPaneId: activePaneId,
+                    path: tab.path,
+                  });
                   setDragIndex(index);
                 }}
                 onDragOver={(e) => {

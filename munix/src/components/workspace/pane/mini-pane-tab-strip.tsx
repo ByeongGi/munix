@@ -6,6 +6,7 @@ import {
   getReorderIndex,
   getTabDropTargetIndex,
   getTabHoverSide,
+  setTabDragData,
   shouldShowLeftDropIndicator,
   shouldShowRightDropIndicator,
   type TabHoverSide,
@@ -14,7 +15,6 @@ import {
   LEGACY_TAB_DND_MIME,
   TAB_DND_MIME,
   parseTabPayload,
-  serializeTabPayload,
 } from "@/lib/dnd-mime";
 import type { PaneNode } from "@/store/workspace-types";
 
@@ -76,18 +76,14 @@ export function MiniPaneTabStrip({
             draggable
             data-pane-tab={tab.id}
             onDragStart={(event) => {
-              event.dataTransfer.setData(
-                TAB_DND_MIME,
-                serializeTabPayload({
-                  type: "munix/tab",
-                  vaultId,
-                  tabId: tab.id,
-                  fromPaneId: pane.id,
-                  path: tab.path,
-                }),
-              );
-              event.dataTransfer.setData(LEGACY_TAB_DND_MIME, String(index));
-              event.dataTransfer.effectAllowed = "move";
+              setTabDragData({
+                dataTransfer: event.dataTransfer,
+                index,
+                vaultId,
+                tabId: tab.id,
+                fromPaneId: pane.id,
+                path: tab.path,
+              });
               setDragIndex(index);
             }}
             onDragOver={(event) => {
