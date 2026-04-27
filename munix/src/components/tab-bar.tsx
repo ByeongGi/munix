@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import { useStore } from "zustand";
-import { X, Plus, AlertTriangle, Pin } from "lucide-react";
+import { X, Plus, Pin } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { useTabStore, type Tab, TAB_SOFT_LIMIT } from "@/store/tab-store";
+import { useTabStore, type Tab } from "@/store/tab-store";
 import { makeTabId } from "@/store/slices/tab-slice";
 import { useEditorStore } from "@/store/editor-store";
 import { useActiveWorkspaceStore } from "@/lib/active-vault";
@@ -35,6 +35,7 @@ import {
 } from "@/components/workspace/pane/pane-context-menu";
 import { TabBarShell } from "@/components/tab/tab-bar-shell";
 import { TabContextMenu } from "@/components/tab/tab-context-menu";
+import { TabSoftLimitBadge } from "@/components/tab/tab-soft-limit-badge";
 
 interface TabBarProps {
   onNewFile: () => void;
@@ -363,21 +364,7 @@ export function TabBar({ onNewFile }: TabBarProps) {
             );
           })}
         </div>
-        {tabs.length > TAB_SOFT_LIMIT && (
-          <span
-            className={cn(
-              "ml-2 flex shrink-0 items-center gap-1 rounded px-1.5 py-0.5 text-[10px]",
-              "bg-[var(--color-warning-muted)] text-[var(--color-warning)]",
-            )}
-            title={t("tabs:softLimit.tooltip", {
-              limit: TAB_SOFT_LIMIT,
-              count: tabs.length,
-            })}
-          >
-            <AlertTriangle className="h-3 w-3" />
-            {tabs.length}/{TAB_SOFT_LIMIT}
-          </span>
-        )}
+        <TabSoftLimitBadge count={tabs.length} t={t} />
         <button
           type="button"
           onClick={onNewFile}
