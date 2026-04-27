@@ -8,7 +8,7 @@ import { useSearchStore } from "@/store/search-store";
 import { useVaultWatcher } from "@/hooks/use-vault-watcher";
 import { VaultPicker } from "@/components/vault-picker";
 import { ShortcutsDialog } from "@/components/shortcuts-dialog";
-import { SettingsDialog } from "@/components/settings-dialog";
+import { SettingsDialog } from "@/components/settings/settings-dialog";
 import { QuickOpen } from "@/components/palette/quick-open";
 import { VaultSwitcher } from "@/components/palette/vault-switcher";
 import { CommandPalette } from "@/components/palette/command-palette";
