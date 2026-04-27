@@ -42,7 +42,7 @@ import {
   dropZoneLabelKey,
 } from "./drop-zone";
 import { EmptyPanePlaceholder } from "./empty-pane-placeholder";
-import { InactivePaneEditor } from "./inactive-pane-editor";
+import { InactivePaneEditor } from "./pane/inactive-pane-editor";
 import { MiniPaneTabStrip } from "./pane/mini-pane-tab-strip";
 
 interface PaneProps {

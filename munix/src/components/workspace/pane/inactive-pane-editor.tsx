@@ -13,8 +13,8 @@ import { useBacklinkStore } from "@/store/backlink-store";
 import { useSearchStore } from "@/store/search-store";
 import { useSettingsStore } from "@/store/settings-store";
 import { useTagStore } from "@/store/tag-store";
-import { InactivePanePropertiesPanel } from "./pane/inactive-pane-properties-panel";
-import { InactivePaneTitleInput } from "./pane/inactive-pane-title-input";
+import { InactivePanePropertiesPanel } from "./inactive-pane-properties-panel";
+import { InactivePaneTitleInput } from "./inactive-pane-title-input";
 
 interface InactivePaneEditorProps {
   path: string;
