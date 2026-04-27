@@ -1,4 +1,3 @@
-import { useEffect, useState } from "react";
 import { useStore } from "zustand";
 import { useTranslation } from "react-i18next";
 import { useTabStore, type Tab } from "@/store/tab-store";
@@ -6,30 +5,17 @@ import { makeTabId } from "@/store/slices/tab-slice";
 import { useEditorStore } from "@/store/editor-store";
 import { useActiveWorkspaceStore } from "@/lib/active-vault";
 import { useVaultDockStore } from "@/store/vault-dock-store";
-import {
-  copyTabLink,
-  copyTabPath,
-  copyTabRelativePath,
-  revealTabInFileTree,
-  revealTabInSystem,
-} from "@/components/tab/tab-actions";
 import { TabBarShell } from "@/components/tab/tab-bar-shell";
-import { TabContextMenu } from "@/components/tab/tab-context-menu";
 import { TabSoftLimitBadge } from "@/components/tab/tab-soft-limit-badge";
 import { EmptyTabItem } from "@/components/tab/empty-tab-item";
 import { NewTabButton } from "@/components/tab/new-tab-button";
 import { useTabDndHandlers } from "@/components/tab/use-tab-dnd-handlers";
 import { TabPaneActions } from "@/components/tab/tab-pane-actions";
 import { ActiveTabList } from "@/components/tab/active-tab-list";
+import { useTabContextMenu } from "@/components/tab/use-tab-context-menu";
 
 interface TabBarProps {
   onNewFile: () => void;
-}
-
-interface TabContextMenuState {
-  x: number;
-  y: number;
-  tab: Tab;
 }
 
 export function TabBar({ onNewFile }: TabBarProps) {
@@ -52,7 +38,6 @@ export function TabBar({ onNewFile }: TabBarProps) {
   const vaultId = useVaultDockStore((s) => s.activeVaultId);
   const { t } = useTranslation(["tabs", "common"]);
 
-  const [menu, setMenu] = useState<TabContextMenuState | null>(null);
   const { getTabDndProps } = useTabDndHandlers({
     activePaneId,
     movePaneTab,
@@ -86,16 +71,15 @@ export function TabBar({ onNewFile }: TabBarProps) {
     else closeAll();
   };
 
-  useEffect(() => {
-    if (!menu) return;
-    const close = () => setMenu(null);
-    window.addEventListener("click", close);
-    window.addEventListener("contextmenu", close, { once: true });
-    return () => {
-      window.removeEventListener("click", close);
-      window.removeEventListener("contextmenu", close);
-    };
-  }, [menu]);
+  const { contextMenu, openEmptyTabMenu, openTabMenu } = useTabContextMenu({
+    t,
+    closeAll,
+    closeOthers,
+    closeTab,
+    closeTabsAfter,
+    splitTab,
+    togglePinned,
+  });
 
   if (tabs.length === 0) {
     return (
@@ -104,15 +88,7 @@ export function TabBar({ onNewFile }: TabBarProps) {
           title={t("tabs:emptyTab.title")}
           closeLabel={t("tabs:aria.closeTab")}
           onClose={closeAll}
-          onContextMenu={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            setMenu({
-              x: e.clientX,
-              y: e.clientY,
-              tab: { id: "__empty-tab__", path: "", title: "" },
-            });
-          }}
+          onContextMenu={openEmptyTabMenu}
         />
         <NewTabButton
           label={t("tabs:aria.newTab")}
@@ -151,11 +127,7 @@ export function TabBar({ onNewFile }: TabBarProps) {
           getTabDndProps={getTabDndProps}
           onActivate={activate}
           onClose={closeTab}
-          onContextMenu={(event, tab) => {
-            event.preventDefault();
-            event.stopPropagation();
-            setMenu({ x: event.clientX, y: event.clientY, tab });
-          }}
+          onContextMenu={openTabMenu}
         />
         <TabSoftLimitBadge count={tabs.length} t={t} />
         <NewTabButton
@@ -172,63 +144,7 @@ export function TabBar({ onNewFile }: TabBarProps) {
         />
       </TabBarShell>
 
-      {menu && (
-        <TabContextMenu
-          x={menu.x}
-          y={menu.y}
-          tab={menu.tab}
-          t={t}
-          onClose={() => {
-            if (menu.tab.id === "__empty-tab__") closeAll();
-            else closeTab(menu.tab.id);
-            setMenu(null);
-          }}
-          onCloseOthers={() => {
-            closeOthers(menu.tab.id);
-            setMenu(null);
-          }}
-          onCloseTabsAfter={() => {
-            closeTabsAfter(menu.tab.id);
-            setMenu(null);
-          }}
-          onTogglePinned={() => {
-            togglePinned(menu.tab.id);
-            setMenu(null);
-          }}
-          onCopyLink={() => {
-            void copyTabLink(menu.tab);
-            setMenu(null);
-          }}
-          onCopyPath={() => {
-            void copyTabPath(menu.tab);
-            setMenu(null);
-          }}
-          onCopyRelativePath={() => {
-            void copyTabRelativePath(menu.tab);
-            setMenu(null);
-          }}
-          onRevealInFileTree={() => {
-            revealTabInFileTree(menu.tab);
-            setMenu(null);
-          }}
-          onRevealInSystem={() => {
-            void revealTabInSystem(menu.tab);
-            setMenu(null);
-          }}
-          onSplitRight={() => {
-            splitTab(menu.tab, "right");
-            setMenu(null);
-          }}
-          onSplitDown={() => {
-            splitTab(menu.tab, "bottom");
-            setMenu(null);
-          }}
-          onCloseAll={() => {
-            closeAll();
-            setMenu(null);
-          }}
-        />
-      )}
+      {contextMenu}
     </>
   );
 }
