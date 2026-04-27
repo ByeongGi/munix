@@ -53,6 +53,7 @@ export function EditorView({ className }: EditorViewProps) {
     anchor: { x: number; y: number };
   } | null>(null);
   const scrollRef = useRef<HTMLDivElement | null>(null);
+  const scrolledPathRef = useRef<string | null>(null);
 
   const handleNodeChange = useCallback(({ pos }: { pos: number | null }) => {
     blockPosRef.current = pos;
@@ -166,6 +167,9 @@ export function EditorView({ className }: EditorViewProps) {
   useEffect(() => {
     if (!editor) return;
     if (editor.isDestroyed) return;
+    const pathChanged = scrolledPathRef.current !== currentPath;
+    scrolledPathRef.current = currentPath;
+
     const storage = editor.storage as unknown as {
       markdown: { getMarkdown: () => string };
     };
@@ -190,10 +194,11 @@ export function EditorView({ className }: EditorViewProps) {
         setSearchOpen(true);
       });
     } else {
-      // 평범하게 연 경우: 스크롤 상단으로 고정
-      if (scrollRef.current) scrollRef.current.scrollTop = 0;
+      // 평범하게 파일을 새로 연 경우에만 스크롤 상단으로 고정한다.
+      // 입력으로 body store가 갱신될 때마다 실행하면 커서가 맨 위로 튄다.
+      if (pathChanged && scrollRef.current) scrollRef.current.scrollTop = 0;
     }
-  }, [editor, body, jumpToSourceLine]);
+  }, [editor, body, currentPath, jumpToSourceLine]);
 
   useAutoSave(editor);
 
