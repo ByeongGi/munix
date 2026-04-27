@@ -72,6 +72,9 @@ interface TabMenuState {
 
 type Translate = (key: string) => string;
 
+const PANE_CHROME_SELECTOR =
+  "[data-pane-tab],[data-pane-tab-close],[data-pane-tab-new],[data-pane-menu]";
+
 export function Pane({
   pane,
   isActive,
@@ -348,14 +351,21 @@ export function Pane({
   }
 
   const onPaneMouseDown = (e: React.MouseEvent) => {
-    if (
-      (e.target as HTMLElement).closest(
-        "[data-pane-tab],[data-pane-tab-close],[data-pane-tab-new],[data-pane-menu]",
-      )
-    )
+    const clickedPaneChrome = (e.target as HTMLElement).closest(
+      PANE_CHROME_SELECTOR,
+    );
+    if (clickedPaneChrome) {
       return;
+    }
     setActivePane(pane.id);
   };
+
+  const tabMenuTab =
+    tabMenu === null
+      ? null
+      : (pane.tabs.find((tab) => tab.id === tabMenu.tabId) ?? null);
+  const tabMenuHasPath = Boolean(tabMenuTab?.path);
+  const tabMenuPinned = tabMenuTab?.pinned === true;
 
   return (
     <div
@@ -631,12 +641,8 @@ export function Pane({
             closeAllPaneTabs(pane.id);
             setTabMenu(null);
           }}
-          hasPath={
-            pane.tabs.find((tab) => tab.id === tabMenu.tabId)?.path !== ""
-          }
-          pinned={
-            pane.tabs.find((tab) => tab.id === tabMenu.tabId)?.pinned === true
-          }
+          hasPath={tabMenuHasPath}
+          pinned={tabMenuPinned}
         />
       )}
       <InactivePaneBody
