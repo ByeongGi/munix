@@ -24,23 +24,19 @@ import { AppSidebar } from "@/components/app-shell/app-sidebar";
 import type { SidebarTab } from "@/components/app-shell/types";
 import { closeActivePane, splitActivePane } from "@/lib/workspace-commands";
 import { ConflictDialog } from "@/components/editor/conflict-dialog";
-import { ipc } from "@/lib/ipc";
 import { cn } from "@/lib/cn";
 import { useKeymapMatcher } from "@/hooks/use-keymap";
 import { useActiveVaultEffects } from "@/hooks/app/use-active-vault-effects";
 import { useAppOverlays } from "@/hooks/app/use-app-overlays";
 import { useFileCreateActions } from "@/hooks/app/use-file-create-actions";
 import { useFileDeleteActions } from "@/hooks/app/use-file-delete-actions";
+import { useFileMoveActions } from "@/hooks/app/use-file-move-actions";
 import { useFileRenameAction } from "@/hooks/app/use-file-rename-action";
 import { useFileSystemActions } from "@/hooks/app/use-file-system-actions";
 import { useFileTreeReveal } from "@/hooks/app/use-file-tree-reveal";
 import { usePersistentSidebarState } from "@/hooks/app/use-persistent-sidebar-state";
 import { useVaultPickerAction } from "@/hooks/app/use-vault-picker-action";
 import {
-  dedupeNestedPaths,
-  findNodeByPath,
-  getMoveTarget,
-  isMoveIntoOwnDescendant,
   parentDir,
   titleFromPath,
 } from "@/lib/app-path-utils";
@@ -128,6 +124,12 @@ function App() {
     removeByPath,
   });
   const { copyPath, reveal } = useFileSystemActions();
+  const { handleMove, handleMoveMany } = useFileMoveActions({
+    files,
+    refreshFiles,
+    removeByPath,
+    updatePath,
+  });
 
   const matchGlobal = useKeymapMatcher("global");
   useEffect(() => {
@@ -313,122 +315,6 @@ function App() {
       handleDelete,
       reveal,
     ],
-  );
-
-  const handleMove = useCallback(
-    async (fromPath: string, toFolderPath: string) => {
-      const { name, newRel } = getMoveTarget(fromPath, toFolderPath);
-      if (newRel === fromPath) return;
-      if (isMoveIntoOwnDescendant(fromPath, toFolderPath)) {
-        window.alert(t("move.invalidTarget"));
-        return;
-      }
-      const existing = findNodeByPath(files, newRel);
-      if (existing) {
-        const ok = window.confirm(
-          t("move.replacePrompt", { name: existing.name || name }),
-        );
-        if (!ok) return;
-        try {
-          await ipc.deleteEntry(newRel);
-          removeByPath(newRel);
-        } catch (e) {
-          window.alert(
-            t("move.errorAlert", {
-              reason: e instanceof Error ? e.message : JSON.stringify(e),
-            }),
-          );
-          return;
-        }
-      }
-      try {
-        await ipc.renameEntry(fromPath, newRel);
-      } catch (e) {
-        window.alert(
-          t("move.errorAlert", {
-            reason: e instanceof Error ? e.message : JSON.stringify(e),
-          }),
-        );
-        return;
-      }
-      updatePath(fromPath, newRel);
-      await refreshFiles();
-    },
-    [t, files, refreshFiles, removeByPath, updatePath],
-  );
-
-  const handleMoveMany = useCallback(
-    async (fromPaths: string[], toFolderPath: string) => {
-      const paths = dedupeNestedPaths(fromPaths);
-      if (paths.length === 0) return;
-
-      if (
-        paths.some((fromPath) =>
-          isMoveIntoOwnDescendant(fromPath, toFolderPath),
-        )
-      ) {
-        window.alert(t("move.invalidTarget"));
-        return;
-      }
-
-      const plans = paths.map((fromPath) => {
-        const { name, newRel } = getMoveTarget(fromPath, toFolderPath);
-        return {
-          fromPath,
-          name,
-          newRel,
-          existing: findNodeByPath(files, newRel),
-        };
-      });
-
-      const duplicateTargets = plans
-        .map((plan) => plan.newRel)
-        .filter((value, index, self) => self.indexOf(value) !== index);
-      if (duplicateTargets.length > 0) {
-        window.alert(t("move.duplicateTarget"));
-        return;
-      }
-
-      const conflicts = plans.filter(
-        (item) => item.newRel !== item.fromPath && item.existing,
-      );
-      if (conflicts.length > 0) {
-        const ok = window.confirm(
-          t("move.replaceManyPrompt", { count: conflicts.length }),
-        );
-        if (!ok) return;
-        for (const conflict of conflicts) {
-          try {
-            await ipc.deleteEntry(conflict.newRel);
-            removeByPath(conflict.newRel);
-          } catch (e) {
-            window.alert(
-              t("move.errorAlert", {
-                reason: e instanceof Error ? e.message : JSON.stringify(e),
-              }),
-            );
-            return;
-          }
-        }
-      }
-
-      for (const plan of plans) {
-        if (plan.newRel === plan.fromPath) continue;
-        try {
-          await ipc.renameEntry(plan.fromPath, plan.newRel);
-        } catch (e) {
-          window.alert(
-            t("move.errorAlert", {
-              reason: e instanceof Error ? e.message : JSON.stringify(e),
-            }),
-          );
-          return;
-        }
-        updatePath(plan.fromPath, plan.newRel);
-      }
-      await refreshFiles();
-    },
-    [t, files, refreshFiles, removeByPath, updatePath],
   );
 
   if (!info) {
