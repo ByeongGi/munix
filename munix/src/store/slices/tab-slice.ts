@@ -139,6 +139,21 @@ export function defaultTabSlice(): TabSlice {
 
 type TabFullSlice = TabSlice & WorkspaceTreeSlice;
 
+function patchActivePaneTabs(
+  tree: WorkspaceNode,
+  activePaneId: string | null,
+  tabs: Tab[],
+  activeTabId: string | null,
+): WorkspaceNode | null {
+  if (!activePaneId) return null;
+  const pane = findPane(tree, activePaneId);
+  if (!pane) return null;
+  return patchPaneInTree(tree, activePaneId, {
+    tabs,
+    activeTabId,
+  });
+}
+
 export const createTabSlice: StateCreator<TabFullSlice, [], [], TabSlice> = (
   set,
   get,
@@ -161,23 +176,20 @@ export const createTabSlice: StateCreator<TabFullSlice, [], [], TabSlice> = (
   createEmptyTab: () => {
     const tab: Tab = { id: makeTabId(), path: "", title: "" };
     const { workspaceTree, activePaneId, tabs } = get();
-    if (workspaceTree && activePaneId) {
-      const pane = findPane(workspaceTree, activePaneId);
-      if (pane) {
-        const nextTabs = [...tabs, tab];
-        set({
-          tabs: nextTabs,
-          activeId: tab.id,
-          workspaceTree: patchPaneInTree(workspaceTree, activePaneId, {
-            tabs: nextTabs,
-            activeTabId: tab.id,
-          }),
-        });
-        void closeEditorFile();
-        return;
-      }
+    const nextTabs = [...tabs, tab];
+    const nextTree = workspaceTree
+      ? patchActivePaneTabs(workspaceTree, activePaneId, nextTabs, tab.id)
+      : null;
+    if (nextTree) {
+      set({
+        tabs: nextTabs,
+        activeId: tab.id,
+        workspaceTree: nextTree,
+      });
+      void closeEditorFile();
+      return;
     }
-    set((s) => ({ tabs: [...s.tabs, tab], activeId: tab.id }));
+    set({ tabs: nextTabs, activeId: tab.id });
     void closeEditorFile();
   },
 
@@ -187,15 +199,17 @@ export const createTabSlice: StateCreator<TabFullSlice, [], [], TabSlice> = (
     if (!promotion) return false;
 
     if (workspaceTree && activePaneId) {
-      const pane = findPane(workspaceTree, activePaneId);
-      if (pane) {
-        const paneTabs = pane.tabs.map((t) =>
-          t.id === activeId ? promotion.tab : t,
+      const paneTabs = findPane(workspaceTree, activePaneId)?.tabs.map((t) =>
+        t.id === activeId ? promotion.tab : t,
+      );
+      if (paneTabs) {
+        const nextTree = patchActivePaneTabs(
+          workspaceTree,
+          activePaneId,
+          paneTabs,
+          activeId,
         );
-        const nextTree = patchPaneInTree(workspaceTree, activePaneId, {
-          tabs: paneTabs,
-          activeTabId: activeId,
-        });
+        if (!nextTree) return false;
         set({ tabs: promotion.tabs, workspaceTree: nextTree });
       } else {
         set({ tabs: promotion.tabs });
