@@ -8,7 +8,6 @@ import { useEditorStore } from "@/store/editor-store";
 import { useActiveWorkspaceStore } from "@/lib/active-vault";
 import { useVaultDockStore } from "@/store/vault-dock-store";
 import { cn } from "@/lib/cn";
-import { ipc } from "@/lib/ipc";
 import {
   getReorderIndex,
   getTabDropTargetIndex,
@@ -18,6 +17,13 @@ import {
   shouldShowRightDropIndicator,
   type TabHoverSide,
 } from "@/components/tab/tab-dnd";
+import {
+  copyTabLink,
+  copyTabPath,
+  copyTabRelativePath,
+  revealTabInFileTree,
+  revealTabInSystem,
+} from "@/components/tab/tab-actions";
 import {
   LEGACY_TAB_DND_MIME,
   TAB_DND_MIME,
@@ -89,53 +95,6 @@ export function TabBar({ onNewFile }: TabBarProps) {
           }
         : undefined,
     );
-  };
-
-  const copyTabPath = async (tab: Tab) => {
-    if (!tab.path) return;
-    try {
-      const abs = await ipc.absPath(tab.path);
-      await ipc.copyText(abs);
-    } catch (e) {
-      console.error("copy tab path failed", e);
-    }
-  };
-
-  const copyTabRelativePath = async (tab: Tab) => {
-    if (!tab.path) return;
-    try {
-      await ipc.copyText(tab.path);
-    } catch (e) {
-      console.error("copy tab relative path failed", e);
-    }
-  };
-
-  const copyTabLink = async (tab: Tab) => {
-    if (!tab.path) return;
-    try {
-      const target = tab.path.replace(/\.md$/i, "");
-      await ipc.copyText(`[[${target}]]`);
-    } catch (e) {
-      console.error("copy tab link failed", e);
-    }
-  };
-
-  const revealInFileTree = (tab: Tab) => {
-    if (!tab.path) return;
-    window.dispatchEvent(
-      new CustomEvent("munix:reveal-file-tree", {
-        detail: { path: tab.path },
-      }),
-    );
-  };
-
-  const revealTab = async (tab: Tab) => {
-    if (!tab.path) return;
-    try {
-      await ipc.revealInSystem(tab.path);
-    } catch (e) {
-      console.error("reveal tab failed", e);
-    }
   };
 
   useEffect(() => {
@@ -488,11 +447,11 @@ export function TabBar({ onNewFile }: TabBarProps) {
             setMenu(null);
           }}
           onRevealInFileTree={() => {
-            revealInFileTree(menu.tab);
+            revealTabInFileTree(menu.tab);
             setMenu(null);
           }}
           onRevealInSystem={() => {
-            void revealTab(menu.tab);
+            void revealTabInSystem(menu.tab);
             setMenu(null);
           }}
           onSplitRight={() => {
