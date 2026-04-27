@@ -29,6 +29,7 @@ import { ConflictDialog } from "@/components/editor/conflict-dialog";
 import { ipc } from "@/lib/ipc";
 import { cn } from "@/lib/cn";
 import { useKeymapMatcher } from "@/hooks/use-keymap";
+import { usePersistentSidebarState } from "@/hooks/app/use-persistent-sidebar-state";
 import { usePropertyTypesStore } from "@/store/property-types-store";
 import {
   dedupeNestedPaths,
@@ -72,49 +73,17 @@ function App() {
   const [renaming, setRenaming] = useState<string | null>(null);
   const [revealPath, setRevealPath] = useState<string | null>(null);
   const [sidebarTab, setSidebarTab] = useState<SidebarTab>("files");
-  const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(() => {
-    try {
-      return localStorage.getItem("munix:sidebarCollapsed") === "true";
-    } catch {
-      return false;
-    }
-  });
+  const {
+    sidebarCollapsed,
+    setSidebarCollapsed,
+    sidebarWidth,
+    setSidebarWidth,
+  } = usePersistentSidebarState();
   const [quickOpen, setQuickOpen] = useState(false);
   const [vaultSwitcherOpen, setVaultSwitcherOpen] = useState(false);
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [sidebarWidth, setSidebarWidth] = useState<number>(() => {
-    try {
-      const saved = localStorage.getItem("munix:sidebarWidth");
-      if (saved) {
-        const n = Number(saved);
-        if (!Number.isNaN(n) && n >= 160 && n <= 600) return n;
-      }
-    } catch {
-      // ignore
-    }
-    return 256;
-  });
-
-  useEffect(() => {
-    try {
-      localStorage.setItem("munix:sidebarWidth", String(sidebarWidth));
-    } catch {
-      // ignore
-    }
-  }, [sidebarWidth]);
-
-  useEffect(() => {
-    try {
-      localStorage.setItem(
-        "munix:sidebarCollapsed",
-        sidebarCollapsed ? "true" : "false",
-      );
-    } catch {
-      // ignore
-    }
-  }, [sidebarCollapsed]);
 
   useVaultWatcher();
 
@@ -151,7 +120,7 @@ function App() {
     return () => {
       window.removeEventListener("munix:reveal-file-tree", onReveal);
     };
-  }, []);
+  }, [setSidebarCollapsed]);
 
   const handleCreateFileAt = useCallback(
     async (parent: string) => {
