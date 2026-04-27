@@ -41,8 +41,8 @@ import {
   classifyDropZone,
   dropZoneLabelKey,
   getDropZoneOverlayStyle,
-} from "./drop-zone";
-import { DropZoneOverlay } from "./drop-zone-overlay";
+} from "../dnd/drop-zone";
+import { DropZoneOverlay } from "../dnd/drop-zone-overlay";
 import { EmptyPanePlaceholder } from "./empty-pane-placeholder";
 import { InactivePaneEditor } from "./inactive-pane-editor";
 import { MiniPaneTabStrip } from "./mini-pane-tab-strip";
