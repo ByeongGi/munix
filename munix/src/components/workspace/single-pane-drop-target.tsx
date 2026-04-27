@@ -3,7 +3,6 @@ import { useStore } from "zustand";
 import { useTranslation } from "react-i18next";
 
 import { useActiveWorkspaceStore } from "@/lib/active-vault";
-import { cn } from "@/lib/cn";
 import { TAB_DND_MIME, parseTabPayload } from "@/lib/dnd-mime";
 import { useVaultDockStore } from "@/store/vault-dock-store";
 import {
@@ -12,6 +11,7 @@ import {
   toEdgeZone,
   type EdgeZone,
 } from "./pane/drop-zone";
+import { DropZoneOverlay } from "./pane/drop-zone-overlay";
 
 interface SinglePaneDropTargetProps {
   children: React.ReactNode;
@@ -110,21 +110,12 @@ export function SinglePaneDropTarget({ children }: SinglePaneDropTargetProps) {
       onDropCapture={handleDropCapture}
     >
       {children}
-      {dropZone && (
-        <div
-          className="pointer-events-none absolute z-10 border border-[var(--color-accent)] bg-[var(--color-accent)]/22"
+      {dropZone ? (
+        <DropZoneOverlay
           style={overlayStyle}
-        >
-          <span
-            className={cn(
-              "absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded px-2 py-1 text-xs font-medium shadow-lg",
-              "bg-[var(--color-accent)] text-[var(--color-text-on-accent)]",
-            )}
-          >
-            {t(dropZoneLabelKey(dropZone))}
-          </span>
-        </div>
-      )}
+          label={t(dropZoneLabelKey(dropZone))}
+        />
+      ) : null}
     </div>
   );
 }
