@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { open } from "@tauri-apps/plugin-dialog";
 import { useVaultStore } from "@/store/vault-store";
 import { useEditorStore } from "@/store/editor-store";
 import { useTabStore } from "@/store/tab-store";
@@ -33,6 +32,7 @@ import { useAppOverlays } from "@/hooks/app/use-app-overlays";
 import { useFileCreateActions } from "@/hooks/app/use-file-create-actions";
 import { useFileTreeReveal } from "@/hooks/app/use-file-tree-reveal";
 import { usePersistentSidebarState } from "@/hooks/app/use-persistent-sidebar-state";
+import { useVaultPickerAction } from "@/hooks/app/use-vault-picker-action";
 import {
   dedupeNestedPaths,
   findNodeByPath,
@@ -72,6 +72,7 @@ function App() {
   const closeAllTabs = useTabStore((s) => s.closeAll);
 
   const [renaming, setRenaming] = useState<string | null>(null);
+  const handlePickFolder = useVaultPickerAction(openVault);
   const [sidebarTab, setSidebarTab] = useState<SidebarTab>("files");
   const {
     sidebarCollapsed,
@@ -162,13 +163,7 @@ function App() {
 
           // ── Vault (ADR-031) ─────────────────────────────────
           case "global.openVault": {
-            void (async () => {
-              const selected = await open({
-                directory: true,
-                multiple: false,
-              });
-              if (typeof selected === "string") await openVault(selected);
-            })();
+            void handlePickFolder();
             return;
           }
           case "global.closeVault": {
@@ -259,20 +254,13 @@ function App() {
     activateNext,
     activatePrev,
     activateIndex,
-    openVault,
+    handlePickFolder,
     setPaletteOpen,
     setQuickOpen,
     setSettingsOpen,
     setShortcutsOpen,
     setVaultSwitcherOpen,
   ]);
-
-  const handlePickFolder = async () => {
-    const selected = await open({ directory: true, multiple: false });
-    if (typeof selected === "string") {
-      await openVault(selected);
-    }
-  };
 
   const handleAction = useCallback(
     (
