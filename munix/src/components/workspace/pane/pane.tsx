@@ -19,33 +19,18 @@
  * (workspace-split-spec §6.1 ADR-031).
  */
 
-import { useCallback, useEffect, useState } from "react";
 import { useStore } from "zustand";
 import { useTranslation } from "react-i18next";
 import { useActiveWorkspaceStore } from "@/lib/active-vault";
 import { cn } from "@/lib/cn";
-import { makeTabId } from "@/store/slices/tab-slice";
-import {
-  TAB_DND_MIME,
-  parseTabPayload,
-} from "@/lib/dnd-mime";
 import { useVaultDockStore } from "@/store/vault-dock-store";
-import type { DropZone, PaneNode } from "@/store/workspace-types";
-import { ipc } from "@/lib/ipc";
-import {
-  PaneActionsButton,
-  PaneActionsMenu,
-  TabActionsMenu,
-} from "./pane-context-menu";
-import {
-  classifyDropZone,
-  dropZoneLabelKey,
-  getDropZoneOverlayStyle,
-} from "../dnd/drop-zone";
+import type { PaneNode } from "@/store/workspace-types";
+import { PaneActionsButton } from "./pane-context-menu";
 import { DropZoneOverlay } from "../dnd/drop-zone-overlay";
-import { EmptyPanePlaceholder } from "./empty-pane-placeholder";
-import { InactivePaneEditor } from "./inactive-pane-editor";
+import { InactivePaneBody } from "./inactive-pane-body";
 import { MiniPaneTabStrip } from "./mini-pane-tab-strip";
+import { usePaneMenus } from "./use-pane-menus";
+import { usePaneDropTarget } from "./use-pane-drop-target";
 
 interface PaneProps {
   pane: PaneNode;
@@ -54,17 +39,6 @@ interface PaneProps {
   activeContent: React.ReactNode;
   onNewFile: () => void;
   onQuickOpen: () => void;
-}
-
-interface PaneMenuState {
-  x: number;
-  y: number;
-}
-
-interface TabMenuState {
-  x: number;
-  y: number;
-  tabId: string;
 }
 
 const PANE_CHROME_SELECTOR =
@@ -92,207 +66,30 @@ export function Pane({
   const movePaneTab = useStore(ws, (s) => s.movePaneTab);
   const splitPaneMove = useStore(ws, (s) => s.splitPaneMove);
   const vaultId = useVaultDockStore((s) => s.activeVaultId);
-  const [dropZone, setDropZone] = useState<DropZone | null>(null);
-  const [paneMenu, setPaneMenu] = useState<PaneMenuState | null>(null);
-  const [tabMenu, setTabMenu] = useState<TabMenuState | null>(null);
   const reorderPaneTab = useStore(ws, (s) => s.reorderPaneTab);
-
-  useEffect(() => {
-    if (!paneMenu && !tabMenu) return;
-    const close = () => {
-      setPaneMenu(null);
-      setTabMenu(null);
-    };
-    window.addEventListener("click", close);
-    window.addEventListener("contextmenu", close, { once: true });
-    return () => {
-      window.removeEventListener("click", close);
-      window.removeEventListener("contextmenu", close);
-    };
-  }, [paneMenu, tabMenu]);
-
-  const splitThisPane = (zone: "right" | "bottom") => {
-    const activeTab = pane.tabs.find((tab) => tab.id === pane.activeTabId);
-    splitPane(
-      pane.id,
-      zone,
-      activeTab
-        ? {
-            ...activeTab,
-            id: makeTabId(),
-          }
-        : undefined,
-    );
-  };
-
-  const splitPaneTab = (tabId: string, zone: "right" | "bottom") => {
-    const tab = pane.tabs.find((t) => t.id === tabId);
-    splitPane(
-      pane.id,
-      zone,
-      tab
-        ? {
-            ...tab,
-            id: makeTabId(),
-          }
-        : undefined,
-    );
-  };
-
-  const copyTabPath = async (tabId: string) => {
-    const tab = pane.tabs.find((t) => t.id === tabId);
-    if (!tab?.path) return;
-    try {
-      const abs = await ipc.absPath(tab.path);
-      await ipc.copyText(abs);
-    } catch (e) {
-      console.error("copy pane tab path failed", e);
-    }
-  };
-
-  const copyTabRelativePath = async (tabId: string) => {
-    const tab = pane.tabs.find((t) => t.id === tabId);
-    if (!tab?.path) return;
-    try {
-      await ipc.copyText(tab.path);
-    } catch (e) {
-      console.error("copy pane tab relative path failed", e);
-    }
-  };
-
-  const copyTabLink = async (tabId: string) => {
-    const tab = pane.tabs.find((t) => t.id === tabId);
-    if (!tab?.path) return;
-    try {
-      const target = tab.path.replace(/\.md$/i, "");
-      await ipc.copyText(`[[${target}]]`);
-    } catch (e) {
-      console.error("copy pane tab link failed", e);
-    }
-  };
-
-  const revealInFileTree = (tabId: string) => {
-    const tab = pane.tabs.find((t) => t.id === tabId);
-    if (!tab?.path) return;
-    window.dispatchEvent(
-      new CustomEvent("munix:reveal-file-tree", {
-        detail: { path: tab.path },
-      }),
-    );
-  };
-
-  const revealTab = async (tabId: string) => {
-    const tab = pane.tabs.find((t) => t.id === tabId);
-    if (!tab?.path) return;
-    try {
-      await ipc.revealInSystem(tab.path);
-    } catch (e) {
-      console.error("reveal pane tab failed", e);
-    }
-  };
-
-  const computeZone = useCallback((e: React.DragEvent): DropZone => {
-    const targetEl = e.target as HTMLElement | null;
-    // TabBar / mini TabBar 위에서는 항상 center — TabBar 자체 reorder 와 충돌 방지.
-    if (targetEl && targetEl.closest?.("[data-no-edge-drop]")) {
-      return "center";
-    }
-    const rect = e.currentTarget.getBoundingClientRect();
-    return classifyDropZone(rect, e.clientX, e.clientY);
-  }, []);
-
-  const isTabDragOverPaneContent = useCallback(
-    (e: React.DragEvent): boolean => {
-      if (!e.dataTransfer.types.includes(TAB_DND_MIME)) return false;
-      const targetEl = e.target as HTMLElement | null;
-      return !targetEl?.closest?.("[data-no-edge-drop]");
-    },
-    [],
-  );
-
-  const updateDropZone = useCallback(
-    (e: React.DragEvent) => {
-      e.preventDefault();
-      e.dataTransfer.dropEffect = "move";
-      const zone = computeZone(e);
-      if (zone !== dropZone) setDropZone(zone);
-    },
-    [computeZone, dropZone],
-  );
-
-  const handleOuterDragEnterCapture = useCallback(
-    (e: React.DragEvent) => {
-      if (!isTabDragOverPaneContent(e)) return;
-      e.stopPropagation();
-      updateDropZone(e);
-    },
-    [isTabDragOverPaneContent, updateDropZone],
-  );
-
-  const handleOuterDragOverCapture = useCallback(
-    (e: React.DragEvent) => {
-      if (!isTabDragOverPaneContent(e)) return;
-      e.stopPropagation();
-      updateDropZone(e);
-    },
-    [isTabDragOverPaneContent, updateDropZone],
-  );
-
-  const handleOuterDragOver = useCallback(
-    (e: React.DragEvent) => {
-      if (!e.dataTransfer.types.includes(TAB_DND_MIME)) return;
-      updateDropZone(e);
-    },
-    [updateDropZone],
-  );
-
-  const handleOuterDragLeave = useCallback(
-    (e: React.DragEvent) => {
-      // 자식으로 이동할 때도 dragleave 가 발생 — relatedTarget 이 outer 안이면 무시.
-      const next = e.relatedTarget as Node | null;
-      if (next && e.currentTarget.contains(next)) return;
-      if (dropZone !== null) setDropZone(null);
-    },
-    [dropZone],
-  );
-
-  const handleOuterDrop = useCallback(
-    (e: React.DragEvent) => {
-      const zone = dropZone ?? computeZone(e);
-      setDropZone(null);
-      if (!e.dataTransfer.types.includes(TAB_DND_MIME)) return;
-      const payload = parseTabPayload(e.dataTransfer.getData(TAB_DND_MIME));
-      if (!payload) return;
-      // vault 경계 검증
-      if (payload.vaultId && vaultId && payload.vaultId !== vaultId) return;
-      if (!payload.fromPaneId) return; // 단일 pane 모드 페이로드 — 무시
-
-      e.preventDefault();
-      e.stopPropagation();
-
-      if (zone === "center") {
-        if (payload.fromPaneId === pane.id) return; // 같은 pane center = no-op
-        movePaneTab(payload.fromPaneId, payload.tabId, pane.id);
-        return;
-      }
-      // edge drop — 새 분할 생성 + 탭 이동
-      splitPaneMove(payload.fromPaneId, payload.tabId, pane.id, zone);
-    },
-    [dropZone, computeZone, vaultId, pane.id, movePaneTab, splitPaneMove],
-  );
-
-  const handleOuterDropCapture = useCallback(
-    (e: React.DragEvent) => {
-      if (!isTabDragOverPaneContent(e)) return;
-      e.stopPropagation();
-      handleOuterDrop(e);
-    },
-    [handleOuterDrop, isTabDragOverPaneContent],
-  );
-
-  const overlayStyle =
-    dropZone === null ? undefined : getDropZoneOverlayStyle(dropZone);
-  const overlayLabel = dropZone === null ? null : t(dropZoneLabelKey(dropZone));
+  const {
+    dropZone,
+    dropTargetHandlers,
+    overlayLabel,
+    overlayStyle,
+  } = usePaneDropTarget({
+    movePaneTab,
+    paneId: pane.id,
+    splitPaneMove,
+    t,
+    vaultId: vaultId ?? null,
+  });
+  const { menus, openPaneMenu, openTabMenu } = usePaneMenus({
+    closeAllPaneTabs,
+    closeOtherPaneTabs,
+    closePane,
+    closePaneTab,
+    closePaneTabsAfter,
+    pane,
+    splitPane,
+    t,
+    togglePaneTabPinned,
+  });
 
   if (isActive) {
     return (
@@ -303,12 +100,7 @@ export function Pane({
         )}
         data-pane-id={pane.id}
         data-pane-active="true"
-        onDragEnterCapture={handleOuterDragEnterCapture}
-        onDragOverCapture={handleOuterDragOverCapture}
-        onDropCapture={handleOuterDropCapture}
-        onDragOver={handleOuterDragOver}
-        onDragLeave={handleOuterDragLeave}
-        onDrop={handleOuterDrop}
+        {...dropTargetHandlers}
       >
         {activeContent}
         {dropZone !== null ? (
@@ -331,13 +123,6 @@ export function Pane({
     setActivePane(pane.id);
   };
 
-  const tabMenuTab =
-    tabMenu === null
-      ? null
-      : (pane.tabs.find((tab) => tab.id === tabMenu.tabId) ?? null);
-  const tabMenuHasPath = Boolean(tabMenuTab?.path);
-  const tabMenuPinned = tabMenuTab?.pinned === true;
-
   return (
     <div
       className={cn(
@@ -348,12 +133,7 @@ export function Pane({
       data-pane-id={pane.id}
       data-pane-active="false"
       onMouseDown={onPaneMouseDown}
-      onDragEnterCapture={handleOuterDragEnterCapture}
-      onDragOverCapture={handleOuterDragOverCapture}
-      onDropCapture={handleOuterDropCapture}
-      onDragOver={handleOuterDragOver}
-      onDragLeave={handleOuterDragLeave}
-      onDrop={handleOuterDrop}
+      {...dropTargetHandlers}
     >
       <div
         data-no-edge-drop="true"
@@ -369,93 +149,14 @@ export function Pane({
           onCloseTab={closePaneTab}
           onCreateTab={createPaneTab}
           onReorderTab={reorderPaneTab}
-          onOpenTabMenu={setTabMenu}
+          onOpenTabMenu={openTabMenu}
         />
         <PaneActionsButton
           label={t("tabs:paneMenu.label")}
-          onClick={(e) => {
-            e.stopPropagation();
-            const rect = e.currentTarget.getBoundingClientRect();
-            setPaneMenu({ x: rect.left, y: rect.bottom + 4 });
-          }}
+          onClick={openPaneMenu}
         />
       </div>
-      {paneMenu && (
-        <PaneActionsMenu
-          x={paneMenu.x}
-          y={paneMenu.y}
-          t={t}
-          onSplitRight={() => {
-            splitThisPane("right");
-            setPaneMenu(null);
-          }}
-          onSplitDown={() => {
-            splitThisPane("bottom");
-            setPaneMenu(null);
-          }}
-          onClosePane={() => {
-            closePane(pane.id);
-            setPaneMenu(null);
-          }}
-        />
-      )}
-      {tabMenu && (
-        <TabActionsMenu
-          x={tabMenu.x}
-          y={tabMenu.y}
-          t={t}
-          onSplitRight={() => {
-            splitPaneTab(tabMenu.tabId, "right");
-            setTabMenu(null);
-          }}
-          onSplitDown={() => {
-            splitPaneTab(tabMenu.tabId, "bottom");
-            setTabMenu(null);
-          }}
-          onClose={() => {
-            closePaneTab(pane.id, tabMenu.tabId);
-            setTabMenu(null);
-          }}
-          onCloseOthers={() => {
-            closeOtherPaneTabs(pane.id, tabMenu.tabId);
-            setTabMenu(null);
-          }}
-          onCloseTabsAfter={() => {
-            closePaneTabsAfter(pane.id, tabMenu.tabId);
-            setTabMenu(null);
-          }}
-          onTogglePinned={() => {
-            togglePaneTabPinned(pane.id, tabMenu.tabId);
-            setTabMenu(null);
-          }}
-          onCopyLink={() => {
-            void copyTabLink(tabMenu.tabId);
-            setTabMenu(null);
-          }}
-          onCopyPath={() => {
-            void copyTabPath(tabMenu.tabId);
-            setTabMenu(null);
-          }}
-          onCopyRelativePath={() => {
-            void copyTabRelativePath(tabMenu.tabId);
-            setTabMenu(null);
-          }}
-          onRevealInFileTree={() => {
-            revealInFileTree(tabMenu.tabId);
-            setTabMenu(null);
-          }}
-          onRevealInSystem={() => {
-            void revealTab(tabMenu.tabId);
-            setTabMenu(null);
-          }}
-          onCloseAll={() => {
-            closeAllPaneTabs(pane.id);
-            setTabMenu(null);
-          }}
-          hasPath={tabMenuHasPath}
-          pinned={tabMenuPinned}
-        />
-      )}
+      {menus}
       <InactivePaneBody
         pane={pane}
         onNewFile={onNewFile}
@@ -469,36 +170,5 @@ export function Pane({
         />
       ) : null}
     </div>
-  );
-}
-
-function InactivePaneBody({
-  pane,
-  onNewFile,
-  onQuickOpen,
-  onClose,
-}: {
-  pane: PaneNode;
-  onNewFile: () => void;
-  onQuickOpen: () => void;
-  onClose: () => void;
-}) {
-  const activeTab = pane.tabs.find((tab) => tab.id === pane.activeTabId);
-  if (pane.tabs.length === 0 || activeTab?.path === "") {
-    return (
-      <EmptyPanePlaceholder
-        onNewFile={onNewFile}
-        onQuickOpen={onQuickOpen}
-        onClose={onClose}
-      />
-    );
-  }
-
-  if (!activeTab?.path) return null;
-  return (
-    <InactivePaneEditor
-      path={activeTab.path}
-      titleDraft={activeTab.titleDraft}
-    />
   );
 }
