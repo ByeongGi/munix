@@ -40,6 +40,7 @@ import {
 import {
   classifyDropZone,
   dropZoneLabelKey,
+  getDropZoneOverlayStyle,
 } from "./drop-zone";
 import { DropZoneOverlay } from "./drop-zone-overlay";
 import { EmptyPanePlaceholder } from "./empty-pane-placeholder";
@@ -289,22 +290,8 @@ export function Pane({
     [handleOuterDrop, isTabDragOverPaneContent],
   );
 
-  const overlayStyle: React.CSSProperties | undefined = (() => {
-    if (dropZone === null) return undefined;
-    if (dropZone === "center") {
-      return { inset: 0 };
-    }
-    if (dropZone === "left") {
-      return { top: 0, bottom: 0, left: 0, width: "50%" };
-    }
-    if (dropZone === "right") {
-      return { top: 0, bottom: 0, right: 0, width: "50%" };
-    }
-    if (dropZone === "top") {
-      return { left: 0, right: 0, top: 0, height: "50%" };
-    }
-    return { left: 0, right: 0, bottom: 0, height: "50%" };
-  })();
+  const overlayStyle =
+    dropZone === null ? undefined : getDropZoneOverlayStyle(dropZone);
   const overlayLabel = dropZone === null ? null : t(dropZoneLabelKey(dropZone));
 
   if (isActive) {
