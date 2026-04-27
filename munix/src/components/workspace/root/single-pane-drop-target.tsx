@@ -3,15 +3,16 @@ import { useStore } from "zustand";
 import { useTranslation } from "react-i18next";
 
 import { useActiveWorkspaceStore } from "@/lib/active-vault";
-import { cn } from "@/lib/cn";
 import { TAB_DND_MIME, parseTabPayload } from "@/lib/dnd-mime";
 import { useVaultDockStore } from "@/store/vault-dock-store";
 import {
   classifyDropZone,
   dropZoneLabelKey,
+  getDropZoneOverlayStyle,
   toEdgeZone,
   type EdgeZone,
-} from "./drop-zone";
+} from "../dnd/drop-zone";
+import { DropZoneOverlay } from "../dnd/drop-zone-overlay";
 
 interface SinglePaneDropTargetProps {
   children: React.ReactNode;
@@ -87,19 +88,8 @@ export function SinglePaneDropTarget({ children }: SinglePaneDropTargetProps) {
     [computeZone, dropZone, splitPaneMove, vaultId],
   );
 
-  const overlayStyle: React.CSSProperties | undefined = (() => {
-    if (dropZone === null) return undefined;
-    if (dropZone === "left") {
-      return { top: 0, bottom: 0, left: 0, width: "50%" };
-    }
-    if (dropZone === "right") {
-      return { top: 0, bottom: 0, right: 0, width: "50%" };
-    }
-    if (dropZone === "top") {
-      return { left: 0, right: 0, top: 0, height: "50%" };
-    }
-    return { left: 0, right: 0, bottom: 0, height: "50%" };
-  })();
+  const overlayStyle =
+    dropZone === null ? undefined : getDropZoneOverlayStyle(dropZone);
 
   return (
     <div
@@ -110,21 +100,12 @@ export function SinglePaneDropTarget({ children }: SinglePaneDropTargetProps) {
       onDropCapture={handleDropCapture}
     >
       {children}
-      {dropZone && (
-        <div
-          className="pointer-events-none absolute z-10 border border-[var(--color-accent)] bg-[var(--color-accent)]/22"
+      {dropZone ? (
+        <DropZoneOverlay
           style={overlayStyle}
-        >
-          <span
-            className={cn(
-              "absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded px-2 py-1 text-xs font-medium shadow-lg",
-              "bg-[var(--color-accent)] text-[var(--color-text-on-accent)]",
-            )}
-          >
-            {t(dropZoneLabelKey(dropZone))}
-          </span>
-        </div>
-      )}
+          label={t(dropZoneLabelKey(dropZone))}
+        />
+      ) : null}
     </div>
   );
 }

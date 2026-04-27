@@ -666,7 +666,6 @@ async fn list_children(
 **작성일:** 2026-04-25
 **최근 업데이트:** 2026-04-26 — ADR-031 cross-reference 추가 (AppState §4.2, Tauri 커맨드 §6, 오픈 이슈 §11)
 **관련 문서:**
-- [마스터 설계](../mupe-design-v0.2.md)
 - [multi-vault-spec.md](./multi-vault-spec.md) — 멀티 vault 워크스페이스 (ADR-031, proposed)
 - [auto-save-spec.md](./auto-save-spec.md)
 - [file-tree-spec.md](./file-tree-spec.md)

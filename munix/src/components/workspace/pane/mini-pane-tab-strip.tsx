@@ -3,10 +3,18 @@ import { Pin, Plus, X } from "lucide-react";
 
 import { cn } from "@/lib/cn";
 import {
+  getReorderIndex,
+  getTabDropTargetIndex,
+  getTabHoverSide,
+  setTabDragData,
+  shouldShowLeftDropIndicator,
+  shouldShowRightDropIndicator,
+  type TabHoverSide,
+} from "@/components/tab/tab-dnd";
+import {
   LEGACY_TAB_DND_MIME,
   TAB_DND_MIME,
   parseTabPayload,
-  serializeTabPayload,
 } from "@/lib/dnd-mime";
 import type { PaneNode } from "@/store/workspace-types";
 
@@ -37,7 +45,7 @@ export function MiniPaneTabStrip({
 }: MiniPaneTabStripProps) {
   const [dragIndex, setDragIndex] = useState<number | null>(null);
   const [hoverIndex, setHoverIndex] = useState<number | null>(null);
-  const [hoverSide, setHoverSide] = useState<"left" | "right">("left");
+  const [hoverSide, setHoverSide] = useState<TabHoverSide>("left");
 
   const resetDragState = () => {
     setDragIndex(null);
@@ -49,16 +57,18 @@ export function MiniPaneTabStrip({
       {pane.tabs.map((tab, index) => {
         const isPaneActive = tab.id === pane.activeTabId;
         const isHovered = dragIndex !== null && hoverIndex === index;
-        const showLeftIndicator =
-          isHovered &&
-          hoverSide === "left" &&
-          dragIndex !== index &&
-          dragIndex !== index - 1;
-        const showRightIndicator =
-          isHovered &&
-          hoverSide === "right" &&
-          dragIndex !== index &&
-          dragIndex !== index + 1;
+        const showLeftIndicator = shouldShowLeftDropIndicator({
+          isHovered,
+          hoverSide,
+          dragIndex,
+          index,
+        });
+        const showRightIndicator = shouldShowRightDropIndicator({
+          isHovered,
+          hoverSide,
+          dragIndex,
+          index,
+        });
 
         return (
           <div
@@ -66,18 +76,14 @@ export function MiniPaneTabStrip({
             draggable
             data-pane-tab={tab.id}
             onDragStart={(event) => {
-              event.dataTransfer.setData(
-                TAB_DND_MIME,
-                serializeTabPayload({
-                  type: "munix/tab",
-                  vaultId,
-                  tabId: tab.id,
-                  fromPaneId: pane.id,
-                  path: tab.path,
-                }),
-              );
-              event.dataTransfer.setData(LEGACY_TAB_DND_MIME, String(index));
-              event.dataTransfer.effectAllowed = "move";
+              setTabDragData({
+                dataTransfer: event.dataTransfer,
+                index,
+                vaultId,
+                tabId: tab.id,
+                fromPaneId: pane.id,
+                path: tab.path,
+              });
               setDragIndex(index);
             }}
             onDragOver={(event) => {
@@ -102,8 +108,7 @@ export function MiniPaneTabStrip({
               event.dataTransfer.dropEffect = "move";
 
               const rect = event.currentTarget.getBoundingClientRect();
-              const nextHoverSide =
-                event.clientX - rect.left < rect.width / 2 ? "left" : "right";
+              const nextHoverSide = getTabHoverSide(rect, event.clientX);
               if (hoverIndex !== index) setHoverIndex(index);
               if (hoverSide !== nextHoverSide) setHoverSide(nextHoverSide);
             }}
@@ -133,9 +138,8 @@ export function MiniPaneTabStrip({
               event.preventDefault();
               event.stopPropagation();
 
-              const targetIndex = hoverSide === "left" ? index : index + 1;
-              const adjustedIndex =
-                from < targetIndex ? targetIndex - 1 : targetIndex;
+              const targetIndex = getTabDropTargetIndex(index, hoverSide);
+              const adjustedIndex = getReorderIndex(from, targetIndex);
               if (adjustedIndex !== from) {
                 onReorderTab(pane.id, from, adjustedIndex);
               }

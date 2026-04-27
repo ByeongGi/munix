@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Folder, FolderPlus, Search } from "lucide-react";
+import { Search } from "lucide-react";
 import { open as openDialog } from "@tauri-apps/plugin-dialog";
 
 import { useVaultDockStore } from "@/store/vault-dock-store";
@@ -9,19 +9,15 @@ import {
   listClosedVaults,
   type VaultRegistryEntry,
 } from "@/lib/vault-registry";
-import type { VaultInfo } from "@/types/ipc";
-import { cn } from "@/lib/cn";
 import { CommandDialog } from "@/components/ui/command-dialog";
+import { VaultSwitcherItemList } from "./vault-switcher-item-list";
+import type { VaultSwitcherItem } from "./vault-switcher-items";
+import { useVaultSwitcherItems } from "./use-vault-switcher-items";
 
 interface VaultSwitcherProps {
   open: boolean;
   onClose: () => void;
 }
-
-type Item =
-  | { kind: "open"; vault: VaultInfo; active: boolean }
-  | { kind: "recent"; id: string; entry: VaultRegistryEntry }
-  | { kind: "new" };
 
 /**
  * Vault Switcher 팔레트 — `⌘⇧O`. (ADR-031 Phase C-5)
@@ -56,30 +52,12 @@ export function VaultSwitcher({ open, onClose }: VaultSwitcherProps) {
     });
   }, [open]);
 
-  const items = useMemo<Item[]>(() => {
-    const q = query.trim().toLowerCase();
-    const matches = (name: string, path: string) =>
-      !q || name.toLowerCase().includes(q) || path.toLowerCase().includes(q);
-
-    const openItems: Item[] = vaults
-      .filter((v) => matches(v.name, v.root))
-      .map((v) => ({
-        kind: "open" as const,
-        vault: v,
-        active: v.id === activeVaultId,
-      }));
-
-    const openPaths = new Set(vaults.map((v) => v.root));
-    const recentItems: Item[] = recent
-      .filter(({ entry }) => !openPaths.has(entry.path))
-      .filter(({ entry }) => {
-        const name = entry.path.split("/").filter(Boolean).pop() ?? entry.path;
-        return matches(name, entry.path);
-      })
-      .map(({ id, entry }) => ({ kind: "recent" as const, id, entry }));
-
-    return [...openItems, ...recentItems, { kind: "new" }];
-  }, [vaults, activeVaultId, recent, query]);
+  const items = useVaultSwitcherItems({
+    activeVaultId,
+    query,
+    recent,
+    vaults,
+  });
 
   useEffect(() => {
     setSelectedIdx(0);
@@ -95,7 +73,7 @@ export function VaultSwitcher({ open, onClose }: VaultSwitcherProps) {
 
   if (!open) return null;
 
-  const handleSelect = async (item: Item) => {
+  const handleSelect = async (item: VaultSwitcherItem) => {
     onClose();
     switch (item.kind) {
       case "open":
@@ -134,10 +112,6 @@ export function VaultSwitcher({ open, onClose }: VaultSwitcherProps) {
     }
   };
 
-  // 그룹 헤더는 첫 등장 시점에만 렌더 — 인덱스로 탐지
-  const firstRecentIdx = items.findIndex((i) => i.kind === "recent");
-  const newIdx = items.findIndex((i) => i.kind === "new");
-
   return (
     <CommandDialog
       icon={<Search className="h-4 w-4 text-[var(--color-text-tertiary)]" />}
@@ -161,114 +135,14 @@ export function VaultSwitcher({ open, onClose }: VaultSwitcherProps) {
           {t("palette:empty.noResults", "No results")}
         </li>
       ) : (
-        items.map((item, i) => {
-          const showOpenHeader = i === 0 && item.kind === "open";
-          const showRecentHeader = i === firstRecentIdx && firstRecentIdx >= 0;
-          const showNewHeader = i === newIdx;
-          return (
-            <li key={itemKey(item, i)}>
-              {showOpenHeader && (
-                <GroupHeader
-                  label={t("vault-dock:switcher.group.open", "Open")}
-                />
-              )}
-              {showRecentHeader && (
-                <GroupHeader
-                  label={t("vault-dock:switcher.group.recent", "Recent")}
-                />
-              )}
-              {showNewHeader && i > 0 && (
-                <GroupHeader
-                  label={t("vault-dock:switcher.group.new", "New")}
-                />
-              )}
-              <button
-                type="button"
-                onClick={() => void handleSelect(item)}
-                onMouseEnter={() => setSelectedIdx(i)}
-                className={cn(
-                  "flex w-full items-center gap-2 px-3 py-2 text-left text-sm",
-                  i === selectedIdx
-                    ? "bg-[var(--color-bg-hover)]"
-                    : "hover:bg-[var(--color-bg-hover)]",
-                )}
-              >
-                <Icon item={item} />
-                <ItemLabel item={item} />
-              </button>
-            </li>
-          );
-        })
+        <VaultSwitcherItemList
+          items={items}
+          selectedIndex={selectedIdx}
+          t={t}
+          onRun={(item) => void handleSelect(item)}
+          onSelect={setSelectedIdx}
+        />
       )}
     </CommandDialog>
-  );
-}
-
-function itemKey(item: Item, fallbackIdx: number): string {
-  switch (item.kind) {
-    case "open":
-      return `open:${item.vault.id}`;
-    case "recent":
-      return `recent:${item.id}`;
-    case "new":
-      return `new:${fallbackIdx}`;
-  }
-}
-
-function GroupHeader({ label }: { label: string }) {
-  return (
-    <div className="px-3 pt-2 pb-1 text-[10px] font-mono uppercase tracking-wide text-[var(--color-text-tertiary)]">
-      {label}
-    </div>
-  );
-}
-
-function Icon({ item }: { item: Item }) {
-  if (item.kind === "new") {
-    return (
-      <FolderPlus className="h-3.5 w-3.5 shrink-0 text-[var(--color-text-tertiary)]" />
-    );
-  }
-  return (
-    <Folder className="h-3.5 w-3.5 shrink-0 text-[var(--color-text-tertiary)]" />
-  );
-}
-
-function ItemLabel({ item }: { item: Item }) {
-  const { t } = useTranslation(["vault-dock"]);
-  if (item.kind === "new") {
-    return (
-      <span className="flex-1 truncate">
-        {t("vault-dock:switcher.action.openNew", "Open vault…")}
-      </span>
-    );
-  }
-  if (item.kind === "open") {
-    return (
-      <div className="flex flex-1 items-center gap-2 overflow-hidden">
-        <div className="flex flex-1 flex-col overflow-hidden">
-          <span className="truncate">{item.vault.name}</span>
-          <span className="truncate text-[11px] text-[var(--color-text-tertiary)]">
-            {item.vault.root}
-          </span>
-        </div>
-        {item.active && (
-          <span className="shrink-0 rounded bg-[var(--color-bg-tertiary)] px-1.5 py-0.5 text-[9px] font-mono uppercase text-[var(--color-text-secondary)]">
-            {t("vault-dock:switcher.activeTag", "active")}
-          </span>
-        )}
-      </div>
-    );
-  }
-  // recent
-  const name =
-    item.entry.path.split("/").filter(Boolean).pop() ?? item.entry.path;
-  return (
-    <div className="flex flex-1 flex-col overflow-hidden">
-      <span className="truncate">{name}</span>
-      <span className="truncate text-[11px] text-[var(--color-text-tertiary)]">
-        {item.entry.path}
-      </span>
-    </div>
   );
 }

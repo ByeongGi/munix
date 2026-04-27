@@ -43,7 +43,6 @@
 note-app/
 ├── AGENTS.md                    # 이 파일
 ├── docs/                         # 설계/ADR/스펙 문서
-│   ├── munix-design-v0.3.md      # 마스터 설계
 │   ├── decisions.md              # ADR 기록
 │   ├── implementation-plan.md    # Phase 0-6 체크리스트
 │   └── specs/                    # 기능별 상세 설계
@@ -165,7 +164,6 @@ note-app/
 
 | 문서 | 용도 | 읽어야 할 때 |
 |------|------|------------|
-| [munix-design-v0.3.md](./docs/munix-design-v0.3.md) | 마스터 설계 | 프로젝트 전체 파악 |
 | [decisions.md](./docs/decisions.md) | ADR 기록 | "왜 이렇게 결정했지?" |
 | [implementation-plan.md](./docs/implementation-plan.md) | 구현 체크리스트 | 다음 할 일 찾을 때 |
 | [specs/README.md](./docs/specs/README.md) | 스펙 인덱스 | 기능별 상세 필요할 때 |

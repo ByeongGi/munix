@@ -1,4 +1,5 @@
 import type { DropZone } from "@/store/workspace-types";
+import type { CSSProperties } from "react";
 
 export type EdgeZone = Exclude<DropZone, "center">;
 
@@ -34,4 +35,20 @@ export function dropZoneLabelKey(zone: DropZone): string {
 
 export function toEdgeZone(zone: DropZone): EdgeZone | null {
   return zone === "center" ? null : zone;
+}
+
+export function getDropZoneOverlayStyle(zone: DropZone): CSSProperties {
+  if (zone === "center") {
+    return { inset: 0 };
+  }
+  if (zone === "left") {
+    return { top: 0, bottom: 0, left: 0, width: "50%" };
+  }
+  if (zone === "right") {
+    return { top: 0, bottom: 0, right: 0, width: "50%" };
+  }
+  if (zone === "top") {
+    return { left: 0, right: 0, top: 0, height: "50%" };
+  }
+  return { left: 0, right: 0, bottom: 0, height: "50%" };
 }
