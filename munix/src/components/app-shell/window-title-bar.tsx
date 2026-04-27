@@ -2,8 +2,8 @@ import { useTranslation } from "react-i18next";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { PanelLeftClose, PanelLeftOpen } from "lucide-react";
 
+import { IconButton } from "@/components/ui/icon-button";
 import { cn } from "@/lib/cn";
-import { iconButton } from "@/lib/ui-variants";
 import { startWindowDrag } from "@/lib/window-drag";
 
 function WindowControl({
@@ -91,20 +91,20 @@ export function AppTitleBar(props: AppTitleBarProps) {
         />
       </div>
       {isWorkspace ? (
-        <button
-          type="button"
+        <IconButton
           onMouseDown={(e) => e.stopPropagation()}
           onClick={props.onToggleSidebar}
-          title={sidebarToggleLabel}
-          aria-label={sidebarToggleLabel}
-          className={cn(iconButton({ size: "sm" }), "ml-0.5")}
-        >
-          {sidebarCollapsed ? (
-            <PanelLeftOpen className="h-3.5 w-3.5" />
-          ) : (
-            <PanelLeftClose className="h-3.5 w-3.5" />
-          )}
-        </button>
+          label={sidebarToggleLabel}
+          size="sm"
+          className="ml-0.5"
+          icon={
+            sidebarCollapsed ? (
+              <PanelLeftOpen className="h-3.5 w-3.5" />
+            ) : (
+              <PanelLeftClose className="h-3.5 w-3.5" />
+            )
+          }
+        />
       ) : null}
       {isWorkspace && sidebarCollapsed ? (
         <div className="ml-3 flex min-w-0 items-center gap-2 text-xs">

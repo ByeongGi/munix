@@ -1,7 +1,7 @@
 import { useTranslation } from "react-i18next";
 import { MoreHorizontal, Plus, Search } from "lucide-react";
 
-import { iconButton } from "@/lib/ui-variants";
+import { IconButton } from "@/components/ui/icon-button";
 import { startWindowDrag } from "@/lib/window-drag";
 
 export function WorkspaceHeader({
@@ -31,32 +31,23 @@ export function WorkspaceHeader({
         className="flex shrink-0 items-center gap-1"
         onMouseDown={(e) => e.stopPropagation()}
       >
-        <button
-          type="button"
+        <IconButton
           onClick={onQuickOpen}
-          title={t("workspace.quickOpen")}
-          aria-label={t("workspace.quickOpen")}
-          className={iconButton({ size: "sm" })}
-        >
-          <Search className="h-3.5 w-3.5" />
-        </button>
-        <button
-          type="button"
+          label={t("workspace.quickOpen")}
+          size="sm"
+          icon={<Search className="h-3.5 w-3.5" />}
+        />
+        <IconButton
           onClick={onNewFile}
-          title={t("header.newFile")}
-          aria-label={t("header.newFile")}
-          className={iconButton({ size: "sm" })}
-        >
-          <Plus className="h-3.5 w-3.5" />
-        </button>
-        <button
-          type="button"
-          title={t("workspace.more")}
-          aria-label={t("workspace.more")}
-          className={iconButton({ size: "sm" })}
-        >
-          <MoreHorizontal className="h-3.5 w-3.5" />
-        </button>
+          label={t("header.newFile")}
+          size="sm"
+          icon={<Plus className="h-3.5 w-3.5" />}
+        />
+        <IconButton
+          label={t("workspace.more")}
+          size="sm"
+          icon={<MoreHorizontal className="h-3.5 w-3.5" />}
+        />
       </div>
     </div>
   );

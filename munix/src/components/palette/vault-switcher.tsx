@@ -11,6 +11,7 @@ import {
 } from "@/lib/vault-registry";
 import type { VaultInfo } from "@/types/ipc";
 import { cn } from "@/lib/cn";
+import { CommandDialog } from "@/components/ui/command-dialog";
 
 interface VaultSwitcherProps {
   open: boolean;
@@ -58,9 +59,7 @@ export function VaultSwitcher({ open, onClose }: VaultSwitcherProps) {
   const items = useMemo<Item[]>(() => {
     const q = query.trim().toLowerCase();
     const matches = (name: string, path: string) =>
-      !q ||
-      name.toLowerCase().includes(q) ||
-      path.toLowerCase().includes(q);
+      !q || name.toLowerCase().includes(q) || path.toLowerCase().includes(q);
 
     const openItems: Item[] = vaults
       .filter((v) => matches(v.name, v.root))
@@ -140,89 +139,68 @@ export function VaultSwitcher({ open, onClose }: VaultSwitcherProps) {
   const newIdx = items.findIndex((i) => i.kind === "new");
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-start justify-center pt-[15vh]"
-      onClick={onClose}
-    >
-      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
-      <div
-        role="dialog"
-        aria-modal="true"
-        onClick={(e) => e.stopPropagation()}
-        className={cn(
-          "relative w-full max-w-lg rounded-lg border shadow-2xl",
-          "border-[var(--color-border-primary)] bg-[var(--color-bg-secondary)]",
-        )}
-      >
-        <div className="flex items-center gap-2 border-b border-[var(--color-border-primary)] px-3 py-2">
-          <Search className="h-4 w-4 text-[var(--color-text-tertiary)]" />
-          <input
-            ref={inputRef}
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            onKeyDown={onKeyDown}
-            placeholder={t(
-              "vault-dock:switcher.placeholder",
-              "Switch vault…",
-            )}
-            className="flex-1 bg-transparent text-sm outline-none placeholder:text-[var(--color-text-tertiary)]"
-          />
-        </div>
-
-        <ul ref={listRef} className="max-h-[50vh] overflow-y-auto py-1">
-          {items.length === 0 ? (
-            <li className="px-4 py-6 text-center text-xs text-[var(--color-text-tertiary)]">
-              {t("palette:empty.noResults", "No results")}
-            </li>
-          ) : (
-            items.map((item, i) => {
-              const showOpenHeader = i === 0 && item.kind === "open";
-              const showRecentHeader = i === firstRecentIdx && firstRecentIdx >= 0;
-              const showNewHeader = i === newIdx;
-              return (
-                <li key={itemKey(item, i)}>
-                  {showOpenHeader && (
-                    <GroupHeader
-                      label={t("vault-dock:switcher.group.open", "Open")}
-                    />
-                  )}
-                  {showRecentHeader && (
-                    <GroupHeader
-                      label={t("vault-dock:switcher.group.recent", "Recent")}
-                    />
-                  )}
-                  {showNewHeader && i > 0 && (
-                    <GroupHeader
-                      label={t("vault-dock:switcher.group.new", "New")}
-                    />
-                  )}
-                  <button
-                    type="button"
-                    onClick={() => void handleSelect(item)}
-                    onMouseEnter={() => setSelectedIdx(i)}
-                    className={cn(
-                      "flex w-full items-center gap-2 px-3 py-2 text-left text-sm",
-                      i === selectedIdx
-                        ? "bg-[var(--color-bg-hover)]"
-                        : "hover:bg-[var(--color-bg-hover)]",
-                    )}
-                  >
-                    <Icon item={item} />
-                    <ItemLabel item={item} />
-                  </button>
-                </li>
-              );
-            })
-          )}
-        </ul>
-
+    <CommandDialog
+      icon={<Search className="h-4 w-4 text-[var(--color-text-tertiary)]" />}
+      inputRef={inputRef}
+      listRef={listRef}
+      value={query}
+      onChange={(e) => setQuery(e.target.value)}
+      onKeyDown={onKeyDown}
+      onClose={onClose}
+      placeholder={t("vault-dock:switcher.placeholder", "Switch vault…")}
+      footer={
         <div className="flex items-center justify-end gap-3 border-t border-[var(--color-border-primary)] px-3 py-1.5 text-[10px] text-[var(--color-text-tertiary)]">
           <span>{t("palette:footer.navigate", "↑↓ Navigate")}</span>
           <span>{t("palette:footer.open", "Enter Run")}</span>
           <span>{t("palette:footer.dismiss", "Esc Close")}</span>
         </div>
-      </div>
-    </div>
+      }
+    >
+      {items.length === 0 ? (
+        <li className="px-4 py-6 text-center text-xs text-[var(--color-text-tertiary)]">
+          {t("palette:empty.noResults", "No results")}
+        </li>
+      ) : (
+        items.map((item, i) => {
+          const showOpenHeader = i === 0 && item.kind === "open";
+          const showRecentHeader = i === firstRecentIdx && firstRecentIdx >= 0;
+          const showNewHeader = i === newIdx;
+          return (
+            <li key={itemKey(item, i)}>
+              {showOpenHeader && (
+                <GroupHeader
+                  label={t("vault-dock:switcher.group.open", "Open")}
+                />
+              )}
+              {showRecentHeader && (
+                <GroupHeader
+                  label={t("vault-dock:switcher.group.recent", "Recent")}
+                />
+              )}
+              {showNewHeader && i > 0 && (
+                <GroupHeader
+                  label={t("vault-dock:switcher.group.new", "New")}
+                />
+              )}
+              <button
+                type="button"
+                onClick={() => void handleSelect(item)}
+                onMouseEnter={() => setSelectedIdx(i)}
+                className={cn(
+                  "flex w-full items-center gap-2 px-3 py-2 text-left text-sm",
+                  i === selectedIdx
+                    ? "bg-[var(--color-bg-hover)]"
+                    : "hover:bg-[var(--color-bg-hover)]",
+                )}
+              >
+                <Icon item={item} />
+                <ItemLabel item={item} />
+              </button>
+            </li>
+          );
+        })
+      )}
+    </CommandDialog>
   );
 }
 

@@ -7,6 +7,7 @@ import { useTabStore } from "@/store/tab-store";
 import { useRecentStore } from "@/store/recent-store";
 import type { SearchHit } from "@/lib/search-index";
 import { cn } from "@/lib/cn";
+import { CommandDialog } from "@/components/ui/command-dialog";
 
 interface QuickOpenProps {
   open: boolean;
@@ -102,77 +103,61 @@ export function QuickOpen({ open, onClose }: QuickOpenProps) {
   };
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-start justify-center pt-[15vh]"
-      onClick={onClose}
-    >
-      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
-      <div
-        role="dialog"
-        aria-modal="true"
-        onClick={(e) => e.stopPropagation()}
-        className={cn(
-          "relative w-full max-w-lg rounded-lg border shadow-2xl",
-          "border-[var(--color-border-primary)] bg-[var(--color-bg-secondary)]",
-        )}
-      >
-        <div className="flex items-center gap-2 border-b border-[var(--color-border-primary)] px-3 py-2">
-          <Search className="h-4 w-4 text-[var(--color-text-tertiary)]" />
-          <input
-            ref={inputRef}
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            onKeyDown={onKeyDown}
-            placeholder={t("palette:placeholder.fileSearch")}
-            className="flex-1 bg-transparent text-sm outline-none placeholder:text-[var(--color-text-tertiary)]"
-          />
-          {status === "building" && (
-            <span className="text-[11px] text-[var(--color-text-tertiary)]">
-              {t("palette:empty.indexing")}
-            </span>
-          )}
-        </div>
-
-        <ul ref={listRef} className="max-h-[50vh] overflow-y-auto py-1">
-          {results.length === 0 ? (
-            <li className="px-4 py-6 text-center text-xs text-[var(--color-text-tertiary)]">
-              {status === "ready"
-                ? t("palette:empty.noResults")
-                : t("palette:empty.indexNotReady")}
-            </li>
-          ) : (
-            results.map((hit, i) => (
-              <li key={hit.path}>
-                <button
-                  type="button"
-                  onClick={() => handleSelect(hit)}
-                  onMouseEnter={() => setSelectedIdx(i)}
-                  className={cn(
-                    "flex w-full items-center gap-2 px-3 py-2 text-left text-sm",
-                    i === selectedIdx
-                      ? "bg-[var(--color-bg-hover)]"
-                      : "hover:bg-[var(--color-bg-hover)]",
-                  )}
-                >
-                  <FileText className="h-3.5 w-3.5 shrink-0 text-[var(--color-text-tertiary)]" />
-                  <div className="flex flex-1 flex-col overflow-hidden">
-                    <span className="truncate">{hit.title}</span>
-                    <span className="truncate text-[11px] text-[var(--color-text-tertiary)]">
-                      {hit.path}
-                    </span>
-                  </div>
-                </button>
-              </li>
-            ))
-          )}
-        </ul>
-
+    <CommandDialog
+      icon={<Search className="h-4 w-4 text-[var(--color-text-tertiary)]" />}
+      inputRef={inputRef}
+      listRef={listRef}
+      value={query}
+      placeholder={t("palette:placeholder.fileSearch")}
+      onChange={(e) => setQuery(e.target.value)}
+      onKeyDown={onKeyDown}
+      onClose={onClose}
+      trailing={
+        status === "building" ? (
+          <span className="text-[11px] text-[var(--color-text-tertiary)]">
+            {t("palette:empty.indexing")}
+          </span>
+        ) : null
+      }
+      footer={
         <div className="flex items-center justify-end gap-3 border-t border-[var(--color-border-primary)] px-3 py-1.5 text-[10px] text-[var(--color-text-tertiary)]">
           <span>{t("palette:footer.navigate")}</span>
           <span>{t("palette:footer.open")}</span>
           <span>{t("palette:footer.dismiss")}</span>
         </div>
-      </div>
-    </div>
+      }
+    >
+      {results.length === 0 ? (
+        <li className="px-4 py-6 text-center text-xs text-[var(--color-text-tertiary)]">
+          {status === "ready"
+            ? t("palette:empty.noResults")
+            : t("palette:empty.indexNotReady")}
+        </li>
+      ) : (
+        results.map((hit, i) => (
+          <li key={hit.path}>
+            <button
+              type="button"
+              onClick={() => handleSelect(hit)}
+              onMouseEnter={() => setSelectedIdx(i)}
+              className={cn(
+                "flex w-full items-center gap-2 px-3 py-2 text-left text-sm",
+                i === selectedIdx
+                  ? "bg-[var(--color-bg-hover)]"
+                  : "hover:bg-[var(--color-bg-hover)]",
+              )}
+            >
+              <FileText className="h-3.5 w-3.5 shrink-0 text-[var(--color-text-tertiary)]" />
+              <div className="flex flex-1 flex-col overflow-hidden">
+                <span className="truncate">{hit.title}</span>
+                <span className="truncate text-[11px] text-[var(--color-text-tertiary)]">
+                  {hit.path}
+                </span>
+              </div>
+            </button>
+          </li>
+        ))
+      )}
+    </CommandDialog>
   );
 }

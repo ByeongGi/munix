@@ -10,13 +10,13 @@ import {
   Settings,
 } from "lucide-react";
 
+import { IconButton } from "@/components/ui/icon-button";
 import { FileList } from "@/components/file-tree";
 import { OutlinePanel } from "@/components/outline-panel";
 import { SearchPanel } from "@/components/search-panel";
 import { SidebarResizer } from "@/components/sidebar-resizer";
 import { TagPanel } from "@/components/tag-panel";
 import { VaultDock } from "@/components/vault-dock";
-import { iconButton } from "@/lib/ui-variants";
 import type { FileNode } from "@/types/ipc";
 import { SidebarTabButton } from "./sidebar-tab-button";
 import type { SidebarTab } from "./types";
@@ -122,24 +122,18 @@ export function AppSidebar({
           </h2>
           {sidebarTab === "files" ? (
             <div className="flex items-center gap-0.5">
-              <button
-                type="button"
+              <IconButton
                 onClick={onCreateFile}
-                title={t("header.newFile")}
-                aria-label={t("header.newFile")}
-                className={iconButton({ size: "sm" })}
-              >
-                <Plus className="h-3.5 w-3.5" />
-              </button>
-              <button
-                type="button"
+                label={t("header.newFile")}
+                size="sm"
+                icon={<Plus className="h-3.5 w-3.5" />}
+              />
+              <IconButton
                 onClick={onCreateFolder}
-                title={t("header.newFolder")}
-                aria-label={t("header.newFolder")}
-                className={iconButton({ size: "sm" })}
-              >
-                <FolderPlus className="h-3.5 w-3.5" />
-              </button>
+                label={t("header.newFolder")}
+                size="sm"
+                icon={<FolderPlus className="h-3.5 w-3.5" />}
+              />
             </div>
           ) : null}
         </div>

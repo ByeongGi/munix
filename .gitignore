@@ -37,3 +37,8 @@ munix/src-tauri/icons/ios/
 # Env
 .env
 .env.local
+
+# skills
+.claude/skills
+.agents/skills
+skills-lock.json

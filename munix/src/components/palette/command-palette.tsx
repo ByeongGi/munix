@@ -37,6 +37,7 @@ import { useVaultStore } from "@/store/vault-store";
 import { useVaultDockStore } from "@/store/vault-dock-store";
 import { ipc } from "@/lib/ipc";
 import { cn } from "@/lib/cn";
+import { CommandDialog } from "@/components/ui/command-dialog";
 import { closeActivePane, splitActivePane } from "@/lib/workspace-commands";
 import type { SearchHit } from "@/lib/search-index";
 import { extractHeadings, parseMode } from "./command-palette-utils";
@@ -699,47 +700,25 @@ export function CommandPalette({
   const ModeIcon = modeIcon();
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-start justify-center pt-[15vh]"
-      onClick={onClose}
-    >
-      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
-      <div
-        role="dialog"
-        aria-modal="true"
-        onClick={(e) => e.stopPropagation()}
-        className={cn(
-          "relative w-full max-w-lg rounded-lg border shadow-2xl",
-          "border-[var(--color-border-primary)] bg-[var(--color-bg-secondary)]",
-        )}
-      >
-        <div className="flex items-center gap-2 border-b border-[var(--color-border-primary)] px-3 py-2">
-          <ModeIcon className="h-4 w-4 shrink-0 text-[var(--color-text-tertiary)]" />
-          <input
-            ref={inputRef}
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            onKeyDown={onKeyDown}
-            placeholder={placeholder()}
-            className="flex-1 bg-transparent text-sm outline-none placeholder:text-[var(--color-text-tertiary)]"
-          />
-          {badge && (
-            <span className="rounded px-1 py-0.5 text-[10px] font-medium bg-[var(--color-bg-tertiary)] text-[var(--color-text-tertiary)]">
-              {badge}
-            </span>
-          )}
-        </div>
-        <ul ref={listRef} className="max-h-[50vh] overflow-y-auto py-1">
-          {items.length === 0 ? (
-            <li className="px-4 py-6 text-center text-xs text-[var(--color-text-tertiary)]">
-              {mode === "line" && text === ""
-                ? t("palette:placeholder.prefix.line")
-                : emptyMessage()}
-            </li>
-          ) : (
-            items.map((item, i) => renderItem(item, i))
-          )}
-        </ul>
+    <CommandDialog
+      icon={
+        <ModeIcon className="h-4 w-4 shrink-0 text-[var(--color-text-tertiary)]" />
+      }
+      inputRef={inputRef}
+      listRef={listRef}
+      value={query}
+      onChange={(e) => setQuery(e.target.value)}
+      onKeyDown={onKeyDown}
+      onClose={onClose}
+      placeholder={placeholder()}
+      trailing={
+        badge ? (
+          <span className="rounded px-1 py-0.5 text-[10px] font-medium bg-[var(--color-bg-tertiary)] text-[var(--color-text-tertiary)]">
+            {badge}
+          </span>
+        ) : null
+      }
+      footer={
         <div className="flex items-center gap-3 border-t border-[var(--color-border-primary)] px-3 py-1.5 text-[11px] text-[var(--color-text-tertiary)]">
           <span>{t("palette:footer.navigate")}</span>
           <span>{t("palette:footer.open")}</span>
@@ -748,7 +727,17 @@ export function CommandPalette({
             {t("palette:footer.prefixHint")}
           </span>
         </div>
-      </div>
-    </div>
+      }
+    >
+      {items.length === 0 ? (
+        <li className="px-4 py-6 text-center text-xs text-[var(--color-text-tertiary)]">
+          {mode === "line" && text === ""
+            ? t("palette:placeholder.prefix.line")
+            : emptyMessage()}
+        </li>
+      ) : (
+        items.map((item, i) => renderItem(item, i))
+      )}
+    </CommandDialog>
   );
 }
