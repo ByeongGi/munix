@@ -22,26 +22,20 @@
 import { useCallback, useEffect, useState } from "react";
 import { useStore } from "zustand";
 import { useTranslation } from "react-i18next";
-import { Pin, Plus, X } from "lucide-react";
-
 import { useActiveWorkspaceStore } from "@/lib/active-vault";
 import { cn } from "@/lib/cn";
 import { makeTabId } from "@/store/slices/tab-slice";
 import {
-  LEGACY_TAB_DND_MIME,
   TAB_DND_MIME,
   parseTabPayload,
-  serializeTabPayload,
 } from "@/lib/dnd-mime";
 import { useVaultDockStore } from "@/store/vault-dock-store";
 import type { DropZone, PaneNode } from "@/store/workspace-types";
 import { ipc } from "@/lib/ipc";
 import {
-  ContextMenuItem,
-  ContextMenuSeparator,
-  ContextMenuSurface,
   PaneActionsButton,
   PaneActionsMenu,
+  TabActionsMenu,
 } from "@/components/workspace/pane-context-menu";
 import {
   classifyDropZone,
@@ -49,6 +43,7 @@ import {
 } from "./drop-zone";
 import { EmptyPanePlaceholder } from "./empty-pane-placeholder";
 import { InactivePaneEditor } from "./inactive-pane-editor";
+import { MiniPaneTabStrip } from "./mini-pane-tab-strip";
 
 interface PaneProps {
   pane: PaneNode;
@@ -69,8 +64,6 @@ interface TabMenuState {
   y: number;
   tabId: string;
 }
-
-type Translate = (key: string) => string;
 
 const PANE_CHROME_SELECTOR =
   "[data-pane-tab],[data-pane-tab-close],[data-pane-tab-new],[data-pane-menu]";
@@ -96,16 +89,11 @@ export function Pane({
   const splitPane = useStore(ws, (s) => s.splitPane);
   const movePaneTab = useStore(ws, (s) => s.movePaneTab);
   const splitPaneMove = useStore(ws, (s) => s.splitPaneMove);
-  const reorderPaneTab = useStore(ws, (s) => s.reorderPaneTab);
   const vaultId = useVaultDockStore((s) => s.activeVaultId);
   const [dropZone, setDropZone] = useState<DropZone | null>(null);
   const [paneMenu, setPaneMenu] = useState<PaneMenuState | null>(null);
   const [tabMenu, setTabMenu] = useState<TabMenuState | null>(null);
-
-  // mini TabBar reorder (B.2 deferred polish): hover index/side 추적.
-  const [miniDragIndex, setMiniDragIndex] = useState<number | null>(null);
-  const [miniHoverIndex, setMiniHoverIndex] = useState<number | null>(null);
-  const [miniHoverSide, setMiniHoverSide] = useState<"left" | "right">("left");
+  const reorderPaneTab = useStore(ws, (s) => s.reorderPaneTab);
 
   useEffect(() => {
     if (!paneMenu && !tabMenu) return;
@@ -388,178 +376,18 @@ export function Pane({
         data-no-edge-drop="true"
         className="flex h-10 shrink-0 items-center gap-0 border-b border-[var(--color-border-primary)] bg-[var(--color-bg-tertiary)] pl-2 pr-1 shadow-[inset_0_-1px_0_var(--color-border-primary)]"
       >
-        <div className="flex min-w-0 flex-1 items-end gap-px overflow-x-auto">
-          {pane.tabs.map((tab, index) => {
-            const isPaneActive = tab.id === pane.activeTabId;
-            const isHovered =
-              miniDragIndex !== null && miniHoverIndex === index;
-            const showLeftIndicator =
-              isHovered &&
-              miniHoverSide === "left" &&
-              miniDragIndex !== index &&
-              miniDragIndex !== index - 1;
-            const showRightIndicator =
-              isHovered &&
-              miniHoverSide === "right" &&
-              miniDragIndex !== index &&
-              miniDragIndex !== index + 1;
-            return (
-              <div
-                key={tab.id}
-                draggable
-                data-pane-tab={tab.id}
-                onDragStart={(e) => {
-                  e.dataTransfer.setData(
-                    TAB_DND_MIME,
-                    serializeTabPayload({
-                      type: "munix/tab",
-                      vaultId: vaultId ?? null,
-                      tabId: tab.id,
-                      fromPaneId: pane.id,
-                      path: tab.path,
-                    }),
-                  );
-                  // 같은 mini TabBar 안 reorder 용 인덱스.
-                  e.dataTransfer.setData(LEGACY_TAB_DND_MIME, String(index));
-                  e.dataTransfer.effectAllowed = "move";
-                  setMiniDragIndex(index);
-                }}
-                onDragOver={(e) => {
-                  const types = e.dataTransfer.types;
-                  if (
-                    !types.includes(LEGACY_TAB_DND_MIME) &&
-                    !types.includes(TAB_DND_MIME)
-                  )
-                    return;
-                  // 같은 pane 안 reorder 만 hover indicator.
-                  const payload = types.includes(TAB_DND_MIME)
-                    ? parseTabPayload(e.dataTransfer.getData(TAB_DND_MIME))
-                    : null;
-                  const fromSamePane =
-                    payload?.fromPaneId === pane.id ||
-                    (!payload && types.includes(LEGACY_TAB_DND_MIME));
-                  if (!fromSamePane) return;
-                  e.preventDefault();
-                  e.stopPropagation();
-                  e.dataTransfer.dropEffect = "move";
-                  const rect = (
-                    e.currentTarget as HTMLElement
-                  ).getBoundingClientRect();
-                  const side: "left" | "right" =
-                    e.clientX - rect.left < rect.width / 2 ? "left" : "right";
-                  if (miniHoverIndex !== index) setMiniHoverIndex(index);
-                  if (miniHoverSide !== side) setMiniHoverSide(side);
-                }}
-                onDragLeave={() => {
-                  if (miniHoverIndex === index) setMiniHoverIndex(null);
-                }}
-                onDrop={(e) => {
-                  const types = e.dataTransfer.types;
-                  let from = -1;
-                  if (types.includes(TAB_DND_MIME)) {
-                    const payload = parseTabPayload(
-                      e.dataTransfer.getData(TAB_DND_MIME),
-                    );
-                    if (!payload || payload.fromPaneId !== pane.id) {
-                      // 다른 pane 에서 끌어온 것 — outer drop 핸들러가 처리.
-                      return;
-                    }
-                    from = pane.tabs.findIndex((tt) => tt.id === payload.tabId);
-                  } else if (types.includes(LEGACY_TAB_DND_MIME)) {
-                    from = parseInt(
-                      e.dataTransfer.getData(LEGACY_TAB_DND_MIME),
-                      10,
-                    );
-                  }
-                  if (from < 0 || Number.isNaN(from)) return;
-                  e.preventDefault();
-                  e.stopPropagation();
-                  const targetIdx =
-                    miniHoverSide === "left" ? index : index + 1;
-                  const adjusted = from < targetIdx ? targetIdx - 1 : targetIdx;
-                  if (adjusted !== from) {
-                    reorderPaneTab(pane.id, from, adjusted);
-                  }
-                  setMiniDragIndex(null);
-                  setMiniHoverIndex(null);
-                }}
-                onDragEnd={() => {
-                  setMiniDragIndex(null);
-                  setMiniHoverIndex(null);
-                }}
-                onMouseDown={(e) => {
-                  if (e.button !== 0) return;
-                  e.stopPropagation();
-                  activatePaneTab(pane.id, tab.id);
-                }}
-                onContextMenu={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  setTabMenu({ x: e.clientX, y: e.clientY, tabId: tab.id });
-                }}
-                className={cn(
-                  "group relative flex h-8 min-w-24 max-w-44 flex-[1_1_9rem] cursor-default select-none items-center gap-1.5 rounded-t-md border border-b-0 px-2 text-xs",
-                  "border-[var(--color-border-primary)]",
-                  isPaneActive
-                    ? "bg-[var(--color-bg-primary)] text-[var(--color-text-primary)]"
-                    : "bg-[var(--color-bg-secondary)] text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-hover)] hover:text-[var(--color-text-primary)]",
-                  miniDragIndex === index && "opacity-40",
-                )}
-                title={tab.path}
-              >
-                {showLeftIndicator && (
-                  <span className="absolute -left-px top-0 h-full w-[2px] bg-[var(--color-accent)]" />
-                )}
-                {showRightIndicator && (
-                  <span className="absolute -right-px top-0 h-full w-[2px] bg-[var(--color-accent)]" />
-                )}
-                <span className="min-w-0 flex-1 truncate">
-                  {tab.pinned && (
-                    <Pin className="mr-1 inline h-3 w-3 text-[var(--color-accent)]" />
-                  )}
-                  {tab.path
-                    ? (tab.titleDraft ?? tab.title)
-                    : t("tabs:emptyTab.title")}
-                </span>
-                {isPaneActive && (
-                  <span className="absolute inset-x-0 top-0 h-[3px] rounded-t-md bg-[var(--color-accent)]" />
-                )}
-                <button
-                  type="button"
-                  data-pane-tab-close={tab.id}
-                  onMouseDown={(e) => {
-                    e.stopPropagation();
-                  }}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    closePaneTab(pane.id, tab.id);
-                  }}
-                  className="flex h-4 w-4 items-center justify-center rounded text-[var(--color-text-tertiary)] hover:bg-[var(--color-bg-hover)] hover:text-[var(--color-text-primary)]"
-                  aria-label="close tab"
-                >
-                  <X className="h-3 w-3" />
-                </button>
-              </div>
-            );
-          })}
-        </div>
-        <button
-          type="button"
-          data-pane-tab-new="true"
-          onMouseDown={(e) => e.stopPropagation()}
-          onClick={(e) => {
-            e.stopPropagation();
-            createPaneTab(pane.id, "");
-          }}
-          className={cn(
-            "ml-1 flex h-6 w-6 items-center justify-center rounded",
-            "text-[var(--color-text-tertiary)] hover:bg-[var(--color-bg-hover)]",
-          )}
-          aria-label={t("tabs:aria.newTab")}
-          title={t("tabs:tooltip.newTab")}
-        >
-          <Plus className="h-3.5 w-3.5" />
-        </button>
+        <MiniPaneTabStrip
+          pane={pane}
+          vaultId={vaultId ?? null}
+          emptyTabTitle={t("tabs:emptyTab.title")}
+          newTabLabel={t("tabs:aria.newTab")}
+          newTabTooltip={t("tabs:tooltip.newTab")}
+          onActivateTab={activatePaneTab}
+          onCloseTab={closePaneTab}
+          onCreateTab={createPaneTab}
+          onReorderTab={reorderPaneTab}
+          onOpenTabMenu={setTabMenu}
+        />
         <PaneActionsButton
           label={t("tabs:paneMenu.label")}
           onClick={(e) => {
@@ -679,105 +507,6 @@ function DropZoneOverlay({
         </span>
       )}
     </div>
-  );
-}
-
-function TabActionsMenu({
-  x,
-  y,
-  t,
-  onSplitRight,
-  onSplitDown,
-  onClose,
-  onCloseOthers,
-  onCloseTabsAfter,
-  onTogglePinned,
-  onCopyLink,
-  onCopyPath,
-  onCopyRelativePath,
-  onRevealInFileTree,
-  onRevealInSystem,
-  onCloseAll,
-  hasPath,
-  pinned,
-}: {
-  x: number;
-  y: number;
-  t: Translate;
-  onSplitRight: () => void;
-  onSplitDown: () => void;
-  onClose: () => void;
-  onCloseOthers: () => void;
-  onCloseTabsAfter: () => void;
-  onTogglePinned: () => void;
-  onCopyLink: () => void;
-  onCopyPath: () => void;
-  onCopyRelativePath: () => void;
-  onRevealInFileTree: () => void;
-  onRevealInSystem: () => void;
-  onCloseAll: () => void;
-  hasPath: boolean;
-  pinned: boolean;
-}) {
-  return (
-    <ContextMenuSurface x={x} y={y}>
-      <ContextMenuItem label={t("tabs:contextMenu.close")} onClick={onClose} />
-      <ContextMenuItem
-        label={t("tabs:contextMenu.closeOthers")}
-        onClick={onCloseOthers}
-      />
-      <ContextMenuItem
-        label={t("tabs:contextMenu.closeTabsAfter")}
-        onClick={onCloseTabsAfter}
-      />
-      <ContextMenuSeparator />
-      <ContextMenuItem
-        label={t(pinned ? "tabs:contextMenu.unpin" : "tabs:contextMenu.pin")}
-        onClick={onTogglePinned}
-      />
-      <ContextMenuItem
-        label={t("tabs:contextMenu.copyLink")}
-        disabled={!hasPath}
-        onClick={onCopyLink}
-      />
-      <ContextMenuSeparator />
-      <ContextMenuItem label={t("tabs:contextMenu.moveToNewWindow")} disabled />
-      <ContextMenuSeparator />
-      {hasPath && (
-        <>
-          <ContextMenuItem
-            label={t("tabs:contextMenu.copyPath")}
-            onClick={onCopyPath}
-          />
-          <ContextMenuItem
-            label={t("tabs:contextMenu.copyRelativePath")}
-            onClick={onCopyRelativePath}
-          />
-          <ContextMenuItem
-            label={t("tabs:contextMenu.revealInFileTree")}
-            onClick={onRevealInFileTree}
-          />
-          <ContextMenuItem
-            label={t("tabs:contextMenu.revealInSystem")}
-            onClick={onRevealInSystem}
-          />
-          <ContextMenuSeparator />
-        </>
-      )}
-      <ContextMenuItem
-        label={t("tabs:contextMenu.splitRight")}
-        onClick={onSplitRight}
-      />
-      <ContextMenuItem
-        label={t("tabs:contextMenu.splitDown")}
-        onClick={onSplitDown}
-      />
-      <ContextMenuSeparator />
-      <ContextMenuItem
-        label={t("tabs:contextMenu.closeAll")}
-        onClick={onCloseAll}
-      />
-    </ContextMenuSurface>
   );
 }
 

@@ -124,3 +124,102 @@ export function PaneActionsMenu({
     </ContextMenuSurface>
   );
 }
+
+export function TabActionsMenu({
+  x,
+  y,
+  t,
+  onSplitRight,
+  onSplitDown,
+  onClose,
+  onCloseOthers,
+  onCloseTabsAfter,
+  onTogglePinned,
+  onCopyLink,
+  onCopyPath,
+  onCopyRelativePath,
+  onRevealInFileTree,
+  onRevealInSystem,
+  onCloseAll,
+  hasPath,
+  pinned,
+}: {
+  x: number;
+  y: number;
+  t: Translate;
+  onSplitRight: () => void;
+  onSplitDown: () => void;
+  onClose: () => void;
+  onCloseOthers: () => void;
+  onCloseTabsAfter: () => void;
+  onTogglePinned: () => void;
+  onCopyLink: () => void;
+  onCopyPath: () => void;
+  onCopyRelativePath: () => void;
+  onRevealInFileTree: () => void;
+  onRevealInSystem: () => void;
+  onCloseAll: () => void;
+  hasPath: boolean;
+  pinned: boolean;
+}) {
+  return (
+    <ContextMenuSurface x={x} y={y}>
+      <ContextMenuItem label={t("tabs:contextMenu.close")} onClick={onClose} />
+      <ContextMenuItem
+        label={t("tabs:contextMenu.closeOthers")}
+        onClick={onCloseOthers}
+      />
+      <ContextMenuItem
+        label={t("tabs:contextMenu.closeTabsAfter")}
+        onClick={onCloseTabsAfter}
+      />
+      <ContextMenuSeparator />
+      <ContextMenuItem
+        label={t(pinned ? "tabs:contextMenu.unpin" : "tabs:contextMenu.pin")}
+        onClick={onTogglePinned}
+      />
+      <ContextMenuItem
+        label={t("tabs:contextMenu.copyLink")}
+        disabled={!hasPath}
+        onClick={onCopyLink}
+      />
+      <ContextMenuSeparator />
+      <ContextMenuItem label={t("tabs:contextMenu.moveToNewWindow")} disabled />
+      <ContextMenuSeparator />
+      {hasPath ? (
+        <>
+          <ContextMenuItem
+            label={t("tabs:contextMenu.copyPath")}
+            onClick={onCopyPath}
+          />
+          <ContextMenuItem
+            label={t("tabs:contextMenu.copyRelativePath")}
+            onClick={onCopyRelativePath}
+          />
+          <ContextMenuItem
+            label={t("tabs:contextMenu.revealInFileTree")}
+            onClick={onRevealInFileTree}
+          />
+          <ContextMenuItem
+            label={t("tabs:contextMenu.revealInSystem")}
+            onClick={onRevealInSystem}
+          />
+          <ContextMenuSeparator />
+        </>
+      ) : null}
+      <ContextMenuItem
+        label={t("tabs:contextMenu.splitRight")}
+        onClick={onSplitRight}
+      />
+      <ContextMenuItem
+        label={t("tabs:contextMenu.splitDown")}
+        onClick={onSplitDown}
+      />
+      <ContextMenuSeparator />
+      <ContextMenuItem
+        label={t("tabs:contextMenu.closeAll")}
+        onClick={onCloseAll}
+      />
+    </ContextMenuSurface>
+  );
+}
