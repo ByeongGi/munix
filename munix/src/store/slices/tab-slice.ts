@@ -104,6 +104,15 @@ async function closeEditorFile(): Promise<void> {
   useEditorStore.getState().closeFile();
 }
 
+function syncEditorToActiveTab(tabs: Tab[], activeId: string | null): void {
+  if (activeId === null) {
+    void closeEditorFile();
+    return;
+  }
+  const tab = tabs.find((item) => item.id === activeId);
+  if (tab) void openFileInEditor(tab.path);
+}
+
 export function defaultTabSlice(): TabSlice {
   return {
     tabs: [],
@@ -210,12 +219,7 @@ export const createTabSlice: StateCreator<TabFullSlice, [], [], TabSlice> = (
     const next = closeTabInList(tabs, activeId, id);
     if (!next) return;
     set({ tabs: next.tabs, activeId: next.activeId });
-    if (next.activeId === null) {
-      void closeEditorFile();
-    } else if (next.activeChanged) {
-      const t = next.tabs.find((x) => x.id === next.activeId);
-      if (t) void openFileInEditor(t.path);
-    }
+    if (next.activeChanged) syncEditorToActiveTab(next.tabs, next.activeId);
   },
 
   closeOthers: (id) => {
@@ -242,12 +246,7 @@ export const createTabSlice: StateCreator<TabFullSlice, [], [], TabSlice> = (
 
     const next = closeUnpinnedTabsInList(get().tabs, get().activeId);
     set({ tabs: next.tabs, activeId: next.activeId });
-    if (next.activeId === null) {
-      void closeEditorFile();
-    } else {
-      const tab = next.tabs.find((t) => t.id === next.activeId);
-      if (tab) void openFileInEditor(tab.path);
-    }
+    syncEditorToActiveTab(next.tabs, next.activeId);
   },
 
   closeTabsAfter: (id) => {
@@ -260,10 +259,7 @@ export const createTabSlice: StateCreator<TabFullSlice, [], [], TabSlice> = (
     const next = closeTabsAfterInList(get().tabs, get().activeId, id);
     if (!next) return;
     set({ tabs: next.tabs, activeId: next.activeId });
-    if (next.activeChanged) {
-      const t = next.tabs.find((x) => x.id === next.activeId);
-      if (t) void openFileInEditor(t.path);
-    }
+    if (next.activeChanged) syncEditorToActiveTab(next.tabs, next.activeId);
   },
 
   togglePinned: (id) => {
@@ -341,12 +337,7 @@ export const createTabSlice: StateCreator<TabFullSlice, [], [], TabSlice> = (
     if (get().workspaceTree) {
       get().removeFromAllPanes(path);
     }
-    if (next.activeId === null) {
-      void closeEditorFile();
-    } else {
-      const t = next.tabs.find((x) => x.id === next.activeId);
-      if (t) void openFileInEditor(t.path);
-    }
+    syncEditorToActiveTab(next.tabs, next.activeId);
   },
 
   reorder: (from, to) => {
