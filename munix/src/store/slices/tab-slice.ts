@@ -17,6 +17,19 @@ import {
   type WorkspaceNode,
 } from "@/store/workspace-types";
 import type { WorkspaceTreeSlice } from "./workspace-tree-slice";
+import {
+  basename,
+  closeOtherTabsInList,
+  closeTabInList,
+  closeTabsAfterInList,
+  closeUnpinnedTabsInList,
+  promoteEmptyTab,
+  removePathFromTabs,
+  renamePathInTabs,
+  reorderTabs,
+  togglePinnedInList,
+  withTitleDraft,
+} from "./tab-helpers";
 
 /** 탭 soft limit — 초과 시 경고 표시. 강제 차단은 아님. */
 export const TAB_SOFT_LIMIT = 10;
@@ -55,17 +68,6 @@ export interface TabSlice {
 /** Client-side tab IDs are ephemeral workspace identifiers, not persisted file IDs. */
 export function makeTabId(): string {
   return `tab-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
-}
-
-function basename(path: string): string {
-  const i = path.lastIndexOf("/");
-  return (i < 0 ? path : path.slice(i + 1)).replace(/\.md$/i, "");
-}
-
-function withTitleDraft(tab: Tab, draft: string | null): Tab {
-  if (draft !== null) return { ...tab, titleDraft: draft };
-  const { titleDraft: _titleDraft, ...rest } = tab;
-  return rest;
 }
 
 function patchTitleDraftInTree(
@@ -172,29 +174,25 @@ export const createTabSlice: StateCreator<TabFullSlice, [], [], TabSlice> = (
 
   promoteActiveEmptyTab: (path) => {
     const { tabs, activeId, workspaceTree, activePaneId } = get();
-    if (!activeId) return false;
-    const active = tabs.find((t) => t.id === activeId);
-    if (!active || active.path !== "") return false;
-
-    const promoted: Tab = { ...active, path, title: basename(path) };
-    const nextTabs = tabs.map((t) => (t.id === activeId ? promoted : t));
+    const promotion = promoteEmptyTab(tabs, activeId, path);
+    if (!promotion) return false;
 
     if (workspaceTree && activePaneId) {
       const pane = findPane(workspaceTree, activePaneId);
       if (pane) {
         const paneTabs = pane.tabs.map((t) =>
-          t.id === activeId ? promoted : t,
+          t.id === activeId ? promotion.tab : t,
         );
         const nextTree = patchPaneInTree(workspaceTree, activePaneId, {
           tabs: paneTabs,
           activeTabId: activeId,
         });
-        set({ tabs: nextTabs, workspaceTree: nextTree });
+        set({ tabs: promotion.tabs, workspaceTree: nextTree });
       } else {
-        set({ tabs: nextTabs });
+        set({ tabs: promotion.tabs });
       }
     } else {
-      set({ tabs: nextTabs });
+      set({ tabs: promotion.tabs });
     }
 
     void openFileInEditor(path);
@@ -209,19 +207,13 @@ export const createTabSlice: StateCreator<TabFullSlice, [], [], TabSlice> = (
     }
 
     const { tabs, activeId } = get();
-    const idx = tabs.findIndex((t) => t.id === id);
-    if (idx < 0) return;
-    const next = tabs.filter((t) => t.id !== id);
-    let nextActive = activeId;
-    if (activeId === id) {
-      const neighbor = next[idx] ?? next[idx - 1] ?? null;
-      nextActive = neighbor?.id ?? null;
-    }
-    set({ tabs: next, activeId: nextActive });
-    if (nextActive === null) {
+    const next = closeTabInList(tabs, activeId, id);
+    if (!next) return;
+    set({ tabs: next.tabs, activeId: next.activeId });
+    if (next.activeId === null) {
       void closeEditorFile();
-    } else if (nextActive !== activeId) {
-      const t = next.find((x) => x.id === nextActive);
+    } else if (next.activeChanged) {
+      const t = next.tabs.find((x) => x.id === next.activeId);
       if (t) void openFileInEditor(t.path);
     }
   },
@@ -233,10 +225,11 @@ export const createTabSlice: StateCreator<TabFullSlice, [], [], TabSlice> = (
       return;
     }
 
-    const target = get().tabs.find((t) => t.id === id);
+    const next = closeOtherTabsInList(get().tabs, id);
+    if (!next) return;
+    const target = next.tabs.find((tab) => tab.id === next.activeId);
+    set({ tabs: next.tabs, activeId: next.activeId });
     if (!target) return;
-    const next = get().tabs.filter((t) => t.id === id || t.pinned);
-    set({ tabs: next, activeId: target.id });
     void openFileInEditor(target.path);
   },
 
@@ -247,15 +240,12 @@ export const createTabSlice: StateCreator<TabFullSlice, [], [], TabSlice> = (
       return;
     }
 
-    const { tabs, activeId } = get();
-    const next = tabs.filter((t) => t.pinned);
-    const nextActive =
-      next.find((t) => t.id === activeId)?.id ?? next[0]?.id ?? null;
-    set({ tabs: next, activeId: nextActive });
-    if (nextActive === null) {
+    const next = closeUnpinnedTabsInList(get().tabs, get().activeId);
+    set({ tabs: next.tabs, activeId: next.activeId });
+    if (next.activeId === null) {
       void closeEditorFile();
     } else {
-      const tab = next.find((t) => t.id === nextActive);
+      const tab = next.tabs.find((t) => t.id === next.activeId);
       if (tab) void openFileInEditor(tab.path);
     }
   },
@@ -267,15 +257,11 @@ export const createTabSlice: StateCreator<TabFullSlice, [], [], TabSlice> = (
       return;
     }
 
-    const { tabs, activeId } = get();
-    const idx = tabs.findIndex((t) => t.id === id);
-    if (idx < 0) return;
-    const next = tabs.filter((t, i) => i <= idx || t.pinned);
-    const activeStillOpen = next.some((t) => t.id === activeId);
-    const nextActive = activeStillOpen ? activeId : id;
-    set({ tabs: next, activeId: nextActive });
-    if (!activeStillOpen) {
-      const t = next.find((x) => x.id === nextActive);
+    const next = closeTabsAfterInList(get().tabs, get().activeId, id);
+    if (!next) return;
+    set({ tabs: next.tabs, activeId: next.activeId });
+    if (next.activeChanged) {
+      const t = next.tabs.find((x) => x.id === next.activeId);
       if (t) void openFileInEditor(t.path);
     }
   },
@@ -287,11 +273,7 @@ export const createTabSlice: StateCreator<TabFullSlice, [], [], TabSlice> = (
       return;
     }
 
-    set((s) => ({
-      tabs: s.tabs.map((t) =>
-        t.id === id ? { ...t, pinned: !t.pinned } : t,
-      ),
-    }));
+    set((s) => ({ tabs: togglePinnedInList(s.tabs, id) }));
   },
 
   activate: (id) => {
@@ -344,20 +326,7 @@ export const createTabSlice: StateCreator<TabFullSlice, [], [], TabSlice> = (
   },
 
   updatePath: (oldPath, newPath) => {
-    set((s) => ({
-      tabs: s.tabs.map((t) =>
-        t.path === oldPath
-          ? { ...t, path: newPath, title: basename(newPath), titleDraft: undefined }
-          : t.path.startsWith(`${oldPath}/`)
-            ? {
-                ...t,
-                path: `${newPath}${t.path.slice(oldPath.length)}`,
-                title: basename(`${newPath}${t.path.slice(oldPath.length)}`),
-                titleDraft: undefined,
-              }
-            : t,
-      ),
-    }));
+    set((s) => ({ tabs: renamePathInTabs(s.tabs, oldPath, newPath) }));
     // Phase D — tree 모드면 모든 pane 의 해당 path 도 갱신.
     if (get().workspaceTree) {
       get().updatePathInAllPanes(oldPath, newPath);
@@ -365,42 +334,24 @@ export const createTabSlice: StateCreator<TabFullSlice, [], [], TabSlice> = (
   },
 
   removeByPath: (path) => {
-    const { tabs, activeId } = get();
-    const removed = tabs.filter(
-      (t) => t.path === path || t.path.startsWith(`${path}/`),
-    );
-    if (removed.length === 0) return;
-    const next = tabs.filter(
-      (t) => !(t.path === path || t.path.startsWith(`${path}/`)),
-    );
-    let nextActive = activeId;
-    if (removed.some((r) => r.id === activeId)) {
-      const firstRemovedIdx = tabs.findIndex((t) => t.id === removed[0]!.id);
-      const neighbor =
-        next[firstRemovedIdx] ?? next[firstRemovedIdx - 1] ?? null;
-      nextActive = neighbor?.id ?? null;
-    }
-    set({ tabs: next, activeId: nextActive });
+    const next = removePathFromTabs(get().tabs, get().activeId, path);
+    if (!next) return;
+    set({ tabs: next.tabs, activeId: next.activeId });
     // Phase D — tree 모드면 모든 pane 의 해당 path 도 정리.
     if (get().workspaceTree) {
       get().removeFromAllPanes(path);
     }
-    if (nextActive === null) {
+    if (next.activeId === null) {
       void closeEditorFile();
     } else {
-      const t = next.find((x) => x.id === nextActive);
+      const t = next.tabs.find((x) => x.id === next.activeId);
       if (t) void openFileInEditor(t.path);
     }
   },
 
   reorder: (from, to) => {
-    const { tabs } = get();
-    if (from === to || from < 0 || from >= tabs.length) return;
-    const next = tabs.slice();
-    const [moved] = next.splice(from, 1);
-    if (!moved) return;
-    const target = Math.max(0, Math.min(next.length, to));
-    next.splice(target, 0, moved);
+    const next = reorderTabs(get().tabs, from, to);
+    if (!next) return;
     set({ tabs: next });
   },
 
