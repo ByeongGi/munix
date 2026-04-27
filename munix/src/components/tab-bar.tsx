@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useStore } from "zustand";
-import { X, Plus } from "lucide-react";
+import { Plus } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useTabStore, type Tab } from "@/store/tab-store";
 import { makeTabId } from "@/store/slices/tab-slice";
@@ -37,6 +37,7 @@ import { TabBarShell } from "@/components/tab/tab-bar-shell";
 import { TabContextMenu } from "@/components/tab/tab-context-menu";
 import { TabSoftLimitBadge } from "@/components/tab/tab-soft-limit-badge";
 import { ActiveTabItem } from "@/components/tab/active-tab-item";
+import { EmptyTabItem } from "@/components/tab/empty-tab-item";
 
 interface TabBarProps {
   onNewFile: () => void;
@@ -117,11 +118,10 @@ export function TabBar({ onNewFile }: TabBarProps) {
   if (tabs.length === 0) {
     return (
       <TabBarShell>
-        <div
-          className={cn(
-            "relative flex h-8 min-w-24 max-w-44 flex-[1_1_9rem] cursor-default select-none items-center gap-1.5 rounded-t-md border border-b-0 px-2 text-xs",
-            "border-[var(--color-border-primary)] bg-[var(--color-bg-primary)] text-[var(--color-text-primary)]",
-          )}
+        <EmptyTabItem
+          title={t("tabs:emptyTab.title")}
+          closeLabel={t("tabs:aria.closeTab")}
+          onClose={closeAll}
           onContextMenu={(e) => {
             e.preventDefault();
             e.stopPropagation();
@@ -131,20 +131,7 @@ export function TabBar({ onNewFile }: TabBarProps) {
               tab: { id: "__empty-tab__", path: "", title: "" },
             });
           }}
-        >
-          <span className="min-w-0 flex-1 truncate">
-            {t("tabs:emptyTab.title")}
-          </span>
-          <button
-            type="button"
-            onClick={closeAll}
-            className="flex h-4 w-4 items-center justify-center rounded hover:bg-[var(--color-bg-hover)]"
-            aria-label={t("tabs:aria.closeTab")}
-          >
-            <X className="h-3 w-3" />
-          </button>
-          <span className="absolute inset-x-0 top-0 h-[3px] rounded-t-md bg-[var(--color-accent)]" />
-        </div>
+        />
         <button
           type="button"
           onClick={onNewFile}
