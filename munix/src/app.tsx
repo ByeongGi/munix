@@ -7,22 +7,15 @@ import { useVaultDockStore } from "@/store/vault-dock-store";
 import { useSearchStore } from "@/store/search-store";
 import { useVaultWatcher } from "@/hooks/use-vault-watcher";
 import { VaultPicker } from "@/components/vault-picker";
-import { TabBar } from "@/components/tab-bar";
-import { StatusBar } from "@/components/status-bar";
 import { ShortcutsDialog } from "@/components/shortcuts-dialog";
 import { SettingsDialog } from "@/components/settings-dialog";
 import { QuickOpen } from "@/components/palette/quick-open";
 import { VaultSwitcher } from "@/components/palette/vault-switcher";
 import { CommandPalette } from "@/components/palette/command-palette";
-import { EditorView } from "@/components/editor/editor-view";
-import { WorkspaceRoot } from "@/components/workspace/workspace-root";
-import { EmptyPanePlaceholder } from "@/components/workspace/pane/empty-pane-placeholder";
+import { AppWorkspaceView } from "@/components/app-shell/app-workspace-view";
 import { AppTitleBar } from "@/components/app-shell/window-title-bar";
-import { WorkspaceHeader } from "@/components/app-shell/workspace-header";
-import { AppSidebar } from "@/components/app-shell/app-sidebar";
 import type { SidebarTab } from "@/components/app-shell/types";
 import { ConflictDialog } from "@/components/editor/conflict-dialog";
-import { cn } from "@/lib/cn";
 import { useActiveVaultEffects } from "@/hooks/app/use-active-vault-effects";
 import { useAppOverlays } from "@/hooks/app/use-app-overlays";
 import { useFileCreateActions } from "@/hooks/app/use-file-create-actions";
@@ -35,7 +28,6 @@ import { useFileTreeReveal } from "@/hooks/app/use-file-tree-reveal";
 import { useGlobalShortcuts } from "@/hooks/app/use-global-shortcuts";
 import { usePersistentSidebarState } from "@/hooks/app/use-persistent-sidebar-state";
 import { useVaultPickerAction } from "@/hooks/app/use-vault-picker-action";
-import { titleFromPath } from "@/lib/app-path-utils";
 
 function App() {
   const { t } = useTranslation("app");
@@ -174,88 +166,41 @@ function App() {
 
   return (
     <div className="munix-window-shell relative flex h-full flex-col">
-      <AppTitleBar
-        variant="workspace"
+      <AppWorkspaceView
+        info={info}
+        files={files}
+        currentPath={currentPath}
+        renaming={renaming}
+        revealPath={revealPath}
         sidebarCollapsed={sidebarCollapsed}
+        setSidebarCollapsed={setSidebarCollapsed}
         sidebarWidth={sidebarWidth}
-        title={titleFromPath(currentPath)}
-        subtitle={info.name}
-        onToggleSidebar={() => setSidebarCollapsed((value) => !value)}
+        setSidebarWidth={setSidebarWidth}
+        sidebarTab={sidebarTab}
+        sidebarTitle={sidebarTitle}
+        setSidebarTab={setSidebarTab}
+        openTab={openTab}
+        createEmptyTab={createEmptyTab}
+        closeAllTabs={closeAllTabs}
+        handleCreateFileAt={handleCreateFileAt}
+        handleCreateFolderAt={handleCreateFolderAt}
+        handleAction={handleAction}
+        handleMove={handleMove}
+        handleMoveMany={handleMoveMany}
+        handleDeleteMany={handleDeleteMany}
+        handleRenameSubmit={handleRenameSubmit}
+        onRenameCancel={() => setRenaming(null)}
+        onOpenVaultSwitcher={() => setVaultSwitcherOpen(true)}
+        onQuickOpen={() => setQuickOpen(true)}
+        onOpenSettings={() => setSettingsOpen(true)}
+        onSearchSelect={(hit, query) => {
+          useEditorStore.getState().setPendingSearchQuery(query);
+          if (hit.matchedLine > 0) {
+            useEditorStore.getState().setPendingJumpLine(hit.matchedLine);
+          }
+          openTab(hit.path);
+        }}
       />
-      <div
-        className={cn(
-          "flex overflow-hidden",
-          !sidebarCollapsed && "munix-sidebar-surface bg-sidebar",
-          sidebarCollapsed ? "min-h-0 flex-1" : "h-full",
-        )}
-      >
-        {sidebarCollapsed ? null : (
-          <AppSidebar
-            width={sidebarWidth}
-            sidebarTab={sidebarTab}
-            sidebarTitle={sidebarTitle}
-            files={files}
-            currentPath={currentPath}
-            renaming={renaming}
-            revealPath={revealPath}
-            onWidthChange={setSidebarWidth}
-            onOpenVaultSwitcher={() => setVaultSwitcherOpen(true)}
-            onSwitchTab={setSidebarTab}
-            onCreateFile={() => void handleCreateFileAt("")}
-            onCreateFolder={() => void handleCreateFolderAt("")}
-            onSelectFile={openTab}
-            onFileAction={handleAction}
-            onMove={(from, to) => void handleMove(from, to)}
-            onMoveMany={(from, to) => void handleMoveMany(from, to)}
-            onDeleteMany={handleDeleteMany}
-            onRenameSubmit={(node, name) => void handleRenameSubmit(node, name)}
-            onRenameCancel={() => setRenaming(null)}
-            onSearchSelect={(hit, query) => {
-              useEditorStore.getState().setPendingSearchQuery(query);
-              if (hit.matchedLine > 0) {
-                useEditorStore.getState().setPendingJumpLine(hit.matchedLine);
-              }
-              openTab(hit.path);
-            }}
-            onOpenSettings={() => setSettingsOpen(true)}
-          />
-        )}
-
-        <section
-          className={cn(
-            "flex flex-1 flex-col overflow-hidden bg-workspace",
-            !sidebarCollapsed &&
-              "-ml-px rounded-l-xl border-l border-border shadow-[inset_1px_0_0_rgb(255_255_255_/_0.04)]",
-          )}
-        >
-          {!sidebarCollapsed && (
-            <WorkspaceHeader
-              title={titleFromPath(currentPath)}
-              subtitle={info.name}
-              onQuickOpen={() => setQuickOpen(true)}
-              onNewFile={() => void handleCreateFileAt("")}
-            />
-          )}
-          <WorkspaceRoot
-            onNewFile={() => void handleCreateFileAt("")}
-            onQuickOpen={() => setQuickOpen(true)}
-          >
-            <div className="flex min-h-0 flex-1 flex-col">
-              <TabBar onNewFile={() => createEmptyTab()} />
-              {currentPath ? (
-                <EditorView className="flex-1" />
-              ) : (
-                <EmptyPanePlaceholder
-                  onNewFile={() => void handleCreateFileAt("")}
-                  onQuickOpen={() => setQuickOpen(true)}
-                  onClose={closeAllTabs}
-                />
-              )}
-            </div>
-          </WorkspaceRoot>
-          <StatusBar />
-        </section>
-      </div>
 
       <ConflictDialog />
       <QuickOpen open={quickOpen} onClose={() => setQuickOpen(false)} />
