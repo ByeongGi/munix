@@ -1,5 +1,5 @@
 import type { SearchHit } from "@/lib/search-index";
-import type { PaletteCommand } from "@/components/palette/use-palette-commands";
+import type { PaletteCommand } from "./palette-command-types";
 
 export interface HeadingItem {
   kind: "heading";
