@@ -11,7 +11,9 @@ const currentPlatform = {
 }[platform()] ?? platform();
 
 const bundleDir = join('src-tauri', 'target', 'release', 'bundle');
-const outputDir = join('..', 'release-dist', tag, currentPlatform);
+const releaseRootDir = join('..', 'release-dist', tag);
+const outputDir = join(releaseRootDir, currentPlatform);
+const installerScript = join('..', 'scripts', 'install-macos.sh');
 const allowedExtensions = new Set([
   '.AppImage',
   '.appimage',
@@ -44,12 +46,20 @@ if (assets.length === 0) {
 
 rmSync(outputDir, { recursive: true, force: true });
 mkdirSync(outputDir, { recursive: true });
+mkdirSync(releaseRootDir, { recursive: true });
 
 for (const asset of assets) {
   copyFileSync(asset, join(outputDir, basename(asset)));
 }
 
+if (currentPlatform === 'macos' && existsSync(installerScript)) {
+  copyFileSync(installerScript, join(releaseRootDir, basename(installerScript)));
+}
+
 console.log(`Copied ${assets.length} asset(s) to ${outputDir}`);
 for (const asset of assets) {
   console.log(`- ${basename(asset)}`);
+}
+if (currentPlatform === 'macos' && existsSync(installerScript)) {
+  console.log(`- ${basename(installerScript)}`);
 }

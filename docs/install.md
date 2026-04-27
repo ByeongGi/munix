@@ -7,7 +7,7 @@ Munix는 현재 초기 오픈소스 빌드이며 macOS Apple notarization은 적
 macOS 개발자/파워유저는 아래 명령으로 GitHub Release DMG를 다운로드하고 `~/Applications/munix.app`에 설치할 수 있다.
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/ByeongGi/munix/main/scripts/install-macos.sh | bash
+curl -fsSL https://github.com/ByeongGi/munix/releases/latest/download/install-macos.sh | bash
 ```
 
 이 명령은 최신 공개 GitHub Release를 자동으로 찾아 설치한다. Draft release 상태에서는 공개 다운로드 URL이 아직 안정적으로 제공되지 않을 수 있다.
@@ -31,14 +31,14 @@ curl -fsSL https://raw.githubusercontent.com/ByeongGi/munix/main/scripts/install
 
 ```bash
 export MUNIX_APP_INSTALL_DIR=/Applications
-curl -fsSL https://raw.githubusercontent.com/ByeongGi/munix/main/scripts/install-macos.sh | bash
+curl -fsSL https://github.com/ByeongGi/munix/releases/latest/download/install-macos.sh | bash
 ```
 
 특정 버전을 설치하려면:
 
 ```bash
 export MUNIX_VERSION=0.1.1
-curl -fsSL https://raw.githubusercontent.com/ByeongGi/munix/main/scripts/install-macos.sh | bash
+curl -fsSL https://github.com/ByeongGi/munix/releases/latest/download/install-macos.sh | bash
 ```
 
 ## 소스에서 직접 빌드
