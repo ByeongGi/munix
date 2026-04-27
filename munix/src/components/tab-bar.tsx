@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useStore } from "zustand";
-import { X, Plus, Pin } from "lucide-react";
+import { X, Plus } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useTabStore, type Tab } from "@/store/tab-store";
 import { makeTabId } from "@/store/slices/tab-slice";
@@ -36,6 +36,7 @@ import {
 import { TabBarShell } from "@/components/tab/tab-bar-shell";
 import { TabContextMenu } from "@/components/tab/tab-context-menu";
 import { TabSoftLimitBadge } from "@/components/tab/tab-soft-limit-badge";
+import { ActiveTabItem } from "@/components/tab/active-tab-item";
 
 interface TabBarProps {
   onNewFile: () => void;
@@ -218,9 +219,16 @@ export function TabBar({ onNewFile }: TabBarProps) {
               index,
             });
             return (
-              <div
+              <ActiveTabItem
                 key={tab.id}
-                draggable
+                tab={tab}
+                active={active}
+                dirty={dirty}
+                dragging={dragIndex === index}
+                emptyTitle={t("tabs:emptyTab.title")}
+                closeLabel={t("tabs:aria.closeTab")}
+                showLeftIndicator={showLeftIndicator}
+                showRightIndicator={showRightIndicator}
                 onDragStart={(e) => {
                   setTabDragData({
                     dataTransfer: e.dataTransfer,
@@ -311,56 +319,11 @@ export function TabBar({ onNewFile }: TabBarProps) {
                   e.stopPropagation();
                   setMenu({ x: e.clientX, y: e.clientY, tab });
                 }}
-                className={cn(
-                  "group relative flex h-8 min-w-24 max-w-44 flex-[1_1_9rem] cursor-default select-none items-center gap-1.5 rounded-t-md border border-b-0 px-2 text-xs",
-                  "border-[var(--color-border-primary)]",
-                  active
-                    ? "bg-[var(--color-bg-primary)] text-[var(--color-text-primary)]"
-                    : "bg-[var(--color-bg-secondary)] text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-hover)] hover:text-[var(--color-text-primary)]",
-                  dragIndex === index && "opacity-40",
-                )}
-                title={tab.path || t("tabs:emptyTab.title")}
-              >
-                {showLeftIndicator && (
-                  <span className="absolute -left-px top-0 h-full w-[2px] bg-[var(--color-accent)]" />
-                )}
-                {showRightIndicator && (
-                  <span className="absolute -right-px top-0 h-full w-[2px] bg-[var(--color-accent)]" />
-                )}
-                <span className="min-w-0 flex-1 truncate">
-                  {tab.pinned && (
-                    <Pin className="mr-1 inline h-3 w-3 text-[var(--color-accent)]" />
-                  )}
-                  {tab.path
-                    ? (tab.titleDraft ?? tab.title)
-                    : t("tabs:emptyTab.title")}
-                </span>
-                <button
-                  type="button"
-                  onClick={(e) => {
+                onClose={(e) => {
                     e.stopPropagation();
                     closeTab(tab.id);
                   }}
-                  className={cn(
-                    "flex h-4 w-4 items-center justify-center rounded",
-                    "hover:bg-[var(--color-bg-hover)]",
-                  )}
-                  aria-label={t("tabs:aria.closeTab")}
-                >
-                  {dirty ? (
-                    <span className="h-1.5 w-1.5 rounded-full bg-[var(--color-text-primary)] group-hover:hidden" />
-                  ) : null}
-                  <X
-                    className={cn(
-                      "h-3 w-3",
-                      dirty ? "hidden group-hover:block" : "",
-                    )}
-                  />
-                </button>
-                {active && (
-                  <span className="absolute inset-x-0 top-0 h-[3px] rounded-t-md bg-[var(--color-accent)]" />
-                )}
-              </div>
+              />
             );
           })}
         </div>
