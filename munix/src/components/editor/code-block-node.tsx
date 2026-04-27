@@ -91,7 +91,7 @@ function CodeBlockView({ node, updateAttributes, extension }: NodeViewProps) {
 }
 
 /** CodeBlockLowlight 확장 + 언어 드롭다운 + 복사 버튼.
- * Tab → 2 공백, Shift+Tab → 줄 시작 2 공백 제거. 코드 블록 안에서만 동작.
+ * Tab → 탭 문자, Shift+Tab → 줄 시작 탭/공백 제거. 코드 블록 안에서만 동작.
  */
 export const CodeBlockWithLang = CodeBlockLowlight.extend({
   addNodeView() {
@@ -103,7 +103,7 @@ export const CodeBlockWithLang = CodeBlockLowlight.extend({
       ...parent,
       Tab: ({ editor }) => {
         if (!editor.isActive("codeBlock")) return false;
-        editor.commands.insertContent("  ");
+        editor.commands.insertContent("\t");
         return true;
       },
       "Shift-Tab": ({ editor }) => {
@@ -115,14 +115,16 @@ export const CodeBlockWithLang = CodeBlockLowlight.extend({
         const before = state.doc.textBetween(blockStart, $from.pos, "\n");
         const lineStartInBlock = before.lastIndexOf("\n") + 1;
         const lineStartPos = blockStart + lineStartInBlock;
-        // 줄 시작 2글자가 공백이면 제거
+        // 줄 시작의 탭 문자 또는 공백 들여쓰기를 제거
         const head = state.doc.textBetween(
           lineStartPos,
-          Math.min(lineStartPos + 2, $from.pos),
+          Math.min(lineStartPos + 4, $from.pos),
           "\n",
         );
         let removeLen = 0;
-        if (head.startsWith("  ")) removeLen = 2;
+        if (head.startsWith("\t")) removeLen = 1;
+        else if (head.startsWith("    ")) removeLen = 4;
+        else if (head.startsWith("  ")) removeLen = 2;
         else if (head.startsWith(" ")) removeLen = 1;
         if (removeLen === 0) return true; // 코드 블록 안이면 항상 동작 흡수
         editor
