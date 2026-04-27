@@ -1,25 +1,14 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect } from "react";
 import { EditorContent, useEditor } from "@tiptap/react";
-import { useDebouncedCallback } from "use-debounce";
 import { useTranslation } from "react-i18next";
 
 import { createEditorExtensions } from "@/components/editor/extensions";
-import { preprocessMarkdown } from "@/lib/editor-preprocess";
-import { ipc } from "@/lib/ipc";
-import { parseDocument, serializeDocument } from "@/lib/markdown";
 import { cn } from "@/lib/cn";
-import { useSettingsStore } from "@/store/settings-store";
-import {
-  canRequestInactiveEditorSave,
-  updateIndexesAfterInactiveSave,
-} from "./inactive-pane-editor-utils";
-import {
-  type InactiveEditorStatus,
-  type MarkdownStorage,
-} from "./inactive-pane-editor-types";
 import { InactivePanePropertiesPanel } from "./inactive-pane-properties-panel";
 import { InactivePaneEditorStatusBanner } from "./inactive-pane-editor-status-banner";
 import { InactivePaneTitleInput } from "./inactive-pane-title-input";
+import { useInactivePaneAutosave } from "./use-inactive-pane-autosave";
+import { useInactivePaneDocumentLoader } from "./use-inactive-pane-document-loader";
 import { useInactivePaneRename } from "./use-inactive-pane-rename";
 
 interface InactivePaneEditorProps {
@@ -32,63 +21,18 @@ export function InactivePaneEditor({
   titleDraft,
 }: InactivePaneEditorProps) {
   const { t } = useTranslation(["editor", "app", "properties"]);
-  const [body, setBody] = useState("");
-  const [frontmatter, setFrontmatter] = useState<Record<
-    string,
-    unknown
-  > | null>(null);
-  const [baseModified, setBaseModified] = useState<number | null>(null);
-  const [status, setStatus] = useState<InactiveEditorStatus>("loading");
-  const statusRef = useRef<InactiveEditorStatus>("loading");
-  const frontmatterRef = useRef<Record<string, unknown> | null>(null);
-  const baseModifiedRef = useRef<number | null>(null);
-  const inFlightRef = useRef(false);
-  const pendingRef = useRef(false);
-
-  useEffect(() => {
-    statusRef.current = status;
-  }, [status]);
-
-  useEffect(() => {
-    frontmatterRef.current = frontmatter;
-  }, [frontmatter]);
-
-  useEffect(() => {
-    baseModifiedRef.current = baseModified;
-  }, [baseModified]);
-
-  useEffect(() => {
-    let cancelled = false;
-    setStatus("loading");
-    setBaseModified(null);
-    void ipc
-      .readFile(path)
-      .then((file) => {
-        if (cancelled) return;
-        const parsed = parseDocument(file.content);
-        frontmatterRef.current = parsed.frontmatter;
-        baseModifiedRef.current = file.modified;
-        setBody(parsed.body);
-        setFrontmatter(parsed.frontmatter);
-        setBaseModified(file.modified);
-        setStatus("ready");
-      })
-      .catch((e) => {
-        if (cancelled) return;
-        console.error("inactive pane editor failed", e);
-        setBody("");
-        frontmatterRef.current = null;
-        baseModifiedRef.current = null;
-        setFrontmatter(null);
-        setBaseModified(null);
-        setStatus("loadError");
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [path]);
-
-  const content = useMemo(() => preprocessMarkdown(body), [body]);
+  const {
+    setBody,
+    content,
+    frontmatter,
+    setFrontmatter,
+    setBaseModified,
+    status,
+    setStatus,
+    statusRef,
+    frontmatterRef,
+    baseModifiedRef,
+  } = useInactivePaneDocumentLoader(path);
   const editor = useEditor(
     {
       extensions: createEditorExtensions(t("editor:placeholder.document"), {
@@ -117,76 +61,21 @@ export function InactivePaneEditor({
     },
     [t],
   );
+  const { requestSave, waitForIdleSave } = useInactivePaneAutosave({
+    path,
+    editor,
+    statusRef,
+    frontmatterRef,
+    baseModifiedRef,
+    setBody,
+    setBaseModified,
+    setStatus,
+  });
 
   useEffect(() => {
     if (!editor || editor.isDestroyed) return;
     editor.commands.setContent(content, { emitUpdate: false });
   }, [editor, content]);
-
-  const doSave = useCallback(async () => {
-    const expectedModified = baseModifiedRef.current;
-    if (!editor || editor.isDestroyed || expectedModified == null) return;
-    if (!canRequestInactiveEditorSave(statusRef.current)) return;
-
-    if (inFlightRef.current) {
-      pendingRef.current = true;
-      return;
-    }
-
-    inFlightRef.current = true;
-    setStatus("saving");
-    try {
-      const nextBody = (
-        editor.storage as unknown as MarkdownStorage
-      ).markdown.getMarkdown();
-      const raw = serializeDocument({
-        frontmatter: frontmatterRef.current,
-        body: nextBody,
-      });
-      const result = await ipc.writeFile(path, raw, expectedModified, false);
-      if (result.conflict) {
-        pendingRef.current = false;
-        setStatus("conflict");
-        return;
-      }
-      baseModifiedRef.current = result.modified;
-      setBaseModified(result.modified);
-      setBody(nextBody);
-      setStatus("ready");
-      updateIndexesAfterInactiveSave(path, nextBody);
-    } catch (e) {
-      console.error("inactive pane editor save failed", e);
-      setStatus("saveError");
-    } finally {
-      inFlightRef.current = false;
-      if (pendingRef.current) {
-        pendingRef.current = false;
-        void doSave();
-      }
-    }
-  }, [editor, path]);
-
-  const debounceMs = useSettingsStore((s) => s.autoSaveDebounceMs);
-  const debouncedSave = useDebouncedCallback(() => {
-    void doSave();
-  }, debounceMs);
-
-  const requestSave = useCallback(
-    (flush = false) => {
-      if (!canRequestInactiveEditorSave(statusRef.current)) return;
-      setStatus("dirty");
-      debouncedSave();
-      if (flush) debouncedSave.flush();
-    },
-    [debouncedSave],
-  );
-
-  const waitForIdleSave = useCallback(async () => {
-    debouncedSave.flush();
-    while (inFlightRef.current) {
-      await new Promise((resolve) => setTimeout(resolve, 20));
-    }
-  }, [debouncedSave]);
 
   const handleFrontmatterChange = useCallback(
     (next: Record<string, unknown> | null, flush: boolean) => {
@@ -194,32 +83,10 @@ export function InactivePaneEditor({
       setFrontmatter(next);
       requestSave(flush);
     },
-    [requestSave],
+    [frontmatterRef, requestSave, setFrontmatter],
   );
 
   const handleRename = useInactivePaneRename({ path, waitForIdleSave });
-
-  useEffect(() => {
-    if (!editor) return;
-
-    const onUpdate = () => {
-      if (!canRequestInactiveEditorSave(statusRef.current)) return;
-      setStatus("dirty");
-      debouncedSave();
-    };
-    const onBlur = () => {
-      debouncedSave.flush();
-    };
-
-    editor.on("update", onUpdate);
-    editor.on("blur", onBlur);
-
-    return () => {
-      editor.off("update", onUpdate);
-      editor.off("blur", onBlur);
-      debouncedSave.flush();
-    };
-  }, [debouncedSave, editor]);
 
   if (status === "loading") {
     return (
