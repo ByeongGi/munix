@@ -30,7 +30,6 @@ import {
   collectPanes,
   findPane,
   isPaneNode,
-  makePaneId,
   patchPaneInTree,
   patchSplitRatio,
   type PaneNode,
@@ -42,12 +41,14 @@ import {
   buildSplit,
   captureGlobalIntoActivePane,
   type EdgeZone,
-  getNeighborTabIdAfterRemoval,
   makeFreshPane,
+  makeRootPane,
   makeWorkspaceTab,
+  moveTabBetweenPanes,
   pruneEmptyPanes,
   removePathTabsFromPane,
   removePane,
+  reorderTabsInPane,
   replaceNode,
   closeOtherTabsInPane,
   closeTabsAfterInPane,
@@ -238,12 +239,7 @@ export const createWorkspaceTreeSlice: StateCreator<
 
       // case 1: 단일 pane 모드 → tree promotion.
       if (tree === null) {
-        const rootPane: PaneNode = {
-          type: "pane",
-          id: makePaneId(),
-          tabs: state.tabs,
-          activeTabId: state.activeId,
-        };
+        const rootPane = makeRootPane(state.tabs, state.activeId);
         const fresh = makeFreshPane(initialTab);
         const split = buildSplit(zone, rootPane, fresh);
         applyActivePaneSwap(split, fresh.id);
@@ -376,14 +372,8 @@ export const createWorkspaceTreeSlice: StateCreator<
 
       // 같은 pane 안 → reorder
       if (sourcePaneId === destPaneId) {
-        const fromIdx = source.tabs.findIndex((t) => t.id === tabId);
-        const toIdx = destIndex ?? source.tabs.length - 1;
-        if (fromIdx < 0 || fromIdx === toIdx) return;
-        const nextTabs = source.tabs.slice();
-        const [moved] = nextTabs.splice(fromIdx, 1);
-        if (!moved) return;
-        const insertAt = Math.max(0, Math.min(nextTabs.length, toIdx));
-        nextTabs.splice(insertAt, 0, moved);
+        const nextTabs = reorderTabsInPane(source, tabId, destIndex);
+        if (!nextTabs) return;
         const nextTree = patchPaneInTree(captured, sourcePaneId, {
           tabs: nextTabs,
         });
@@ -397,30 +387,16 @@ export const createWorkspaceTreeSlice: StateCreator<
       }
 
       // 다른 pane 으로 이동.
-      const sourceTabs = source.tabs.filter((t) => t.id !== tabId);
-      let sourceActive = source.activeTabId;
-      if (source.activeTabId === tabId) {
-        sourceActive = getNeighborTabIdAfterRemoval(
-          source.tabs,
-          sourceTabs,
-          tabId,
-        );
-      }
-
-      const insertAt =
-        destIndex !== undefined
-          ? Math.max(0, Math.min(dest.tabs.length, destIndex))
-          : dest.tabs.length;
-      const destTabs = dest.tabs.slice();
-      destTabs.splice(insertAt, 0, tab);
+      const transfer = moveTabBetweenPanes(source, dest, tabId, destIndex);
+      if (!transfer) return;
 
       let nextTree = patchPaneInTree(captured, sourcePaneId, {
-        tabs: sourceTabs,
-        activeTabId: sourceActive,
+        tabs: transfer.sourcePatch.tabs,
+        activeTabId: transfer.sourcePatch.activeTabId,
       });
       nextTree = patchPaneInTree(nextTree, destPaneId, {
-        tabs: destTabs,
-        activeTabId: tab.id,
+        tabs: transfer.destinationPatch.tabs,
+        activeTabId: transfer.destinationPatch.activeTabId,
       });
       nextTree = pruneEmptyPanes(nextTree) ?? nextTree;
 
@@ -720,21 +696,13 @@ export const createWorkspaceTreeSlice: StateCreator<
       if (!tree) {
         const tab = state.tabs.find((t) => t.id === tabId);
         if (!tab) return;
-        const sourceTabs = state.tabs.filter((t) => t.id !== tabId);
-        let sourceActive = state.activeId;
-        if (state.activeId === tabId) {
-          sourceActive = getNeighborTabIdAfterRemoval(
-            state.tabs,
-            sourceTabs,
-            tabId,
-          );
-        }
-        const rootPane: PaneNode = {
-          type: "pane",
-          id: makePaneId(),
-          tabs: sourceTabs,
-          activeTabId: sourceActive,
-        };
+        const rootSourcePane = makeRootPane(state.tabs, state.activeId);
+        const sourcePatch = removeTabFromPane(rootSourcePane, tabId);
+        if (!sourcePatch) return;
+        const rootPane = makeRootPane(
+          sourcePatch.tabs,
+          sourcePatch.activeTabId,
+        );
         const fresh = makeFreshPane(tab);
         const split = buildSplit(zone, rootPane, fresh);
         applyActivePaneSwap(split, fresh.id);
@@ -758,18 +726,11 @@ export const createWorkspaceTreeSlice: StateCreator<
       if (!tab) return;
 
       // 1. source pane 에서 tab 제거 + 필요 시 activeTabId 갱신.
-      const sourceTabs = source.tabs.filter((t) => t.id !== tabId);
-      let sourceActive = source.activeTabId;
-      if (source.activeTabId === tabId) {
-        sourceActive = getNeighborTabIdAfterRemoval(
-          source.tabs,
-          sourceTabs,
-          tabId,
-        );
-      }
+      const sourcePatch = removeTabFromPane(source, tabId);
+      if (!sourcePatch) return;
       const treeAfterRemove = patchPaneInTree(captured, sourcePaneId, {
-        tabs: sourceTabs,
-        activeTabId: sourceActive,
+        tabs: sourcePatch.tabs,
+        activeTabId: sourcePatch.activeTabId,
       });
 
       // 2. fresh pane 만들고 target 자리에 SplitNode 삽입.

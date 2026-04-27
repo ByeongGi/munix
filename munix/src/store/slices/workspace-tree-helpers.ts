@@ -79,6 +79,15 @@ export function makeFreshPane(initialTab?: Tab): PaneNode {
   };
 }
 
+export function makeRootPane(tabs: Tab[], activeTabId: string | null): PaneNode {
+  return {
+    type: "pane",
+    id: makePaneId(),
+    tabs,
+    activeTabId,
+  };
+}
+
 export function makeWorkspaceTab(path = ""): Tab {
   return {
     id: makeTabId(),
@@ -150,6 +159,57 @@ export function removeTabFromPane(
       ? getNeighborTabIdAfterRemoval(pane.tabs, tabs, tabId)
       : pane.activeTabId;
   return { tabs, activeTabId };
+}
+
+export function reorderTabsInPane(
+  pane: PaneNode,
+  tabId: string,
+  toIndex?: number,
+): Tab[] | null {
+  const fromIndex = pane.tabs.findIndex((t) => t.id === tabId);
+  const targetIndex = toIndex ?? pane.tabs.length - 1;
+  if (fromIndex < 0 || fromIndex === targetIndex) return null;
+
+  const tabs = pane.tabs.slice();
+  const [moved] = tabs.splice(fromIndex, 1);
+  if (!moved) return null;
+  const insertAt = Math.max(0, Math.min(tabs.length, targetIndex));
+  tabs.splice(insertAt, 0, moved);
+  return tabs;
+}
+
+export interface PaneTabTransfer {
+  sourcePatch: PaneTabsPatch;
+  destinationPatch: PaneTabsPatch;
+  movedTab: Tab;
+}
+
+export function moveTabBetweenPanes(
+  source: PaneNode,
+  destination: PaneNode,
+  tabId: string,
+  destinationIndex?: number,
+): PaneTabTransfer | null {
+  const movedTab = source.tabs.find((t) => t.id === tabId);
+  if (!movedTab) return null;
+  const sourcePatch = removeTabFromPane(source, tabId);
+  if (!sourcePatch) return null;
+
+  const insertAt =
+    destinationIndex !== undefined
+      ? Math.max(0, Math.min(destination.tabs.length, destinationIndex))
+      : destination.tabs.length;
+  const destinationTabs = destination.tabs.slice();
+  destinationTabs.splice(insertAt, 0, movedTab);
+
+  return {
+    sourcePatch,
+    destinationPatch: {
+      tabs: destinationTabs,
+      activeTabId: movedTab.id,
+    },
+    movedTab,
+  };
 }
 
 export function closeOtherTabsInPane(
