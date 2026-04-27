@@ -4,48 +4,27 @@ import { useDebouncedCallback } from "use-debounce";
 import { useTranslation } from "react-i18next";
 
 import { createEditorExtensions } from "@/components/editor/extensions";
-import { useActiveWorkspaceStore } from "@/lib/active-vault";
 import { preprocessMarkdown } from "@/lib/editor-preprocess";
 import { ipc } from "@/lib/ipc";
 import { parseDocument, serializeDocument } from "@/lib/markdown";
 import { cn } from "@/lib/cn";
-import { useBacklinkStore } from "@/store/backlink-store";
-import { useSearchStore } from "@/store/search-store";
 import { useSettingsStore } from "@/store/settings-store";
-import { useTagStore } from "@/store/tag-store";
+import {
+  canRequestInactiveEditorSave,
+  updateIndexesAfterInactiveSave,
+} from "./inactive-pane-editor-utils";
+import {
+  type InactiveEditorStatus,
+  type MarkdownStorage,
+} from "./inactive-pane-editor-types";
 import { InactivePanePropertiesPanel } from "./inactive-pane-properties-panel";
+import { InactivePaneEditorStatusBanner } from "./inactive-pane-editor-status-banner";
 import { InactivePaneTitleInput } from "./inactive-pane-title-input";
+import { useInactivePaneRename } from "./use-inactive-pane-rename";
 
 interface InactivePaneEditorProps {
   path: string;
   titleDraft?: string;
-}
-
-interface MarkdownStorage {
-  markdown: { getMarkdown: () => string };
-}
-
-type InactiveEditorStatus =
-  | "loading"
-  | "ready"
-  | "dirty"
-  | "saving"
-  | "loadError"
-  | "saveError"
-  | "conflict";
-
-function canRequestInactiveEditorSave(status: InactiveEditorStatus): boolean {
-  return status !== "conflict" && status !== "loading" && status !== "loadError";
-}
-
-function updateIndexesAfterInactiveSave(path: string, body: string) {
-  void useTagStore.getState().updatePath(path);
-  void useBacklinkStore.getState().updatePath(path);
-  const search = useSearchStore.getState();
-  if (search.status === "ready") {
-    search.index.updateDoc(path, body);
-    if (search.query) search.setQuery(search.query);
-  }
 }
 
 export function InactivePaneEditor({
@@ -53,7 +32,6 @@ export function InactivePaneEditor({
   titleDraft,
 }: InactivePaneEditorProps) {
   const { t } = useTranslation(["editor", "app", "properties"]);
-  const ws = useActiveWorkspaceStore();
   const [body, setBody] = useState("");
   const [frontmatter, setFrontmatter] = useState<Record<
     string,
@@ -219,43 +197,7 @@ export function InactivePaneEditor({
     [requestSave],
   );
 
-  const handleRename = useCallback(
-    async (name: string): Promise<boolean> => {
-      const trimmed = name.trim();
-      if (!trimmed) return false;
-      if (/[/\\:*?"<>|]/.test(trimmed) || trimmed.startsWith(".")) {
-        return false;
-      }
-
-      const currentBase = basenameWithoutMd(path);
-      if (trimmed === currentBase) return true;
-
-      await waitForIdleSave();
-      const lastSlash = path.lastIndexOf("/");
-      const dir = lastSlash >= 0 ? path.substring(0, lastSlash) : "";
-      const newPath = dir ? `${dir}/${trimmed}.md` : `${trimmed}.md`;
-
-      try {
-        await ipc.renameEntry(path, newPath);
-        useSearchStore.getState().renamePath?.(path, newPath);
-        useTagStore.getState().renamePath?.(path, newPath);
-        useBacklinkStore.getState().renamePath?.(path, newPath);
-
-        const state = ws.getState();
-        state.updatePathInAllPanes(path, newPath);
-        if (state.currentPath === path) {
-          await state.openFile(newPath);
-        }
-        const { useVaultStore } = await import("@/store/vault-store");
-        void useVaultStore.getState().refresh();
-        return true;
-      } catch (e) {
-        console.error("inactive pane rename failed", e);
-        return false;
-      }
-    },
-    [path, waitForIdleSave, ws],
-  );
+  const handleRename = useInactivePaneRename({ path, waitForIdleSave });
 
   useEffect(() => {
     if (!editor) return;
@@ -308,27 +250,6 @@ export function InactivePaneEditor({
         onChange={handleFrontmatterChange}
       />
       <EditorContent editor={editor} />
-    </div>
-  );
-}
-
-function basenameWithoutMd(path: string): string {
-  return (path.split("/").pop() ?? path).replace(/\.md$/i, "");
-}
-
-function InactivePaneEditorStatusBanner({
-  status,
-}: {
-  status: InactiveEditorStatus;
-}) {
-  const { t } = useTranslation(["app"]);
-  if (status !== "conflict" && status !== "saveError") return null;
-
-  return (
-    <div className="sticky top-0 z-10 border-b border-[var(--color-border-primary)] bg-[var(--color-bg-secondary)] px-3 py-2 text-xs text-[var(--color-danger)]">
-      {status === "conflict"
-        ? t("app:pane.editorConflict")
-        : t("app:pane.editorSaveError")}
     </div>
   );
 }
