@@ -8,6 +8,7 @@ import { useVaultDockStore } from "@/store/vault-dock-store";
 import {
   classifyDropZone,
   dropZoneLabelKey,
+  getDropZoneOverlayStyle,
   toEdgeZone,
   type EdgeZone,
 } from "./pane/drop-zone";
@@ -87,19 +88,8 @@ export function SinglePaneDropTarget({ children }: SinglePaneDropTargetProps) {
     [computeZone, dropZone, splitPaneMove, vaultId],
   );
 
-  const overlayStyle: React.CSSProperties | undefined = (() => {
-    if (dropZone === null) return undefined;
-    if (dropZone === "left") {
-      return { top: 0, bottom: 0, left: 0, width: "50%" };
-    }
-    if (dropZone === "right") {
-      return { top: 0, bottom: 0, right: 0, width: "50%" };
-    }
-    if (dropZone === "top") {
-      return { left: 0, right: 0, top: 0, height: "50%" };
-    }
-    return { left: 0, right: 0, bottom: 0, height: "50%" };
-  })();
+  const overlayStyle =
+    dropZone === null ? undefined : getDropZoneOverlayStyle(dropZone);
 
   return (
     <div
