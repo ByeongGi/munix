@@ -10,7 +10,7 @@ macOS 개발자/파워유저는 아래 명령으로 GitHub Release DMG를 다운
 curl -fsSL https://raw.githubusercontent.com/ByeongGi/munix/main/scripts/install-macos.sh | bash
 ```
 
-이 명령은 해당 버전의 GitHub Release가 공개된 뒤 동작한다. Draft release 상태에서는 공개 다운로드 URL이 아직 안정적으로 제공되지 않을 수 있다.
+이 명령은 최신 공개 GitHub Release를 자동으로 찾아 설치한다. Draft release 상태에서는 공개 다운로드 URL이 아직 안정적으로 제공되지 않을 수 있다.
 
 스크립트는 다음을 수행한다.
 
@@ -37,7 +37,7 @@ curl -fsSL https://raw.githubusercontent.com/ByeongGi/munix/main/scripts/install
 특정 버전을 설치하려면:
 
 ```bash
-export MUNIX_VERSION=0.1.0
+export MUNIX_VERSION=0.1.1
 curl -fsSL https://raw.githubusercontent.com/ByeongGi/munix/main/scripts/install-macos.sh | bash
 ```
 
@@ -57,7 +57,7 @@ open src-tauri/target/release/bundle/macos/munix.app
 
 GitHub Release에서 받은 DMG는 더 간단하지만, Apple notarization이 적용되어 있지 않아 macOS Gatekeeper가 차단할 수 있다.
 
-1. `munix_0.1.0_aarch64.dmg`를 다운로드한다.
+1. 최신 Release의 `munix_{version}_aarch64.dmg`를 다운로드한다. 현재 공개 버전은 `munix_0.1.1_aarch64.dmg`다.
 2. DMG를 열고 `munix.app`을 `/Applications`로 드래그한다.
 3. Applications에서 Munix를 실행한다.
 

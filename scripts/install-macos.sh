@@ -1,16 +1,13 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-VERSION="${MUNIX_VERSION:-0.1.0}"
+VERSION="${MUNIX_VERSION:-latest}"
 ARCH="${MUNIX_ARCH:-aarch64}"
 APP_NAME="munix.app"
-ASSET_NAME="munix_${VERSION}_${ARCH}.dmg"
-DOWNLOAD_URL="${MUNIX_DMG_URL:-https://github.com/ByeongGi/munix/releases/download/v${VERSION}/${ASSET_NAME}}"
 EXPECTED_SHA256="${MUNIX_SHA256:-}"
 APP_INSTALL_DIR="${MUNIX_APP_INSTALL_DIR:-$HOME/Applications}"
 APP_DEST="$APP_INSTALL_DIR/$APP_NAME"
 WORK_DIR="$(mktemp -d "${TMPDIR:-/tmp}/munix-install.XXXXXX")"
-DMG_PATH="$WORK_DIR/$ASSET_NAME"
 MOUNT_DIR="$WORK_DIR/mount"
 
 cleanup() {
@@ -46,8 +43,31 @@ require_command ditto
 require_command shasum
 require_command xattr
 
-if [ -z "$EXPECTED_SHA256" ] && [ "$VERSION" = "0.1.0" ] && [ "$ARCH" = "aarch64" ]; then
-  EXPECTED_SHA256="304824a2283920ffac8a40089205f9672b4f408e129cc53bcf1abf4aa056e1ae"
+if [ "$VERSION" = "latest" ]; then
+  LATEST_TAG="$(
+    curl --fail --silent --location https://api.github.com/repos/ByeongGi/munix/releases/latest \
+      | sed -n 's/.*"tag_name":[[:space:]]*"\([^"]*\)".*/\1/p' \
+      | head -n 1
+  )"
+  if [ -z "$LATEST_TAG" ]; then
+    fail "could not resolve the latest GitHub release tag."
+  fi
+  VERSION="${LATEST_TAG#v}"
+fi
+
+ASSET_NAME="munix_${VERSION}_${ARCH}.dmg"
+DOWNLOAD_URL="${MUNIX_DMG_URL:-https://github.com/ByeongGi/munix/releases/download/v${VERSION}/${ASSET_NAME}}"
+DMG_PATH="$WORK_DIR/$ASSET_NAME"
+
+if [ -z "$EXPECTED_SHA256" ] && [ "$ARCH" = "aarch64" ]; then
+  case "$VERSION" in
+    0.1.1)
+      EXPECTED_SHA256="f9b8f5087c17a7a581f3e9f89f28392f3bc90e0a42adee403bd1900899a96314"
+      ;;
+    0.1.0)
+      EXPECTED_SHA256="304824a2283920ffac8a40089205f9672b4f408e129cc53bcf1abf4aa056e1ae"
+      ;;
+  esac
 fi
 
 case "$(uname -m)" in

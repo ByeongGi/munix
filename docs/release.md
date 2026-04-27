@@ -47,8 +47,8 @@ pnpm icon:generate
 4. 버전 태그를 만들고 푸시한다.
 
 ```bash
-git tag v0.1.0
-git push origin v0.1.0
+git tag v0.1.1
+git push origin v0.1.1
 ```
 
 5. GitHub CLI로 draft release를 만들고 산출물을 업로드한다.
@@ -58,10 +58,10 @@ cd munix
 pnpm release:upload
 ```
 
-기본 태그는 `package.json`의 `version`에서 만든 `v0.1.0` 형식이다. 다른 태그를 쓰려면:
+기본 태그는 `package.json`의 `version`에서 만든 `v0.1.1` 형식이다. 다른 태그를 쓰려면:
 
 ```bash
-pnpm release:upload -- --tag v0.1.0
+pnpm release:upload -- --tag v0.1.1
 ```
 
 `release:upload`는 `gh release view`로 릴리즈 존재 여부를 확인한다. 없으면 draft release를 만들고, 있으면 기존 release에 파일을 `--clobber`로 다시 올린다.
