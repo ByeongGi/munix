@@ -5,7 +5,7 @@
 
 import { useStore } from "zustand";
 
-import { useActiveVaultId, NO_VAULT_ID } from "@/lib/active-vault-context";
+import { useActiveVaultId, NO_VAULT_ID } from "@/lib/active-vault";
 import {
   getWorkspaceStore,
   type WorkspaceStore,
@@ -23,7 +23,7 @@ interface BacklinkStoreApi {
 
 const pickBacklinks = (s: WorkspaceStore) => s.backlinks;
 
-const useBacklinkStoreFn = <T,>(selector: (s: BacklinksState) => T): T => {
+const useBacklinkStoreFn = <T>(selector: (s: BacklinksState) => T): T => {
   const id = useActiveVaultId();
   const store = getWorkspaceStore(id ?? NO_VAULT_ID);
   const backlinks = useStore(store, pickBacklinks);

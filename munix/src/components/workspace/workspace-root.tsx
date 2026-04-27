@@ -12,7 +12,7 @@
 
 import { useStore } from "zustand";
 
-import { useActiveWorkspaceStore } from "@/lib/active-vault-context";
+import { useActiveWorkspaceStore } from "@/lib/active-vault";
 import type { WorkspaceNode } from "@/store/workspace-types";
 
 import { Pane } from "./pane";

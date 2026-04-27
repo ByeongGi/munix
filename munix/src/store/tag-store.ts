@@ -5,16 +5,13 @@
 
 import { useStore } from "zustand";
 
-import { useActiveVaultId, NO_VAULT_ID } from "@/lib/active-vault-context";
+import { useActiveVaultId, NO_VAULT_ID } from "@/lib/active-vault";
 import {
   getWorkspaceStore,
   type WorkspaceStore,
 } from "@/store/workspace-registry";
 import { useVaultDockStore } from "@/store/vault-dock-store";
-import {
-  defaultTagsSlice,
-  type TagsState,
-} from "@/store/slices/tags-slice";
+import { defaultTagsSlice, type TagsState } from "@/store/slices/tags-slice";
 
 interface TagStoreApi {
   <T>(selector: (s: TagsState) => T): T;
@@ -23,7 +20,7 @@ interface TagStoreApi {
 
 const pickTags = (s: WorkspaceStore) => s.tags;
 
-const useTagStoreFn = <T,>(selector: (s: TagsState) => T): T => {
+const useTagStoreFn = <T>(selector: (s: TagsState) => T): T => {
   const id = useActiveVaultId();
   const store = getWorkspaceStore(id ?? NO_VAULT_ID);
   const tags = useStore(store, pickTags);

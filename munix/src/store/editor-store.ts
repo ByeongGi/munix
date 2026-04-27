@@ -17,7 +17,7 @@
 
 import { useStore } from "zustand";
 
-import { useActiveVaultId, NO_VAULT_ID } from "@/lib/active-vault-context";
+import { useActiveVaultId, NO_VAULT_ID } from "@/lib/active-vault";
 import { getWorkspaceStore } from "@/store/workspace-registry";
 import { useVaultDockStore } from "@/store/vault-dock-store";
 import {
@@ -36,7 +36,7 @@ interface EditorStoreApi {
   getState(): EditorSlice;
 }
 
-const useEditorStoreFn = <T,>(selector: (s: EditorSlice) => T): T => {
+const useEditorStoreFn = <T>(selector: (s: EditorSlice) => T): T => {
   const id = useActiveVaultId();
   const store = getWorkspaceStore(id ?? NO_VAULT_ID);
   return useStore(store, selector);

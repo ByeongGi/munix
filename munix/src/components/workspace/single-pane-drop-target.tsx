@@ -2,7 +2,7 @@ import { useCallback, useState } from "react";
 import { useStore } from "zustand";
 import { useTranslation } from "react-i18next";
 
-import { useActiveWorkspaceStore } from "@/lib/active-vault-context";
+import { useActiveWorkspaceStore } from "@/lib/active-vault";
 import { cn } from "@/lib/cn";
 import { TAB_DND_MIME, parseTabPayload } from "@/lib/dnd-mime";
 import { useVaultDockStore } from "@/store/vault-dock-store";

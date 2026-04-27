@@ -8,7 +8,7 @@ import {
 import { useTranslation } from "react-i18next";
 import { useStore } from "zustand";
 import type { FileNode } from "@/types/ipc";
-import { useActiveWorkspaceStore } from "@/lib/active-vault-context";
+import { useActiveWorkspaceStore } from "@/lib/active-vault";
 import { cn } from "@/lib/cn";
 import { collectPanes } from "@/store/workspace-types";
 import { RenameInput } from "./rename-input";
@@ -78,9 +78,7 @@ export function FlatTreeRow({
     )?.titleDraft;
     if (activeDraft !== undefined) return activeDraft;
     for (const pane of collectPanes(s.workspaceTree)) {
-      const draft = pane.tabs.find(
-        (tab) => tab.path === node.path,
-      )?.titleDraft;
+      const draft = pane.tabs.find((tab) => tab.path === node.path)?.titleDraft;
       if (draft !== undefined) return draft;
     }
     return undefined;
@@ -191,7 +189,9 @@ export function FlatTreeRow({
       try {
         const parsed = JSON.parse(raw) as { paths?: unknown };
         if (Array.isArray(parsed.paths)) {
-          paths = parsed.paths.filter((p): p is string => typeof p === "string");
+          paths = parsed.paths.filter(
+            (p): p is string => typeof p === "string",
+          );
         }
       } catch {
         paths = [];
@@ -205,7 +205,8 @@ export function FlatTreeRow({
     }
     const target = targetFolderForDrop;
     const movable = paths.filter(
-      (src) => src !== node.path && target !== src && !target.startsWith(`${src}/`),
+      (src) =>
+        src !== node.path && target !== src && !target.startsWith(`${src}/`),
     );
     if (movable.length === 0) {
       console.debug("[tree-dnd] no movable sources", { paths, target });

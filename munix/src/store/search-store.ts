@@ -5,7 +5,7 @@
 
 import { useStore } from "zustand";
 
-import { useActiveVaultId, NO_VAULT_ID } from "@/lib/active-vault-context";
+import { useActiveVaultId, NO_VAULT_ID } from "@/lib/active-vault";
 import {
   getWorkspaceStore,
   type WorkspaceStore,
@@ -26,7 +26,7 @@ interface SearchStoreApi {
 // stable selector — module scope. useSyncExternalStoreWithSelector cache 효율.
 const pickSearch = (s: WorkspaceStore) => s.search;
 
-const useSearchStoreFn = <T,>(selector: (s: SearchState) => T): T => {
+const useSearchStoreFn = <T>(selector: (s: SearchState) => T): T => {
   const id = useActiveVaultId();
   const store = getWorkspaceStore(id ?? NO_VAULT_ID);
   const search = useStore(store, pickSearch);

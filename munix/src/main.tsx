@@ -1,15 +1,12 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
 import { attachConsole } from "@tauri-apps/plugin-log";
-import App from "@/app";
 import "@/index.css";
 import "katex/dist/katex.min.css";
 import { setupI18n, resolveLang } from "@/lib/i18n";
 import { useSettingsStore } from "@/store/settings-store";
-import { useVaultDockStore } from "@/store/vault-dock-store";
-import { ActiveVaultProvider } from "@/lib/active-vault-context";
+import { Root } from "@/root";
 import { bootstrapVaultRegistry } from "@/lib/vault-registry";
-import { ErrorBoundary } from "@/components/error-boundary";
 import { installDevErrorTrap } from "@/lib/dev-error-trap";
 
 // Rust 쪽 log 매크로(`info!`, `error!` 등) 출력을 webview console 로 포워드.
@@ -25,7 +22,9 @@ const i18n = setupI18n();
 
 // settings-store.language 변경 시 i18next.changeLanguage() 동기.
 // 'auto' 면 navigator.language 기반으로 해석.
-function syncLanguage(setting: ReturnType<typeof useSettingsStore.getState>["language"]): void {
+function syncLanguage(
+  setting: ReturnType<typeof useSettingsStore.getState>["language"],
+): void {
   const target = resolveLang(setting);
   if (i18n.resolvedLanguage !== target) {
     void i18n.changeLanguage(target);
@@ -39,21 +38,6 @@ useSettingsStore.subscribe((state, prev) => {
     syncLanguage(state.language);
   }
 });
-
-/**
- * ActiveVaultProvider 의 vault id source 는 `vault-dock-store.activeVaultId`.
- * (ADR-031 Phase B-ε — dock store 가 진실의 원천. 호환 layer 인 useVaultStore 는
- * info/files 캐시만 보유하며 open/close 호출 시 dock store 에 위임.)
- */
-function Root() {
-  const vaultId = useVaultDockStore((s) => s.activeVaultId);
-
-  return (
-    <ActiveVaultProvider vaultId={vaultId}>
-      <App />
-    </ActiveVaultProvider>
-  );
-}
 
 // 부팅 시 1회 — `munix.json` 로드 + legacy localStorage 마이그레이션 +
 // open: true 였던 vault 자동 reopen. (ADR-032)
@@ -70,9 +54,7 @@ async function boot(): Promise<void> {
   }
   ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
     <React.StrictMode>
-      <ErrorBoundary scope="root">
-        <Root />
-      </ErrorBoundary>
+      <Root />
     </React.StrictMode>,
   );
 }

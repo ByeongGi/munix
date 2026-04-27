@@ -22,6 +22,9 @@ import {
 import { useVaultStore } from "@/store/vault-store";
 import { useThemeStore, type ThemeMode } from "@/store/theme-store";
 import { cn } from "@/lib/cn";
+import { IconButton } from "@/components/ui/icon-button";
+import { ModalShell } from "@/components/ui/modal-shell";
+import { SegmentedControl } from "@/components/ui/segmented-control";
 import { KeymapSettings } from "./keymap-settings";
 
 interface SettingsDialogProps {
@@ -89,256 +92,249 @@ export function SettingsDialog({ open, onClose }: SettingsDialogProps) {
   const navItems = [...globalNav, ...vaultNav];
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center"
-      onClick={onClose}
+    <ModalShell
+      onClose={onClose}
+      panelClassName="flex h-[min(760px,88vh)] w-[min(1080px,94vw)] overflow-hidden"
     >
-      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
-      <div
-        role="dialog"
-        aria-modal="true"
-        onClick={(e) => e.stopPropagation()}
-        className={cn(
-          "relative flex h-[min(760px,88vh)] w-[min(1080px,94vw)] overflow-hidden rounded-lg border shadow-2xl",
-          "border-[var(--color-border-primary)] bg-[var(--color-bg-secondary)]",
-        )}
-      >
-        <aside className="flex w-64 shrink-0 flex-col border-r border-[var(--color-border-primary)] bg-[var(--color-bg-tertiary)]">
-          <div className="px-5 pb-3 pt-5">
-            <h2 className="text-base font-semibold">{t("settings:title")}</h2>
-          </div>
-          <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-2">
-            <NavGroupLabel label={t("settings:vaultScope.groupGlobal")} />
-            {globalNav.map((item) => (
-              <SettingsNavButton
-                key={item.id}
-                icon={item.icon}
-                label={item.label}
-                active={activeSection === item.id}
-                onClick={() => setActiveSection(item.id)}
+      <aside className="flex w-64 shrink-0 flex-col border-r border-[var(--color-border-primary)] bg-[var(--color-bg-tertiary)]">
+        <div className="px-5 pb-3 pt-5">
+          <h2 className="text-base font-semibold">{t("settings:title")}</h2>
+        </div>
+        <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-2">
+          <NavGroupLabel label={t("settings:vaultScope.groupGlobal")} />
+          {globalNav.map((item) => (
+            <SettingsNavButton
+              key={item.id}
+              icon={item.icon}
+              label={item.label}
+              active={activeSection === item.id}
+              onClick={() => setActiveSection(item.id)}
+            />
+          ))}
+          {vaultNav.length > 0 && (
+            <>
+              <NavGroupLabel
+                label={t("settings:vaultScope.groupVault")}
+                className="mt-3"
               />
-            ))}
-            {vaultNav.length > 0 && (
-              <>
-                <NavGroupLabel
-                  label={t("settings:vaultScope.groupVault")}
-                  className="mt-3"
+              {vaultNav.map((item) => (
+                <SettingsNavButton
+                  key={item.id}
+                  icon={item.icon}
+                  label={item.label}
+                  active={activeSection === item.id}
+                  onClick={() => setActiveSection(item.id)}
                 />
-                {vaultNav.map((item) => (
-                  <SettingsNavButton
-                    key={item.id}
-                    icon={item.icon}
-                    label={item.label}
-                    active={activeSection === item.id}
-                    onClick={() => setActiveSection(item.id)}
-                  />
-                ))}
-              </>
-            )}
-          </nav>
-          <div className="border-t border-[var(--color-border-primary)] p-3">
-            <button
-              type="button"
-              onClick={reset}
-              className="flex h-8 w-full items-center gap-2 rounded px-2 text-xs text-[var(--color-text-tertiary)] hover:bg-[var(--color-bg-hover)]"
-            >
-              <RotateCcw className="h-3.5 w-3.5" />
-              {t("common:resetToDefaults")}
-            </button>
-          </div>
-        </aside>
+              ))}
+            </>
+          )}
+        </nav>
+        <div className="border-t border-[var(--color-border-primary)] p-3">
+          <button
+            type="button"
+            onClick={reset}
+            className="flex h-8 w-full items-center gap-2 rounded px-2 text-xs text-[var(--color-text-tertiary)] hover:bg-[var(--color-bg-hover)]"
+          >
+            <RotateCcw className="h-3.5 w-3.5" />
+            {t("common:resetToDefaults")}
+          </button>
+        </div>
+      </aside>
 
-        <main className="flex min-w-0 flex-1 flex-col">
-          <div className="flex items-center justify-between border-b border-[var(--color-border-primary)] px-6 py-4">
-            <h3 className="text-lg font-semibold">
-              {navItems.find((item) => item.id === activeSection)?.label}
-            </h3>
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex h-7 w-7 items-center justify-center rounded text-[var(--color-text-tertiary)] hover:bg-[var(--color-bg-hover)]"
-              aria-label={t("common:close")}
-            >
-              <X className="h-4 w-4" />
-            </button>
-          </div>
+      <main className="flex min-w-0 flex-1 flex-col">
+        <div className="flex items-center justify-between border-b border-[var(--color-border-primary)] px-6 py-4">
+          <h3 className="text-lg font-semibold">
+            {navItems.find((item) => item.id === activeSection)?.label}
+          </h3>
+          <IconButton
+            onClick={onClose}
+            label={t("common:close")}
+            size="sm"
+            icon={<X className="h-4 w-4" />}
+          />
+        </div>
 
-          <div className="flex-1 overflow-y-auto px-8 py-6">
-            {activeSection === "general" && (
-              <Section title={t("settings:section.appearance")}>
-                <SegmentedControl<ThemeMode>
-                  label={t("settings:theme.label")}
-                  value={theme}
-                  options={[
-                    { value: "system", label: t("settings:theme.system") },
-                    { value: "light", label: t("settings:theme.light") },
-                    { value: "dark", label: t("settings:theme.dark") },
-                  ]}
-                  onChange={setTheme}
-                />
-                <LanguageSelector
-                  value={language}
-                  onChange={(v) => set({ language: v })}
-                  label={t("settings:language.label")}
-                  description={t("settings:language.description")}
-                  options={[
-                    { value: "auto", label: t("settings:language.auto") },
-                    { value: "ko", label: t("settings:language.ko") },
-                    { value: "en", label: t("settings:language.en") },
-                  ]}
-                />
-              </Section>
-            )}
+        <div className="flex-1 overflow-y-auto px-8 py-6">
+          {activeSection === "general" && (
+            <Section title={t("settings:section.appearance")}>
+              <SegmentedControl<ThemeMode>
+                label={t("settings:theme.label")}
+                value={theme}
+                options={[
+                  { value: "system", label: t("settings:theme.system") },
+                  { value: "light", label: t("settings:theme.light") },
+                  { value: "dark", label: t("settings:theme.dark") },
+                ]}
+                onChange={setTheme}
+              />
+              <LanguageSelector
+                value={language}
+                onChange={(v) => set({ language: v })}
+                label={t("settings:language.label")}
+                description={t("settings:language.description")}
+                options={[
+                  { value: "auto", label: t("settings:language.auto") },
+                  { value: "ko", label: t("settings:language.ko") },
+                  { value: "en", label: t("settings:language.en") },
+                ]}
+              />
+            </Section>
+          )}
 
-            {activeSection === "editor" && (
-              <Section title={t("settings:section.editor")}>
-                <SegmentedControl<FontSize>
-                  label={t("settings:fontSize.label")}
-                  value={fontSize}
-                  options={[
-                    { value: "sm", label: t("settings:fontSize.sm") },
-                    { value: "base", label: t("settings:fontSize.base") },
-                    { value: "lg", label: t("settings:fontSize.lg") },
-                    { value: "xl", label: t("settings:fontSize.xl") },
-                  ]}
-                  onChange={(v) => set({ fontSize: v })}
-                />
-                <SegmentedControl<EditorWidth>
-                  label={t("settings:editorWidth.label")}
-                  value={editorWidth}
-                  options={[
-                    {
-                      value: "narrow",
-                      label: t("settings:editorWidth.narrow"),
-                    },
-                    {
-                      value: "default",
-                      label: t("settings:editorWidth.default"),
-                    },
-                    { value: "wide", label: t("settings:editorWidth.wide") },
-                    { value: "full", label: t("settings:editorWidth.full") },
-                  ]}
-                  onChange={(v) => set({ editorWidth: v })}
-                />
-                <SegmentedControl<AutoSaveDebounceMs>
-                  label={t("settings:autoSave.label")}
-                  value={autoSaveDebounceMs}
-                  options={[
-                    { value: 500, label: t("settings:autoSave.ms500") },
-                    { value: 750, label: t("settings:autoSave.ms750") },
-                    { value: 1500, label: t("settings:autoSave.ms1500") },
-                    { value: 3000, label: t("settings:autoSave.ms3000") },
-                  ]}
-                  onChange={(v) => set({ autoSaveDebounceMs: v })}
-                />
-              </Section>
-            )}
+          {activeSection === "editor" && (
+            <Section title={t("settings:section.editor")}>
+              <SegmentedControl<FontSize>
+                label={t("settings:fontSize.label")}
+                value={fontSize}
+                options={[
+                  { value: "sm", label: t("settings:fontSize.sm") },
+                  { value: "base", label: t("settings:fontSize.base") },
+                  { value: "lg", label: t("settings:fontSize.lg") },
+                  { value: "xl", label: t("settings:fontSize.xl") },
+                ]}
+                onChange={(v) => set({ fontSize: v })}
+              />
+              <SegmentedControl<EditorWidth>
+                label={t("settings:editorWidth.label")}
+                value={editorWidth}
+                options={[
+                  {
+                    value: "narrow",
+                    label: t("settings:editorWidth.narrow"),
+                  },
+                  {
+                    value: "default",
+                    label: t("settings:editorWidth.default"),
+                  },
+                  { value: "wide", label: t("settings:editorWidth.wide") },
+                  { value: "full", label: t("settings:editorWidth.full") },
+                ]}
+                onChange={(v) => set({ editorWidth: v })}
+              />
+              <SegmentedControl<AutoSaveDebounceMs>
+                label={t("settings:autoSave.label")}
+                value={autoSaveDebounceMs}
+                options={[
+                  { value: 500, label: t("settings:autoSave.ms500") },
+                  { value: 750, label: t("settings:autoSave.ms750") },
+                  { value: 1500, label: t("settings:autoSave.ms1500") },
+                  { value: 3000, label: t("settings:autoSave.ms3000") },
+                ]}
+                onChange={(v) => set({ autoSaveDebounceMs: v })}
+              />
+            </Section>
+          )}
 
-            {activeSection === "shortcuts" && (
-              <Section title={t("settings:section.shortcuts")}>
-                <KeymapSettings />
-              </Section>
-            )}
+          {activeSection === "shortcuts" && (
+            <Section title={t("settings:section.shortcuts")}>
+              <KeymapSettings />
+            </Section>
+          )}
 
-            {activeSection === "advanced" && (
-              <Section title={t("settings:section.advanced")}>
-                <p className="text-[11px] text-[var(--color-text-tertiary)]">
-                  {t("settings:customCss.description")}
-                </p>
-                <textarea
-                  value={customCss}
-                  onChange={(e) => set({ customCss: e.target.value })}
-                  placeholder={t("settings:customCss.placeholder")}
-                  spellCheck={false}
-                  className={cn(
-                    "h-56 w-full resize-y rounded border p-3 font-mono text-xs",
-                    "border-[var(--color-border-secondary)] bg-[var(--color-bg-tertiary)]",
-                    "text-[var(--color-text-primary)]",
-                    "placeholder:text-[var(--color-text-tertiary)] outline-none",
-                    "focus:border-[var(--color-accent)]",
-                  )}
-                />
-              </Section>
-            )}
-
-            {activeSection === "about" && (
-              <Section title={t("settings:section.about")}>
-                <p className="text-xs text-[var(--color-text-tertiary)]">
-                  {t("settings:about.tagline")}
-                </p>
-                <p className="text-xs text-[var(--color-text-tertiary)]">
-                  {t("settings:about.meta")}
-                </p>
-              </Section>
-            )}
-
-            {activeSection === "vault" && (
-              <Section
-                title={
-                  vaultInfo
-                    ? t("settings:section.vault", { name: vaultInfo.name })
-                    : t("settings:section.vault", { name: "—" })
-                }
-              >
-                {!vaultInfo ? (
-                  <p className="text-[11px] text-[var(--color-text-tertiary)]">
-                    {t("settings:vaultScope.noActive")}
-                  </p>
-                ) : (
-                  <>
-                    <p className="text-[11px] text-[var(--color-text-tertiary)]">
-                      {t("settings:vaultScope.description")}
-                    </p>
-                    <VaultOverrideRow<FontSize>
-                      label={t("settings:fontSize.label")}
-                      keyName="fontSize"
-                      override={vaultOverride.fontSize}
-                      globalValue={globalSettings.fontSize}
-                      options={[
-                        { value: "sm", label: t("settings:fontSize.sm") },
-                        { value: "base", label: t("settings:fontSize.base") },
-                        { value: "lg", label: t("settings:fontSize.lg") },
-                        { value: "xl", label: t("settings:fontSize.xl") },
-                      ]}
-                      onSet={(v) => setVaultOverride({ fontSize: v })}
-                      onClear={() => clearVaultOverride("fontSize")}
-                    />
-                    <VaultOverrideRow<EditorWidth>
-                      label={t("settings:editorWidth.label")}
-                      keyName="editorWidth"
-                      override={vaultOverride.editorWidth}
-                      globalValue={globalSettings.editorWidth}
-                      options={[
-                        { value: "narrow", label: t("settings:editorWidth.narrow") },
-                        { value: "default", label: t("settings:editorWidth.default") },
-                        { value: "wide", label: t("settings:editorWidth.wide") },
-                        { value: "full", label: t("settings:editorWidth.full") },
-                      ]}
-                      onSet={(v) => setVaultOverride({ editorWidth: v })}
-                      onClear={() => clearVaultOverride("editorWidth")}
-                    />
-                    <VaultOverrideRow<AutoSaveDebounceMs>
-                      label={t("settings:autoSave.label")}
-                      keyName="autoSaveDebounceMs"
-                      override={vaultOverride.autoSaveDebounceMs}
-                      globalValue={globalSettings.autoSaveDebounceMs}
-                      options={[
-                        { value: 500, label: t("settings:autoSave.ms500") },
-                        { value: 750, label: t("settings:autoSave.ms750") },
-                        { value: 1500, label: t("settings:autoSave.ms1500") },
-                        { value: 3000, label: t("settings:autoSave.ms3000") },
-                      ]}
-                      onSet={(v) => setVaultOverride({ autoSaveDebounceMs: v })}
-                      onClear={() => clearVaultOverride("autoSaveDebounceMs")}
-                    />
-                  </>
+          {activeSection === "advanced" && (
+            <Section title={t("settings:section.advanced")}>
+              <p className="text-[11px] text-[var(--color-text-tertiary)]">
+                {t("settings:customCss.description")}
+              </p>
+              <textarea
+                value={customCss}
+                onChange={(e) => set({ customCss: e.target.value })}
+                placeholder={t("settings:customCss.placeholder")}
+                spellCheck={false}
+                className={cn(
+                  "h-56 w-full resize-y rounded border p-3 font-mono text-xs",
+                  "border-[var(--color-border-secondary)] bg-[var(--color-bg-tertiary)]",
+                  "text-[var(--color-text-primary)]",
+                  "placeholder:text-[var(--color-text-tertiary)] outline-none",
+                  "focus:border-[var(--color-accent)]",
                 )}
-              </Section>
-            )}
-          </div>
-        </main>
-      </div>
-    </div>
+              />
+            </Section>
+          )}
+
+          {activeSection === "about" && (
+            <Section title={t("settings:section.about")}>
+              <p className="text-xs text-[var(--color-text-tertiary)]">
+                {t("settings:about.tagline")}
+              </p>
+              <p className="text-xs text-[var(--color-text-tertiary)]">
+                {t("settings:about.meta")}
+              </p>
+            </Section>
+          )}
+
+          {activeSection === "vault" && (
+            <Section
+              title={
+                vaultInfo
+                  ? t("settings:section.vault", { name: vaultInfo.name })
+                  : t("settings:section.vault", { name: "—" })
+              }
+            >
+              {!vaultInfo ? (
+                <p className="text-[11px] text-[var(--color-text-tertiary)]">
+                  {t("settings:vaultScope.noActive")}
+                </p>
+              ) : (
+                <>
+                  <p className="text-[11px] text-[var(--color-text-tertiary)]">
+                    {t("settings:vaultScope.description")}
+                  </p>
+                  <VaultOverrideRow<FontSize>
+                    label={t("settings:fontSize.label")}
+                    keyName="fontSize"
+                    override={vaultOverride.fontSize}
+                    globalValue={globalSettings.fontSize}
+                    options={[
+                      { value: "sm", label: t("settings:fontSize.sm") },
+                      { value: "base", label: t("settings:fontSize.base") },
+                      { value: "lg", label: t("settings:fontSize.lg") },
+                      { value: "xl", label: t("settings:fontSize.xl") },
+                    ]}
+                    onSet={(v) => setVaultOverride({ fontSize: v })}
+                    onClear={() => clearVaultOverride("fontSize")}
+                  />
+                  <VaultOverrideRow<EditorWidth>
+                    label={t("settings:editorWidth.label")}
+                    keyName="editorWidth"
+                    override={vaultOverride.editorWidth}
+                    globalValue={globalSettings.editorWidth}
+                    options={[
+                      {
+                        value: "narrow",
+                        label: t("settings:editorWidth.narrow"),
+                      },
+                      {
+                        value: "default",
+                        label: t("settings:editorWidth.default"),
+                      },
+                      { value: "wide", label: t("settings:editorWidth.wide") },
+                      { value: "full", label: t("settings:editorWidth.full") },
+                    ]}
+                    onSet={(v) => setVaultOverride({ editorWidth: v })}
+                    onClear={() => clearVaultOverride("editorWidth")}
+                  />
+                  <VaultOverrideRow<AutoSaveDebounceMs>
+                    label={t("settings:autoSave.label")}
+                    keyName="autoSaveDebounceMs"
+                    override={vaultOverride.autoSaveDebounceMs}
+                    globalValue={globalSettings.autoSaveDebounceMs}
+                    options={[
+                      { value: 500, label: t("settings:autoSave.ms500") },
+                      { value: 750, label: t("settings:autoSave.ms750") },
+                      { value: 1500, label: t("settings:autoSave.ms1500") },
+                      { value: 3000, label: t("settings:autoSave.ms3000") },
+                    ]}
+                    onSet={(v) => setVaultOverride({ autoSaveDebounceMs: v })}
+                    onClear={() => clearVaultOverride("autoSaveDebounceMs")}
+                  />
+                </>
+              )}
+            </Section>
+          )}
+        </div>
+      </main>
+    </ModalShell>
   );
 }
 
@@ -407,49 +403,6 @@ function Section({
   );
 }
 
-function SegmentedControl<T extends string | number>({
-  label,
-  value,
-  options,
-  onChange,
-}: {
-  label: string;
-  value: T;
-  options: { value: T; label: string }[];
-  onChange: (v: T) => void;
-}) {
-  return (
-    <div className="flex items-center justify-between gap-3">
-      <span className="text-sm">{label}</span>
-      <div
-        className={cn(
-          "inline-flex overflow-hidden rounded-md border",
-          "border-[var(--color-border-primary)]",
-        )}
-      >
-        {options.map((opt) => {
-          const active = opt.value === value;
-          return (
-            <button
-              key={String(opt.value)}
-              type="button"
-              onClick={() => onChange(opt.value)}
-              className={cn(
-                "px-3 py-1 text-xs",
-                active
-                  ? "bg-[var(--color-accent)] text-[var(--color-text-on-accent)]"
-                  : "text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-hover)]",
-              )}
-            >
-              {opt.label}
-            </button>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
 function VaultOverrideRow<T extends string | number>({
   label,
   keyName: _keyName,
@@ -474,34 +427,12 @@ function VaultOverrideRow<T extends string | number>({
     options.find((o) => o.value === globalValue)?.label ?? String(globalValue);
   return (
     <div className="space-y-1">
-      <div className="flex items-center justify-between gap-3">
-        <span className="text-sm">{label}</span>
-        <div
-          className={cn(
-            "inline-flex overflow-hidden rounded-md border",
-            "border-[var(--color-border-primary)]",
-          )}
-        >
-          {options.map((opt) => {
-            const active = opt.value === value;
-            return (
-              <button
-                key={String(opt.value)}
-                type="button"
-                onClick={() => onSet(opt.value)}
-                className={cn(
-                  "px-3 py-1 text-xs",
-                  active
-                    ? "bg-[var(--color-accent)] text-[var(--color-text-on-accent)]"
-                    : "text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-hover)]",
-                )}
-              >
-                {opt.label}
-              </button>
-            );
-          })}
-        </div>
-      </div>
+      <SegmentedControl
+        label={label}
+        value={value}
+        options={options}
+        onChange={onSet}
+      />
       <div className="flex items-center justify-between gap-3 text-[11px] text-[var(--color-text-tertiary)]">
         <span>
           {isOverride ? (
@@ -514,7 +445,9 @@ function VaultOverrideRow<T extends string | number>({
               </span>
             </>
           ) : (
-            <span>{t("settings:vaultScope.usingGlobal")} ({globalLabel})</span>
+            <span>
+              {t("settings:vaultScope.usingGlobal")} ({globalLabel})
+            </span>
           )}
         </span>
         {isOverride && (

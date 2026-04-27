@@ -11,13 +11,10 @@
 
 import { useStore } from "zustand";
 
-import { useActiveVaultId, NO_VAULT_ID } from "@/lib/active-vault-context";
+import { useActiveVaultId, NO_VAULT_ID } from "@/lib/active-vault";
 import { getWorkspaceStore } from "@/store/workspace-registry";
 import { useVaultDockStore } from "@/store/vault-dock-store";
-import {
-  defaultTabSlice,
-  type TabSlice,
-} from "@/store/slices/tab-slice";
+import { defaultTabSlice, type TabSlice } from "@/store/slices/tab-slice";
 
 export type { Tab } from "@/store/slices/tab-slice";
 export { TAB_SOFT_LIMIT } from "@/store/slices/tab-slice";
@@ -27,7 +24,7 @@ interface TabStoreApi {
   getState(): TabSlice;
 }
 
-const useTabStoreFn = <T,>(selector: (s: TabSlice) => T): T => {
+const useTabStoreFn = <T>(selector: (s: TabSlice) => T): T => {
   const id = useActiveVaultId();
   const store = getWorkspaceStore(id ?? NO_VAULT_ID);
   return useStore(store, selector);

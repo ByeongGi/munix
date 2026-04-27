@@ -3,7 +3,7 @@ import { useStore } from "zustand";
 import { useEditorStore } from "@/store/editor-store";
 import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/cn";
-import { useActiveWorkspaceStore } from "@/lib/active-vault-context";
+import { useActiveWorkspaceStore } from "@/lib/active-vault";
 
 interface EditorTitleInputProps {
   className?: string;
@@ -21,7 +21,9 @@ export function EditorTitleInput({ className }: EditorTitleInputProps) {
   const currentPath = useEditorStore((s) => s.currentPath);
   const renameCurrent = useEditorStore((s) => s.renameCurrent);
   const titleDraft = useStore(ws, (s) =>
-    currentPath ? s.tabs.find((tab) => tab.path === currentPath)?.titleDraft : undefined,
+    currentPath
+      ? s.tabs.find((tab) => tab.path === currentPath)?.titleDraft
+      : undefined,
   );
   const setTitleDraft = useStore(ws, (s) => s.setTitleDraft);
 

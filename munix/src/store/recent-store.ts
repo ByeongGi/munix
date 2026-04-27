@@ -5,7 +5,7 @@
 
 import { useStore } from "zustand";
 
-import { useActiveVaultId, NO_VAULT_ID } from "@/lib/active-vault-context";
+import { useActiveVaultId, NO_VAULT_ID } from "@/lib/active-vault";
 import {
   getWorkspaceStore,
   type WorkspaceStore,
@@ -23,7 +23,7 @@ interface RecentStoreApi {
 
 const pickRecent = (s: WorkspaceStore) => s.recent;
 
-const useRecentStoreFn = <T,>(selector: (s: RecentState) => T): T => {
+const useRecentStoreFn = <T>(selector: (s: RecentState) => T): T => {
   const id = useActiveVaultId();
   const store = getWorkspaceStore(id ?? NO_VAULT_ID);
   const recent = useStore(store, pickRecent);

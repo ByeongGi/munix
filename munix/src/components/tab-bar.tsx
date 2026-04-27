@@ -4,7 +4,7 @@ import { X, Plus, AlertTriangle, MoreHorizontal, Pin } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useTabStore, type Tab, TAB_SOFT_LIMIT } from "@/store/tab-store";
 import { useEditorStore } from "@/store/editor-store";
-import { useActiveWorkspaceStore } from "@/lib/active-vault-context";
+import { useActiveWorkspaceStore } from "@/lib/active-vault";
 import { useVaultDockStore } from "@/store/vault-dock-store";
 import { cn } from "@/lib/cn";
 import { ipc } from "@/lib/ipc";

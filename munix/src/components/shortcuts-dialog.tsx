@@ -2,6 +2,8 @@ import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { X, Search } from "lucide-react";
 import { cn } from "@/lib/cn";
+import { IconButton } from "@/components/ui/icon-button";
+import { ModalShell } from "@/components/ui/modal-shell";
 import { groupedRegistry, type KeymapEntry } from "@/lib/keymap-registry";
 import { formatKeymap, isMac } from "@/lib/keymap-format";
 import { useEffectiveKeymap } from "@/hooks/use-keymap";
@@ -89,7 +91,10 @@ const STATIC_GROUPS: Array<{
   },
   {
     groupKey: "inFileSearch",
-    items: [{ i18nKey: "inFileSearch.next" }, { i18nKey: "inFileSearch.close" }],
+    items: [
+      { i18nKey: "inFileSearch.next" },
+      { i18nKey: "inFileSearch.close" },
+    ],
   },
 ];
 
@@ -157,99 +162,86 @@ export function ShortcutsDialog({ open, onClose }: ShortcutsDialogProps) {
   if (!open) return null;
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center"
-      onClick={onClose}
+    <ModalShell
+      onClose={onClose}
+      panelClassName="flex max-h-[80vh] w-full max-w-2xl flex-col"
     >
-      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
-      <div
-        role="dialog"
-        aria-modal="true"
-        onClick={(e) => e.stopPropagation()}
-        className={cn(
-          "relative flex max-h-[80vh] w-full max-w-2xl flex-col rounded-lg border shadow-2xl",
-          "border-[var(--color-border-primary)] bg-[var(--color-bg-secondary)]",
-        )}
-      >
-        <div className="flex items-center justify-between border-b border-[var(--color-border-primary)] px-5 py-3">
-          <h2 className="text-base font-semibold">
-            {t("settings:shortcuts.dialog.title")}
-          </h2>
+      <div className="flex items-center justify-between border-b border-[var(--color-border-primary)] px-5 py-3">
+        <h2 className="text-base font-semibold">
+          {t("settings:shortcuts.dialog.title")}
+        </h2>
+        <IconButton
+          onClick={onClose}
+          label={t("common:close")}
+          size="sm"
+          icon={<X className="h-4 w-4" />}
+        />
+      </div>
+      <div className="flex items-center gap-2 border-b border-[var(--color-border-primary)] px-5 py-2">
+        <Search className="h-3.5 w-3.5 text-[var(--color-text-tertiary)]" />
+        <input
+          autoFocus
+          type="text"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder={t("settings:shortcuts.dialog.searchPlaceholder")}
+          className={cn(
+            "flex-1 bg-transparent text-sm outline-none",
+            "placeholder:text-[var(--color-text-tertiary)]",
+          )}
+          onKeyDown={(e) => {
+            if (e.key === "Escape") onClose();
+          }}
+        />
+        {query && (
           <button
             type="button"
-            onClick={onClose}
-            className="flex h-7 w-7 items-center justify-center rounded text-[var(--color-text-tertiary)] hover:bg-[var(--color-bg-hover)]"
-            aria-label={t("common:close")}
+            onClick={() => setQuery("")}
+            className="text-[10px] text-[var(--color-text-tertiary)] hover:text-[var(--color-text-secondary)]"
+            aria-label={t("settings:shortcuts.dialog.clear")}
           >
-            <X className="h-4 w-4" />
+            {t("settings:shortcuts.dialog.clear")}
           </button>
-        </div>
-        <div className="flex items-center gap-2 border-b border-[var(--color-border-primary)] px-5 py-2">
-          <Search className="h-3.5 w-3.5 text-[var(--color-text-tertiary)]" />
-          <input
-            autoFocus
-            type="text"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder={t("settings:shortcuts.dialog.searchPlaceholder")}
-            className={cn(
-              "flex-1 bg-transparent text-sm outline-none",
-              "placeholder:text-[var(--color-text-tertiary)]",
-            )}
-            onKeyDown={(e) => {
-              if (e.key === "Escape") onClose();
-            }}
-          />
-          {query && (
-            <button
-              type="button"
-              onClick={() => setQuery("")}
-              className="text-[10px] text-[var(--color-text-tertiary)] hover:text-[var(--color-text-secondary)]"
-              aria-label={t("settings:shortcuts.dialog.clear")}
-            >
-              {t("settings:shortcuts.dialog.clear")}
-            </button>
-          )}
-        </div>
-        <div className="flex-1 overflow-y-auto">
-          {filtered.length === 0 ? (
-            <p className="px-5 py-8 text-center text-xs text-[var(--color-text-tertiary)]">
-              {t("settings:shortcuts.dialog.noResults", { query })}
-            </p>
-          ) : (
-            <div className="grid grid-cols-1 gap-6 p-5 sm:grid-cols-2">
-              {filtered.map((g) => (
-                <section key={g.groupKey}>
-                  <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--color-text-tertiary)]">
-                    {g.title}
-                  </h3>
-                  <ul className="space-y-1.5 text-sm">
-                    {g.items.map((s) => (
-                      <li
-                        key={s.keys + s.action}
-                        className="flex items-center justify-between gap-3"
-                      >
-                        <span className="text-[var(--color-text-secondary)]">
-                          {s.action}
-                        </span>
-                        <kbd
-                          className={cn(
-                            "rounded border px-1.5 py-0.5 font-mono text-[11px]",
-                            "border-[var(--color-border-primary)] bg-[var(--color-bg-tertiary)]",
-                            "text-[var(--color-text-primary)]",
-                          )}
-                        >
-                          {s.keys}
-                        </kbd>
-                      </li>
-                    ))}
-                  </ul>
-                </section>
-              ))}
-            </div>
-          )}
-        </div>
+        )}
       </div>
-    </div>
+      <div className="flex-1 overflow-y-auto">
+        {filtered.length === 0 ? (
+          <p className="px-5 py-8 text-center text-xs text-[var(--color-text-tertiary)]">
+            {t("settings:shortcuts.dialog.noResults", { query })}
+          </p>
+        ) : (
+          <div className="grid grid-cols-1 gap-6 p-5 sm:grid-cols-2">
+            {filtered.map((g) => (
+              <section key={g.groupKey}>
+                <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--color-text-tertiary)]">
+                  {g.title}
+                </h3>
+                <ul className="space-y-1.5 text-sm">
+                  {g.items.map((s) => (
+                    <li
+                      key={s.keys + s.action}
+                      className="flex items-center justify-between gap-3"
+                    >
+                      <span className="text-[var(--color-text-secondary)]">
+                        {s.action}
+                      </span>
+                      <kbd
+                        className={cn(
+                          "rounded border px-1.5 py-0.5 font-mono text-[11px]",
+                          "border-[var(--color-border-primary)] bg-[var(--color-bg-tertiary)]",
+                          "text-[var(--color-text-primary)]",
+                        )}
+                      >
+                        {s.keys}
+                      </kbd>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            ))}
+          </div>
+        )}
+      </div>
+    </ModalShell>
   );
 }

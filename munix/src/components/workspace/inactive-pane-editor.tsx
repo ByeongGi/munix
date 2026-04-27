@@ -7,7 +7,7 @@ import { Plus, X } from "lucide-react";
 
 import { createEditorExtensions } from "@/components/editor/extensions";
 import { PropertyRow } from "@/components/editor/properties/property-row";
-import { useActiveWorkspaceStore } from "@/lib/active-vault-context";
+import { useActiveWorkspaceStore } from "@/lib/active-vault";
 import { preprocessMarkdown } from "@/lib/editor-preprocess";
 import { ipc } from "@/lib/ipc";
 import { parseDocument, serializeDocument } from "@/lib/markdown";
@@ -17,10 +17,7 @@ import { usePropertyTypesStore } from "@/store/property-types-store";
 import { useSearchStore } from "@/store/search-store";
 import { useSettingsStore } from "@/store/settings-store";
 import { useTagStore } from "@/store/tag-store";
-import {
-  KNOWN_PROPERTY_TYPES,
-  type PropertyType,
-} from "@/types/frontmatter";
+import { KNOWN_PROPERTY_TYPES, type PropertyType } from "@/types/frontmatter";
 
 interface InactivePaneEditorProps {
   path: string;
@@ -57,7 +54,10 @@ type InactiveEditorStatus =
   | "saveError"
   | "conflict";
 
-export function InactivePaneEditor({ path, titleDraft }: InactivePaneEditorProps) {
+export function InactivePaneEditor({
+  path,
+  titleDraft,
+}: InactivePaneEditorProps) {
   const { t } = useTranslation(["editor", "app", "properties"]);
   const ws = useActiveWorkspaceStore();
   const [body, setBody] = useState("");
@@ -530,7 +530,10 @@ function InactivePanePropertiesPanel({
   onChange,
 }: {
   frontmatter: Record<string, unknown> | null;
-  onChange: (frontmatter: Record<string, unknown> | null, flush: boolean) => void;
+  onChange: (
+    frontmatter: Record<string, unknown> | null,
+    flush: boolean,
+  ) => void;
 }) {
   const { t } = useTranslation(["properties"]);
   const resolve = usePropertyTypesStore((s) => s.resolve);
@@ -636,9 +639,7 @@ function InactivePanePropertiesPanel({
               fieldKey={key}
               value={value}
               type={resolve(key, value)}
-              onValueChange={(raw, flush) =>
-                handleValueChange(key, raw, flush)
-              }
+              onValueChange={(raw, flush) => handleValueChange(key, raw, flush)}
               onDelete={() => handleDelete(key)}
               onTypeChange={(type: PropertyType) => {
                 void setType(key, type);

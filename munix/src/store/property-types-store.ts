@@ -5,7 +5,7 @@
 
 import { useStore } from "zustand";
 
-import { useActiveVaultId, NO_VAULT_ID } from "@/lib/active-vault-context";
+import { useActiveVaultId, NO_VAULT_ID } from "@/lib/active-vault";
 import {
   getWorkspaceStore,
   type WorkspaceStore,
@@ -23,7 +23,7 @@ interface PropertyTypesStoreApi {
 
 const pickPropertyTypes = (s: WorkspaceStore) => s.propertyTypes;
 
-const usePropertyTypesStoreFn = <T,>(
+const usePropertyTypesStoreFn = <T>(
   selector: (s: PropertyTypesState) => T,
 ): T => {
   const id = useActiveVaultId();

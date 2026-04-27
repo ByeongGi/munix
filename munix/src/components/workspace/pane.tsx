@@ -24,7 +24,7 @@ import { useStore } from "zustand";
 import { useTranslation } from "react-i18next";
 import { MoreHorizontal, Pin, Plus, X } from "lucide-react";
 
-import { useActiveWorkspaceStore } from "@/lib/active-vault-context";
+import { useActiveWorkspaceStore } from "@/lib/active-vault";
 import { cn } from "@/lib/cn";
 import {
   LEGACY_TAB_DND_MIME,
@@ -804,9 +804,7 @@ function TabActionsMenu({
       />
       <div className="my-1 h-px bg-[var(--color-border-secondary)]" />
       <PaneMenuItem
-        label={t(
-          pinned ? "tabs:contextMenu.unpin" : "tabs:contextMenu.pin",
-        )}
+        label={t(pinned ? "tabs:contextMenu.unpin" : "tabs:contextMenu.pin")}
         onClick={onTogglePinned}
       />
       <PaneMenuItem

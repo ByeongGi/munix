@@ -11,7 +11,7 @@
 
 import { useStore } from "zustand";
 
-import { useActiveWorkspaceStore } from "@/lib/active-vault-context";
+import { useActiveWorkspaceStore } from "@/lib/active-vault";
 import { cn } from "@/lib/cn";
 import type { SplitDirection } from "@/store/workspace-types";
 
