@@ -49,6 +49,11 @@ import {
   removePane,
   replaceNode,
   basenameWithoutMarkdownExtension,
+  closeOtherTabsInPane,
+  closeTabsAfterInPane,
+  closeUnpinnedTabsInPane,
+  removeTabFromPane,
+  togglePaneTabPinnedState,
 } from "./workspace-tree-helpers";
 
 interface WorkspaceTreeState {
@@ -462,21 +467,11 @@ export const createWorkspaceTreeSlice: StateCreator<
       );
       const pane = findPane(captured, paneId);
       if (!pane) return;
-      const idx = pane.tabs.findIndex((t) => t.id === tabId);
-      if (idx < 0) return;
-
-      const nextTabs = pane.tabs.filter((t) => t.id !== tabId);
-      let nextActive = pane.activeTabId;
-      if (pane.activeTabId === tabId) {
-        nextActive = getNeighborTabIdAfterRemoval(
-          pane.tabs,
-          nextTabs,
-          tabId,
-        );
-      }
+      const patch = removeTabFromPane(pane, tabId);
+      if (!patch) return;
       let nextTree = patchPaneInTree(captured, paneId, {
-        tabs: nextTabs,
-        activeTabId: nextActive,
+        tabs: patch.tabs,
+        activeTabId: patch.activeTabId,
       });
       nextTree = pruneEmptyPanes(nextTree) ?? nextTree;
 
@@ -508,13 +503,13 @@ export const createWorkspaceTreeSlice: StateCreator<
         state.activeId,
       );
       const pane = findPane(captured, paneId);
-      const target = pane?.tabs.find((t) => t.id === tabId);
-      if (!pane || !target) return;
+      if (!pane) return;
+      const patch = closeOtherTabsInPane(pane, tabId);
+      if (!patch) return;
 
-      const nextTabs = pane.tabs.filter((t) => t.id === tabId || t.pinned);
       const nextTree = patchPaneInTree(captured, paneId, {
-        tabs: nextTabs,
-        activeTabId: target.id,
+        tabs: patch.tabs,
+        activeTabId: patch.activeTabId,
       });
       commitPaneTabsMutation(nextTree, paneId);
     },
@@ -530,14 +525,12 @@ export const createWorkspaceTreeSlice: StateCreator<
       );
       const pane = findPane(captured, paneId);
       if (!pane) return;
-      const idx = pane.tabs.findIndex((t) => t.id === tabId);
-      if (idx < 0) return;
+      const patch = closeTabsAfterInPane(pane, tabId);
+      if (!patch) return;
 
-      const nextTabs = pane.tabs.filter((t, i) => i <= idx || t.pinned);
-      const activeStillOpen = nextTabs.some((t) => t.id === pane.activeTabId);
       const nextTree = patchPaneInTree(captured, paneId, {
-        tabs: nextTabs,
-        activeTabId: activeStillOpen ? pane.activeTabId : tabId,
+        tabs: patch.tabs,
+        activeTabId: patch.activeTabId,
       });
       commitPaneTabsMutation(nextTree, paneId);
     },
@@ -552,16 +545,13 @@ export const createWorkspaceTreeSlice: StateCreator<
         state.activeId,
       );
       const pane = findPane(captured, paneId);
-      if (!pane || pane.tabs.length === 0) return;
+      if (!pane) return;
+      const patch = closeUnpinnedTabsInPane(pane);
+      if (!patch) return;
 
-      const nextTabs = pane.tabs.filter((t) => t.pinned);
-      const nextActive =
-        nextTabs.find((t) => t.id === pane.activeTabId)?.id ??
-        nextTabs[0]?.id ??
-        null;
       const nextTree = patchPaneInTree(captured, paneId, {
-        tabs: nextTabs,
-        activeTabId: nextActive,
+        tabs: patch.tabs,
+        activeTabId: patch.activeTabId,
       });
       commitPaneTabsMutation(nextTree, paneId);
     },
@@ -576,10 +566,9 @@ export const createWorkspaceTreeSlice: StateCreator<
         state.activeId,
       );
       const pane = findPane(captured, paneId);
-      if (!pane || !pane.tabs.some((t) => t.id === tabId)) return;
-      const nextTabs = pane.tabs.map((t) =>
-        t.id === tabId ? { ...t, pinned: !t.pinned } : t,
-      );
+      if (!pane) return;
+      const nextTabs = togglePaneTabPinnedState(pane, tabId);
+      if (!nextTabs) return;
       const nextTree = patchPaneInTree(captured, paneId, { tabs: nextTabs });
       commitPaneTabsMutation(nextTree, paneId);
     },

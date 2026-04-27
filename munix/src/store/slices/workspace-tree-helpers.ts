@@ -134,6 +134,68 @@ export function getNeighborTabIdAfterRemoval(
   return neighbor?.id ?? null;
 }
 
+export interface PaneTabsPatch {
+  tabs: Tab[];
+  activeTabId: string | null;
+}
+
+export function removeTabFromPane(
+  pane: PaneNode,
+  tabId: string,
+): PaneTabsPatch | null {
+  if (!pane.tabs.some((t) => t.id === tabId)) return null;
+  const tabs = pane.tabs.filter((t) => t.id !== tabId);
+  const activeTabId =
+    pane.activeTabId === tabId
+      ? getNeighborTabIdAfterRemoval(pane.tabs, tabs, tabId)
+      : pane.activeTabId;
+  return { tabs, activeTabId };
+}
+
+export function closeOtherTabsInPane(
+  pane: PaneNode,
+  tabId: string,
+): PaneTabsPatch | null {
+  const target = pane.tabs.find((t) => t.id === tabId);
+  if (!target) return null;
+  return {
+    tabs: pane.tabs.filter((t) => t.id === tabId || t.pinned),
+    activeTabId: target.id,
+  };
+}
+
+export function closeTabsAfterInPane(
+  pane: PaneNode,
+  tabId: string,
+): PaneTabsPatch | null {
+  const idx = pane.tabs.findIndex((t) => t.id === tabId);
+  if (idx < 0) return null;
+  const tabs = pane.tabs.filter((t, i) => i <= idx || t.pinned);
+  const activeStillOpen = tabs.some((t) => t.id === pane.activeTabId);
+  return {
+    tabs,
+    activeTabId: activeStillOpen ? pane.activeTabId : tabId,
+  };
+}
+
+export function closeUnpinnedTabsInPane(pane: PaneNode): PaneTabsPatch | null {
+  if (pane.tabs.length === 0) return null;
+  const tabs = pane.tabs.filter((t) => t.pinned);
+  const activeTabId =
+    tabs.find((t) => t.id === pane.activeTabId)?.id ?? tabs[0]?.id ?? null;
+  return { tabs, activeTabId };
+}
+
+export function togglePaneTabPinnedState(
+  pane: PaneNode,
+  tabId: string,
+): Tab[] | null {
+  if (!pane.tabs.some((t) => t.id === tabId)) return null;
+  return pane.tabs.map((t) =>
+    t.id === tabId ? { ...t, pinned: !t.pinned } : t,
+  );
+}
+
 export function basenameWithoutMarkdownExtension(path: string): string {
   const i = path.lastIndexOf("/");
   return (i < 0 ? path : path.slice(i + 1)).replace(/\.md$/i, "");
