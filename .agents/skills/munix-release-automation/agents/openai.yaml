@@ -1,0 +1,3 @@
+display_name: Munix Release Automation
+short_description: Build, tag, publish, and validate Munix desktop releases.
+default_prompt: Build and deploy the next Munix release, then verify the installer path works.
