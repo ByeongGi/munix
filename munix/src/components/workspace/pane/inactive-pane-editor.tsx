@@ -10,7 +10,10 @@ import { InactivePaneTitleInput } from "./inactive-pane-title-input";
 import { useInactivePaneAutosave } from "./use-inactive-pane-autosave";
 import { useInactivePaneDocumentLoader } from "./use-inactive-pane-document-loader";
 import { useInactivePaneRename } from "./use-inactive-pane-rename";
-import { focusEditorStartOnNextFrame } from "@/components/editor/editor-focus";
+import {
+  focusEditorEndOnEmptySurface,
+  focusEditorStartOnNextFrame,
+} from "@/components/editor/editor-focus";
 
 interface InactivePaneEditorProps {
   path: string;
@@ -87,17 +90,8 @@ export function InactivePaneEditor({
     [frontmatterRef, requestSave, setFrontmatter],
   );
   const handleEditorEmptyAreaMouseDown = useCallback(
-    (event: React.MouseEvent<HTMLDivElement>) => {
-      if (!editor || editor.isDestroyed || event.button !== 0) return;
-
-      const target = event.target as HTMLElement | null;
-      const editorRoot = editor.view.dom;
-      if (target && target !== editorRoot && editorRoot.contains(target)) {
-        return;
-      }
-
-      event.preventDefault();
-      editor.chain().focus("end").run();
+    (event: React.MouseEvent<HTMLElement>) => {
+      focusEditorEndOnEmptySurface(editor, event);
     },
     [editor],
   );
@@ -124,7 +118,10 @@ export function InactivePaneEditor({
   }
 
   return (
-    <div className="relative min-h-0 min-w-0 flex-1 overflow-y-auto bg-[var(--color-bg-primary)]">
+    <div
+      className="relative min-h-0 min-w-0 flex-1 overflow-y-auto bg-[var(--color-bg-primary)]"
+      onMouseDown={handleEditorEmptyAreaMouseDown}
+    >
       <InactivePaneEditorStatusBanner status={status} />
       <InactivePaneTitleInput
         path={path}
@@ -136,10 +133,7 @@ export function InactivePaneEditor({
         frontmatter={frontmatter}
         onChange={handleFrontmatterChange}
       />
-      <div
-        className="munix-editor-content-surface"
-        onMouseDown={handleEditorEmptyAreaMouseDown}
-      >
+      <div className="munix-editor-content-surface">
         <EditorContent editor={editor} />
       </div>
     </div>

@@ -16,7 +16,10 @@ import { DragHandle } from "@tiptap/extension-drag-handle-react";
 import { GripVertical } from "lucide-react";
 import { useKeymapMatcher } from "@/hooks/use-keymap";
 import { preprocessMarkdown } from "@/lib/editor-preprocess";
-import { focusEditorStartOnNextFrame } from "@/components/editor/editor-focus";
+import {
+  focusEditorEndOnEmptySurface,
+  focusEditorStartOnNextFrame,
+} from "@/components/editor/editor-focus";
 
 interface EditorViewProps {
   className?: string;
@@ -108,17 +111,8 @@ export function EditorView({ className }: EditorViewProps) {
     [t],
   );
   const handleEditorEmptyAreaMouseDown = useCallback(
-    (event: React.MouseEvent<HTMLDivElement>) => {
-      if (!editor || editor.isDestroyed || event.button !== 0) return;
-
-      const target = event.target as HTMLElement | null;
-      const editorRoot = editor.view.dom;
-      if (target && target !== editorRoot && editorRoot.contains(target)) {
-        return;
-      }
-
-      event.preventDefault();
-      editor.chain().focus("end").run();
+    (event: React.MouseEvent<HTMLElement>) => {
+      focusEditorEndOnEmptySurface(editor, event);
     },
     [editor],
   );
@@ -276,7 +270,11 @@ export function EditorView({ className }: EditorViewProps) {
         open={searchOpen}
         onClose={handleSearchClose}
       />
-      <div ref={scrollRef} className="h-full min-w-0 overflow-y-auto">
+      <div
+        ref={scrollRef}
+        className="h-full min-w-0 overflow-y-auto"
+        onMouseDown={handleEditorEmptyAreaMouseDown}
+      >
         <EditorTitleInput onSubmitTitle={focusEditorStart} />
         <ErrorBoundary scope="properties-panel" inline>
           <PropertiesPanel />
@@ -308,10 +306,7 @@ export function EditorView({ className }: EditorViewProps) {
             onClose={handleBlockMenuClose}
           />
         )}
-        <div
-          className="munix-editor-content-surface"
-          onMouseDown={handleEditorEmptyAreaMouseDown}
-        >
+        <div className="munix-editor-content-surface">
           <EditorContent editor={editor} />
         </div>
       </div>
