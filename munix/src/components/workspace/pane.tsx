@@ -36,7 +36,7 @@ import {
   PaneActionsButton,
   PaneActionsMenu,
   TabActionsMenu,
-} from "@/components/workspace/pane-context-menu";
+} from "@/components/workspace/pane/pane-context-menu";
 import {
   classifyDropZone,
   dropZoneLabelKey,

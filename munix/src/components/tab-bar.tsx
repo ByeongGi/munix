@@ -21,7 +21,7 @@ import {
   ContextMenuSurface,
   PaneActionsButton,
   PaneActionsMenu,
-} from "@/components/workspace/pane-context-menu";
+} from "@/components/workspace/pane/pane-context-menu";
 
 interface TabBarProps {
   onNewFile: () => void;
