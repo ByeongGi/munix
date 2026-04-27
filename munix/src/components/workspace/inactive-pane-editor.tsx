@@ -14,7 +14,7 @@ import { useSearchStore } from "@/store/search-store";
 import { useSettingsStore } from "@/store/settings-store";
 import { useTagStore } from "@/store/tag-store";
 import { InactivePanePropertiesPanel } from "./inactive-pane-properties-panel";
-import { InactivePaneTitleInput } from "./inactive-pane-title-input";
+import { InactivePaneTitleInput } from "./pane/inactive-pane-title-input";
 
 interface InactivePaneEditorProps {
   path: string;
