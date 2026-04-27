@@ -6,7 +6,7 @@ import type { SidebarTab } from "@/components/app-shell/types";
 import { AppTitleBar } from "@/components/app-shell/window-title-bar";
 import { WorkspaceHeader } from "@/components/app-shell/workspace-header";
 import { EmptyPanePlaceholder } from "@/components/workspace/pane/empty-pane-placeholder";
-import { WorkspaceRoot } from "@/components/workspace/workspace-root";
+import { WorkspaceRoot } from "@/components/workspace/root/workspace-root";
 import { StatusBar } from "@/components/status-bar";
 import { TabBar } from "@/components/tab-bar";
 import { cn } from "@/lib/cn";

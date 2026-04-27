@@ -11,8 +11,8 @@ import {
   getDropZoneOverlayStyle,
   toEdgeZone,
   type EdgeZone,
-} from "./pane/drop-zone";
-import { DropZoneOverlay } from "./pane/drop-zone-overlay";
+} from "../pane/drop-zone";
+import { DropZoneOverlay } from "../pane/drop-zone-overlay";
 
 interface SinglePaneDropTargetProps {
   children: React.ReactNode;
