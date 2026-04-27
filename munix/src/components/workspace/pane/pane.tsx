@@ -36,14 +36,14 @@ import {
   PaneActionsButton,
   PaneActionsMenu,
   TabActionsMenu,
-} from "@/components/workspace/pane/pane-context-menu";
+} from "./pane-context-menu";
 import {
   classifyDropZone,
   dropZoneLabelKey,
-} from "./pane/drop-zone";
-import { EmptyPanePlaceholder } from "./pane/empty-pane-placeholder";
-import { InactivePaneEditor } from "./pane/inactive-pane-editor";
-import { MiniPaneTabStrip } from "./pane/mini-pane-tab-strip";
+} from "./drop-zone";
+import { EmptyPanePlaceholder } from "./empty-pane-placeholder";
+import { InactivePaneEditor } from "./inactive-pane-editor";
+import { MiniPaneTabStrip } from "./mini-pane-tab-strip";
 
 interface PaneProps {
   pane: PaneNode;
