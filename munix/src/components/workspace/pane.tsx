@@ -43,7 +43,7 @@ import {
 } from "./drop-zone";
 import { EmptyPanePlaceholder } from "./empty-pane-placeholder";
 import { InactivePaneEditor } from "./inactive-pane-editor";
-import { MiniPaneTabStrip } from "./mini-pane-tab-strip";
+import { MiniPaneTabStrip } from "./pane/mini-pane-tab-strip";
 
 interface PaneProps {
   pane: PaneNode;
