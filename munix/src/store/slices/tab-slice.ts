@@ -52,7 +52,8 @@ export interface TabSlice {
   resetTabs: () => void;
 }
 
-function makeId(): string {
+/** Client-side tab IDs are ephemeral workspace identifiers, not persisted file IDs. */
+export function makeTabId(): string {
   return `tab-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
@@ -141,13 +142,13 @@ export const createTabSlice: StateCreator<TabFullSlice, [], [], TabSlice> = (
       void openFileInEditor(existing.path);
       return;
     }
-    const tab: Tab = { id: makeId(), path, title: basename(path) };
+    const tab: Tab = { id: makeTabId(), path, title: basename(path) };
     set((s) => ({ tabs: [...s.tabs, tab], activeId: tab.id }));
     void openFileInEditor(path);
   },
 
   createEmptyTab: () => {
-    const tab: Tab = { id: makeId(), path: "", title: "" };
+    const tab: Tab = { id: makeTabId(), path: "", title: "" };
     const { workspaceTree, activePaneId, tabs } = get();
     if (workspaceTree && activePaneId) {
       const pane = findPane(workspaceTree, activePaneId);

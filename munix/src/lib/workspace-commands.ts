@@ -5,7 +5,7 @@
  * 모두 active vault 의 workspace store 에 위임. vault 가 없으면 no-op.
  */
 
-import type { Tab } from "@/store/slices/tab-slice";
+import { makeTabId, type Tab } from "@/store/slices/tab-slice";
 import type { DropZone, PaneNode } from "@/store/workspace-types";
 import { useVaultDockStore } from "@/store/vault-dock-store";
 import {
@@ -14,10 +14,6 @@ import {
 } from "@/store/workspace-registry";
 
 type EdgeZone = Exclude<DropZone, "center">;
-
-function makeTabId(): string {
-  return `tab-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
-}
 
 function getActiveStore(): WorkspaceStore | null {
   const id = useVaultDockStore.getState().activeVaultId;

@@ -42,7 +42,7 @@ import {
   type WorkspaceNode,
 } from "../workspace-types";
 import type { EditorSlice } from "./editor-slice";
-import type { Tab, TabSlice } from "./tab-slice";
+import { makeTabId, type Tab, type TabSlice } from "./tab-slice";
 
 type EdgeZone = Exclude<DropZone, "center">;
 
@@ -197,7 +197,7 @@ function makeTab(path = ""): Tab {
     ? (i < 0 ? path : path.slice(i + 1)).replace(/\.md$/i, "")
     : "";
   return {
-    id: `tab-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`,
+    id: makeTabId(),
     path,
     title,
   };

@@ -26,6 +26,7 @@ import { Pin, Plus, X } from "lucide-react";
 
 import { useActiveWorkspaceStore } from "@/lib/active-vault";
 import { cn } from "@/lib/cn";
+import { makeTabId } from "@/store/slices/tab-slice";
 import {
   LEGACY_TAB_DND_MIME,
   TAB_DND_MIME,
@@ -151,7 +152,7 @@ export function Pane({
       activeTab
         ? {
             ...activeTab,
-            id: `tab-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`,
+            id: makeTabId(),
           }
         : undefined,
     );
@@ -165,7 +166,7 @@ export function Pane({
       tab
         ? {
             ...tab,
-            id: `tab-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`,
+            id: makeTabId(),
           }
         : undefined,
     );

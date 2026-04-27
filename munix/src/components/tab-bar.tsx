@@ -3,6 +3,7 @@ import { useStore } from "zustand";
 import { X, Plus, AlertTriangle, Pin } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useTabStore, type Tab, TAB_SOFT_LIMIT } from "@/store/tab-store";
+import { makeTabId } from "@/store/slices/tab-slice";
 import { useEditorStore } from "@/store/editor-store";
 import { useActiveWorkspaceStore } from "@/lib/active-vault";
 import { useVaultDockStore } from "@/store/vault-dock-store";
@@ -66,7 +67,7 @@ export function TabBar({ onNewFile }: TabBarProps) {
   const splitTab = (tab: Tab, zone: "right" | "bottom") => {
     splitPane(activePaneId, zone, {
       ...tab,
-      id: `tab-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`,
+      id: makeTabId(),
     });
   };
 
@@ -78,7 +79,7 @@ export function TabBar({ onNewFile }: TabBarProps) {
       tab
         ? {
             ...tab,
-            id: `tab-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`,
+            id: makeTabId(),
           }
         : undefined,
     );
