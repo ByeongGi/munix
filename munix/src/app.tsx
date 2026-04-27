@@ -30,6 +30,7 @@ import { useKeymapMatcher } from "@/hooks/use-keymap";
 import { useActiveVaultEffects } from "@/hooks/app/use-active-vault-effects";
 import { useAppOverlays } from "@/hooks/app/use-app-overlays";
 import { useFileCreateActions } from "@/hooks/app/use-file-create-actions";
+import { useFileDeleteActions } from "@/hooks/app/use-file-delete-actions";
 import { useFileRenameAction } from "@/hooks/app/use-file-rename-action";
 import { useFileTreeReveal } from "@/hooks/app/use-file-tree-reveal";
 import { usePersistentSidebarState } from "@/hooks/app/use-persistent-sidebar-state";
@@ -120,6 +121,10 @@ function App() {
     refreshFiles,
     updatePath,
     setRenaming,
+  });
+  const { handleDelete, handleDeleteMany } = useFileDeleteActions({
+    refreshFiles,
+    removeByPath,
   });
 
   const matchGlobal = useKeymapMatcher("global");
@@ -283,25 +288,7 @@ function App() {
         return;
       }
       if (action === "delete") {
-        void (async () => {
-          const ok = window.confirm(
-            t("delete.confirmPrompt", { name: node.name }),
-          );
-          if (!ok) return;
-          try {
-            await ipc.deleteEntry(node.path);
-          } catch (e) {
-            console.error("delete failed", e);
-            window.alert(
-              t("delete.errorAlert", {
-                reason: e instanceof Error ? e.message : JSON.stringify(e),
-              }),
-            );
-            return;
-          }
-          removeByPath(node.path);
-          await refreshFiles();
-        })();
+        handleDelete(node);
         return;
       }
       if (action === "copy-path") {
@@ -360,7 +347,7 @@ function App() {
       if (action === "new-file") void handleCreateFileAt(parent);
       else if (action === "new-folder") void handleCreateFolderAt(parent);
     },
-    [t, refreshFiles, handleCreateFileAt, handleCreateFolderAt, removeByPath],
+    [t, handleCreateFileAt, handleCreateFolderAt, handleDelete],
   );
 
   const handleMove = useCallback(
@@ -477,34 +464,6 @@ function App() {
       await refreshFiles();
     },
     [t, files, refreshFiles, removeByPath, updatePath],
-  );
-
-  const handleDeleteMany = useCallback(
-    (nodes: FileNode[]) => {
-      const paths = dedupeNestedPaths(nodes.map((node) => node.path));
-      const ok = window.confirm(
-        t("delete.confirmManyPrompt", { count: paths.length }),
-      );
-      if (!ok) return;
-      void (async () => {
-        for (const path of paths) {
-          try {
-            await ipc.deleteEntry(path);
-            removeByPath(path);
-          } catch (e) {
-            console.error("delete many failed", e);
-            window.alert(
-              t("delete.errorAlert", {
-                reason: e instanceof Error ? e.message : JSON.stringify(e),
-              }),
-            );
-            return;
-          }
-        }
-        await refreshFiles();
-      })();
-    },
-    [t, refreshFiles, removeByPath],
   );
 
   if (!info) {
