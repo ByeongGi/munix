@@ -11,7 +11,7 @@ import {
   dropZoneLabelKey,
   toEdgeZone,
   type EdgeZone,
-} from "./drop-zone";
+} from "./pane/drop-zone";
 
 interface SinglePaneDropTargetProps {
   children: React.ReactNode;

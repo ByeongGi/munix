@@ -40,7 +40,7 @@ import {
 import {
   classifyDropZone,
   dropZoneLabelKey,
-} from "./drop-zone";
+} from "./pane/drop-zone";
 import { EmptyPanePlaceholder } from "./pane/empty-pane-placeholder";
 import { InactivePaneEditor } from "./pane/inactive-pane-editor";
 import { MiniPaneTabStrip } from "./pane/mini-pane-tab-strip";
