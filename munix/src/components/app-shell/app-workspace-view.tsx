@@ -137,10 +137,10 @@ export function AppWorkspaceView({
             onNewFile={() => void handleCreateFileAt("")}
             onQuickOpen={onQuickOpen}
           >
-            <div className="flex min-h-0 flex-1 flex-col">
+            <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
               <TabBar onNewFile={() => createEmptyTab()} />
               {currentPath ? (
-                <EditorView className="flex-1" />
+                <EditorView className="min-h-0 min-w-0 flex-1" />
               ) : (
                 <EmptyPanePlaceholder
                   onNewFile={() => void handleCreateFileAt("")}

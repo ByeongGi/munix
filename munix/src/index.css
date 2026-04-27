@@ -234,7 +234,9 @@
   caret-color: var(--color-text-primary);
 }
 .tiptap.prose {
-  max-width: var(--editor-max-width);
+  box-sizing: border-box;
+  width: 100%;
+  max-width: min(var(--editor-max-width), 100%);
   margin-left: auto;
   margin-right: auto;
   --tw-prose-body: var(--color-text-primary);

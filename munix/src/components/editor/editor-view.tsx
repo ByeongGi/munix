@@ -94,7 +94,7 @@ export function EditorView({ className }: EditorViewProps) {
         attributes: {
           class: cn(
             "tiptap prose max-w-none",
-            "min-h-[60vh] px-12 pt-4 pb-10 outline-none",
+            "min-h-full px-6 pt-4 pb-10 outline-none sm:px-8 lg:px-12",
             "prose-headings:font-semibold prose-headings:tracking-tight",
             "prose-p:my-2 prose-li:my-0",
             "prose-code:before:content-none prose-code:after:content-none",
@@ -251,13 +251,13 @@ export function EditorView({ className }: EditorViewProps) {
   }
 
   return (
-    <div className={cn("relative h-full", className)}>
+    <div className={cn("relative min-h-0 min-w-0 overflow-hidden", className)}>
       <SearchBar
         editor={editor}
         open={searchOpen}
         onClose={handleSearchClose}
       />
-      <div ref={scrollRef} className="h-full overflow-y-auto">
+      <div ref={scrollRef} className="h-full min-w-0 overflow-y-auto">
         <EditorTitleInput />
         <ErrorBoundary scope="properties-panel" inline>
           <PropertiesPanel />

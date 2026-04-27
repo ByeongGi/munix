@@ -49,7 +49,7 @@ export function InactivePaneEditor({
         attributes: {
           class: cn(
             "tiptap prose max-w-none",
-            "min-h-full px-12 pt-4 pb-10 outline-none",
+            "min-h-full px-6 pt-4 pb-10 outline-none sm:px-8 lg:px-12",
             "prose-headings:font-semibold prose-headings:tracking-tight",
             "prose-p:my-2 prose-li:my-0",
             "prose-code:before:content-none prose-code:after:content-none",
@@ -105,7 +105,7 @@ export function InactivePaneEditor({
   }
 
   return (
-    <div className="relative min-h-0 flex-1 overflow-y-auto bg-[var(--color-bg-primary)]">
+    <div className="relative min-h-0 min-w-0 flex-1 overflow-y-auto bg-[var(--color-bg-primary)]">
       <InactivePaneEditorStatusBanner status={status} />
       <InactivePaneTitleInput
         path={path}
