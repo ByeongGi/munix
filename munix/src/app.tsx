@@ -29,6 +29,7 @@ import { ConflictDialog } from "@/components/editor/conflict-dialog";
 import { ipc } from "@/lib/ipc";
 import { cn } from "@/lib/cn";
 import { useKeymapMatcher } from "@/hooks/use-keymap";
+import { useAppOverlays } from "@/hooks/app/use-app-overlays";
 import { useFileTreeReveal } from "@/hooks/app/use-file-tree-reveal";
 import { usePersistentSidebarState } from "@/hooks/app/use-persistent-sidebar-state";
 import { usePropertyTypesStore } from "@/store/property-types-store";
@@ -79,11 +80,18 @@ function App() {
     sidebarWidth,
     setSidebarWidth,
   } = usePersistentSidebarState();
-  const [quickOpen, setQuickOpen] = useState(false);
-  const [vaultSwitcherOpen, setVaultSwitcherOpen] = useState(false);
-  const [paletteOpen, setPaletteOpen] = useState(false);
-  const [shortcutsOpen, setShortcutsOpen] = useState(false);
-  const [settingsOpen, setSettingsOpen] = useState(false);
+  const {
+    quickOpen,
+    setQuickOpen,
+    vaultSwitcherOpen,
+    setVaultSwitcherOpen,
+    paletteOpen,
+    setPaletteOpen,
+    shortcutsOpen,
+    setShortcutsOpen,
+    settingsOpen,
+    setSettingsOpen,
+  } = useAppOverlays();
   const revealPath = useFileTreeReveal({
     setSidebarCollapsed,
     setSidebarTab,
@@ -283,6 +291,11 @@ function App() {
     activatePrev,
     activateIndex,
     openVault,
+    setPaletteOpen,
+    setQuickOpen,
+    setSettingsOpen,
+    setShortcutsOpen,
+    setVaultSwitcherOpen,
   ]);
 
   const handlePickFolder = async () => {
