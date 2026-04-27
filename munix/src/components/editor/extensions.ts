@@ -24,6 +24,7 @@ import { MarkdownLinkClick } from "./markdown-link-click";
 import { HorizontalRuleNode } from "./horizontal-rule-node";
 import { HorizontalRuleEnter } from "./horizontal-rule-enter";
 import { BlockShortcuts } from "./block-shortcuts";
+import { IndentShortcuts } from "./indent-shortcuts";
 import { HeadingFold } from "./heading-fold";
 import { InlineMath, BlockMath, MathInputRules } from "./math";
 import { FootnoteRef, FootnoteBlock } from "./footnote";
@@ -88,6 +89,7 @@ export function createEditorExtensions(
     MarkdownLinkClick,
     HorizontalRuleEnter,
     BlockShortcuts,
+    IndentShortcuts,
     HeadingFold,
     InlineMath,
     BlockMath,
