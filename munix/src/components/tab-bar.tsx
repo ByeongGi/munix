@@ -33,6 +33,7 @@ import {
   PaneActionsButton,
   PaneActionsMenu,
 } from "@/components/workspace/pane/pane-context-menu";
+import { TabBarShell } from "@/components/tab/tab-bar-shell";
 import { TabContextMenu } from "@/components/tab/tab-context-menu";
 
 interface TabBarProps {
@@ -113,13 +114,7 @@ export function TabBar({ onNewFile }: TabBarProps) {
 
   if (tabs.length === 0) {
     return (
-      <div
-        data-no-edge-drop="true"
-        className={cn(
-          "flex h-10 shrink-0 items-center gap-0 border-b pl-2 pr-1",
-          "border-[var(--color-border-primary)] bg-[var(--color-bg-tertiary)] shadow-[inset_0_-1px_0_var(--color-accent-muted)]",
-        )}
-      >
+      <TabBarShell>
         <div
           className={cn(
             "relative flex h-8 min-w-24 max-w-44 flex-[1_1_9rem] cursor-default select-none items-center gap-1.5 rounded-t-md border border-b-0 px-2 text-xs",
@@ -188,7 +183,7 @@ export function TabBar({ onNewFile }: TabBarProps) {
             }}
           />
         )}
-      </div>
+      </TabBarShell>
     );
   }
 
@@ -203,13 +198,7 @@ export function TabBar({ onNewFile }: TabBarProps) {
 
   return (
     <>
-      <div
-        data-no-edge-drop="true"
-        className={cn(
-          "flex h-10 shrink-0 items-center gap-0 border-b pl-2 pr-1",
-          "border-[var(--color-border-primary)] bg-[var(--color-bg-tertiary)] shadow-[inset_0_-1px_0_var(--color-accent-muted)]",
-        )}
-      >
+      <TabBarShell>
         <div className="flex min-w-0 flex-1 items-end gap-px overflow-x-auto">
           {tabs.map((tab, index) => {
             const active = tab.id === activeId;
@@ -409,7 +398,7 @@ export function TabBar({ onNewFile }: TabBarProps) {
             setPaneMenu({ x: rect.left, y: rect.bottom + 4 });
           }}
         />
-      </div>
+      </TabBarShell>
 
       {menu && (
         <TabContextMenu
