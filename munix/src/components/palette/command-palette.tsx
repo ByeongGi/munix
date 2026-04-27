@@ -9,15 +9,13 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { useEditorStore } from "@/store/editor-store";
-import { useSearchStore } from "@/store/search-store";
 import { useTabStore } from "@/store/tab-store";
-import { useTagStore } from "@/store/tag-store";
-import { useVaultStore } from "@/store/vault-store";
 import { CommandDialog } from "@/components/ui/command-dialog";
 import { parseMode } from "./command-palette-utils";
 import type { PaletteItem } from "./palette-items";
 import { PaletteItemList } from "./palette-item-list";
 import { usePaletteCommands } from "./use-palette-commands";
+import { usePaletteIndexes } from "./use-palette-indexes";
 import { usePaletteItems } from "./use-palette-items";
 
 // ──────────────────────────────────────────────
@@ -57,11 +55,7 @@ export function CommandPalette({
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLUListElement>(null);
 
-  const searchStatus = useSearchStore((s) => s.status);
-  const buildSearchIndex = useSearchStore((s) => s.buildIndex);
-  const tagStatus = useTagStore((s) => s.status);
-  const vaultInfo = useVaultStore((s) => s.info);
-  const vaultFiles = useVaultStore((s) => s.files);
+  const { searchStatus, tagStatus } = usePaletteIndexes(open);
 
   useEffect(() => {
     if (open) {
@@ -70,19 +64,6 @@ export function CommandPalette({
       requestAnimationFrame(() => inputRef.current?.focus());
     }
   }, [open]);
-
-  // 팔레트가 열려 있을 때 태그 인덱스가 준비 안 됐으면 빌드 트리거
-  useEffect(() => {
-    if (open && tagStatus === "idle" && vaultInfo) {
-      void useTagStore.getState().build(vaultInfo.root, vaultFiles);
-    }
-  }, [open, tagStatus, vaultInfo, vaultFiles]);
-
-  useEffect(() => {
-    if (!open || !vaultInfo) return;
-    if (searchStatus === "idle")
-      void buildSearchIndex(vaultInfo.root, vaultFiles);
-  }, [open, vaultInfo, vaultFiles, searchStatus, buildSearchIndex]);
 
   const commands = usePaletteCommands({
     t,
