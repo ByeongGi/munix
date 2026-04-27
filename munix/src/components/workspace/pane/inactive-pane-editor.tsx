@@ -48,7 +48,7 @@ export function InactivePaneEditor({
       editorProps: {
         attributes: {
           class: cn(
-            "tiptap prose max-w-none",
+            "tiptap prose",
             "min-h-full px-6 pt-4 pb-10 outline-none sm:px-8 lg:px-12",
             "prose-headings:font-semibold prose-headings:tracking-tight",
             "prose-p:my-2 prose-li:my-0",
