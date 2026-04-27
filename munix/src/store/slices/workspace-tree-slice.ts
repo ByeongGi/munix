@@ -38,23 +38,23 @@ import {
 import type { EditorSlice } from "./editor-slice";
 import { type Tab, type TabSlice } from "./tab-slice";
 import {
-  buildSplit,
   captureGlobalIntoActivePane,
+  closePaneInWorkspace,
   type EdgeZone,
-  makeFreshPane,
-  makeRootPane,
   makeWorkspaceTab,
   moveTabBetweenPanes,
   pruneEmptyPanes,
   removePathTabsFromPane,
-  removePane,
   reorderTabsInPane,
-  replaceNode,
   closeOtherTabsInPane,
   closeTabsAfterInPane,
   closeUnpinnedTabsInPane,
   renamePathTabsInPane,
   removeTabFromPane,
+  splitMoveFromSinglePaneWorkspace,
+  splitMoveInWorkspace,
+  splitPaneInWorkspace,
+  splitSinglePaneWorkspace,
   togglePaneTabPinnedState,
 } from "./workspace-tree-helpers";
 
@@ -261,16 +261,19 @@ export const createWorkspaceTreeSlice: StateCreator<
       const state = get();
       const tree = state.workspaceTree;
 
-      // case 1: 단일 pane 모드 → tree promotion.
       if (tree === null) {
-        const rootPane = makeRootPane(state.tabs, state.activeId);
-        const fresh = makeFreshPane(initialTab);
-        const split = buildSplit(zone, rootPane, fresh);
-        applyActivePaneSwap(split, fresh.id);
+        const transition = splitSinglePaneWorkspace(
+          state.tabs,
+          state.activeId,
+          zone,
+          initialTab,
+        );
+        if (transition.tree) {
+          applyActivePaneSwap(transition.tree, transition.activePaneId);
+        }
         return;
       }
 
-      // case 2: tree 모드 — target pane 을 SplitNode 로 교체.
       const target = targetPaneId
         ? findPane(tree, targetPaneId)
         : state.activePaneId
@@ -278,7 +281,6 @@ export const createWorkspaceTreeSlice: StateCreator<
           : (collectPanes(tree)[0] ?? null);
       if (!target) return;
 
-      // 현재 active pane 의 글로벌 → PaneNode capture (split 직전).
       const captured = captureGlobalIntoActivePane(
         tree,
         state.activePaneId,
@@ -286,23 +288,21 @@ export const createWorkspaceTreeSlice: StateCreator<
         state.activeId,
       );
 
-      const fresh = makeFreshPane(initialTab);
-      const refreshedTarget =
-        target.id === state.activePaneId
-          ? (findPane(captured, target.id) ?? target)
-          : target;
-      const split = buildSplit(zone, refreshedTarget, fresh);
-      const nextTree = replaceNode(captured, target.id, split);
-      applyActivePaneSwap(nextTree, fresh.id);
+      const transition = splitPaneInWorkspace(
+        captured,
+        target.id,
+        zone,
+        initialTab,
+      );
+      if (!transition?.tree) return;
+      applyActivePaneSwap(transition.tree, transition.activePaneId);
     },
 
     closePane: (paneId) => {
       const state = get();
       const tree = state.workspaceTree;
-      if (tree === null) return; // 단일 pane 모드는 closePane no-op
+      if (tree === null) return;
 
-      // 닫히는 pane 이 active 가 아닐 수도 있으므로, 우선 글로벌을
-      // active pane 으로 capture (active pane 의 작업 결과 보존).
       const captured = captureGlobalIntoActivePane(
         tree,
         state.activePaneId,
@@ -310,39 +310,23 @@ export const createWorkspaceTreeSlice: StateCreator<
         state.activeId,
       );
 
-      const next = removePane(captured, paneId);
+      const transition = closePaneInWorkspace(
+        captured,
+        paneId,
+        state.activePaneId,
+      );
 
-      // 남은 노드가 없음 — 안전 fallback. tabs/activeId 유지.
-      if (next === null) {
+      if (transition.tree === null) {
         set({ workspaceTree: null, activePaneId: null });
         return;
       }
 
-      // 단 하나의 pane 만 남음 — tabs/activeId 로 mirror 하고 tree 해제.
-      if (isPaneNode(next)) {
-        set({
-          workspaceTree: null,
-          activePaneId: null,
-          tabs: next.tabs,
-          activeId: next.activeTabId,
-        });
-        const lastTab = next.activeTabId
-          ? next.tabs.find((t) => t.id === next.activeTabId)
-          : undefined;
-        if (lastTab) {
-          void get().openFile(lastTab.path);
-        } else {
-          get().closeFile();
-        }
+      if (isPaneNode(transition.tree)) {
+        collapseToSinglePane(transition.tree);
         return;
       }
 
-      // 여전히 split tree — 닫힌 pane 이 active 였으면 새 active 결정.
-      let nextActive = state.activePaneId;
-      if (nextActive === paneId || nextActive === null) {
-        nextActive = collectPanes(next)[0]?.id ?? null;
-      }
-      applyActivePaneSwap(next, nextActive);
+      applyActivePaneSwap(transition.tree, transition.activePaneId);
     },
 
     setActivePane: (paneId) => {
@@ -672,23 +656,19 @@ export const createWorkspaceTreeSlice: StateCreator<
       const state = get();
       const tree = state.workspaceTree;
       if (!tree) {
-        const tab = state.tabs.find((t) => t.id === tabId);
-        if (!tab) return;
-        const rootSourcePane = makeRootPane(state.tabs, state.activeId);
-        const sourcePatch = removeTabFromPane(rootSourcePane, tabId);
-        if (!sourcePatch) return;
-        const rootPane = makeRootPane(
-          sourcePatch.tabs,
-          sourcePatch.activeTabId,
+        const transition = splitMoveFromSinglePaneWorkspace(
+          state.tabs,
+          state.activeId,
+          tabId,
+          zone,
         );
-        const fresh = makeFreshPane(tab);
-        const split = buildSplit(zone, rootPane, fresh);
-        applyActivePaneSwap(split, fresh.id);
+        if (transition?.tree) {
+          applyActivePaneSwap(transition.tree, transition.activePaneId);
+        }
         return;
       }
       if (!sourcePaneId || !targetPaneId) return;
 
-      // 글로벌 → active pane 으로 capture (split 직전 일관성).
       const captured = captureGlobalIntoActivePane(
         tree,
         state.activePaneId,
@@ -696,36 +676,20 @@ export const createWorkspaceTreeSlice: StateCreator<
         state.activeId,
       );
 
-      const source = findPane(captured, sourcePaneId);
-      const target = findPane(captured, targetPaneId);
-      if (!source || !target) return;
+      const transition = splitMoveInWorkspace(
+        captured,
+        sourcePaneId,
+        tabId,
+        targetPaneId,
+        zone,
+      );
+      if (!transition?.tree) return;
 
-      const tab = source.tabs.find((t) => t.id === tabId);
-      if (!tab) return;
-
-      // 1. source pane 에서 tab 제거 + 필요 시 activeTabId 갱신.
-      const sourcePatch = removeTabFromPane(source, tabId);
-      if (!sourcePatch) return;
-      const treeAfterRemove = patchPaneInTree(captured, sourcePaneId, {
-        tabs: sourcePatch.tabs,
-        activeTabId: sourcePatch.activeTabId,
-      });
-
-      // 2. fresh pane 만들고 target 자리에 SplitNode 삽입.
-      //    target 자체가 source 와 다를 수 있으니 treeAfterRemove 에서 다시 lookup.
-      const refreshedTarget = findPane(treeAfterRemove, targetPaneId);
-      if (!refreshedTarget) return;
-      const fresh = makeFreshPane(tab);
-      const split = buildSplit(zone, refreshedTarget, fresh);
-      let nextTree = replaceNode(treeAfterRemove, targetPaneId, split);
-      nextTree = pruneEmptyPanes(nextTree) ?? nextTree;
-
-      // 3. fresh pane 으로 active swap (Obsidian UX: 끌어 놓은 곳으로 시선 이동).
-      if (isPaneNode(nextTree)) {
-        collapseToSinglePane(nextTree);
+      if (isPaneNode(transition.tree)) {
+        collapseToSinglePane(transition.tree);
         return;
       }
-      applyActivePaneSwap(nextTree, fresh.id);
+      applyActivePaneSwap(transition.tree, transition.activePaneId);
     },
 
     reorderPaneTab: (paneId, fromIndex, toIndex) => {

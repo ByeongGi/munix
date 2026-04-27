@@ -96,6 +96,121 @@ export function makeWorkspaceTab(path = ""): Tab {
   };
 }
 
+export interface WorkspaceTreeTransition {
+  tree: WorkspaceNode | null;
+  activePaneId: string | null;
+}
+
+export function splitSinglePaneWorkspace(
+  tabs: Tab[],
+  activeTabId: string | null,
+  zone: EdgeZone,
+  initialTab?: Tab,
+): WorkspaceTreeTransition {
+  const rootPane = makeRootPane(tabs, activeTabId);
+  const fresh = makeFreshPane(initialTab);
+  return {
+    tree: buildSplit(zone, rootPane, fresh),
+    activePaneId: fresh.id,
+  };
+}
+
+export function splitPaneInWorkspace(
+  tree: WorkspaceNode,
+  targetPaneId: string,
+  zone: EdgeZone,
+  initialTab?: Tab,
+): WorkspaceTreeTransition | null {
+  const target = collectPanes(tree).find((pane) => pane.id === targetPaneId);
+  if (!target) return null;
+
+  const fresh = makeFreshPane(initialTab);
+  const split = buildSplit(zone, target, fresh);
+  return {
+    tree: replaceNode(tree, target.id, split),
+    activePaneId: fresh.id,
+  };
+}
+
+export function closePaneInWorkspace(
+  tree: WorkspaceNode,
+  paneId: string,
+  activePaneId: string | null,
+): WorkspaceTreeTransition {
+  const nextTree = removePane(tree, paneId);
+  if (!nextTree) return { tree: null, activePaneId: null };
+  if (isPaneNode(nextTree)) return { tree: nextTree, activePaneId: null };
+
+  const nextActivePaneId =
+    activePaneId === paneId || activePaneId === null
+      ? (collectPanes(nextTree)[0]?.id ?? null)
+      : activePaneId;
+
+  return {
+    tree: nextTree,
+    activePaneId: nextActivePaneId,
+  };
+}
+
+export function splitMoveFromSinglePaneWorkspace(
+  tabs: Tab[],
+  activeTabId: string | null,
+  tabId: string,
+  zone: EdgeZone,
+): WorkspaceTreeTransition | null {
+  const tab = tabs.find((t) => t.id === tabId);
+  if (!tab) return null;
+
+  const rootSourcePane = makeRootPane(tabs, activeTabId);
+  const sourcePatch = removeTabFromPane(rootSourcePane, tabId);
+  if (!sourcePatch) return null;
+
+  const rootPane = makeRootPane(sourcePatch.tabs, sourcePatch.activeTabId);
+  const fresh = makeFreshPane(tab);
+  return {
+    tree: buildSplit(zone, rootPane, fresh),
+    activePaneId: fresh.id,
+  };
+}
+
+export function splitMoveInWorkspace(
+  tree: WorkspaceNode,
+  sourcePaneId: string,
+  tabId: string,
+  targetPaneId: string,
+  zone: EdgeZone,
+): WorkspaceTreeTransition | null {
+  const source = collectPanes(tree).find((pane) => pane.id === sourcePaneId);
+  const target = collectPanes(tree).find((pane) => pane.id === targetPaneId);
+  if (!source || !target) return null;
+
+  const tab = source.tabs.find((t) => t.id === tabId);
+  if (!tab) return null;
+
+  const sourcePatch = removeTabFromPane(source, tabId);
+  if (!sourcePatch) return null;
+
+  const treeAfterRemove = patchPaneInTree(tree, sourcePaneId, {
+    tabs: sourcePatch.tabs,
+    activeTabId: sourcePatch.activeTabId,
+  });
+  const refreshedTarget = collectPanes(treeAfterRemove).find(
+    (pane) => pane.id === targetPaneId,
+  );
+  if (!refreshedTarget) return null;
+
+  const fresh = makeFreshPane(tab);
+  const split = buildSplit(zone, refreshedTarget, fresh);
+  const nextTree = pruneEmptyPanes(
+    replaceNode(treeAfterRemove, targetPaneId, split),
+  );
+
+  return {
+    tree: nextTree,
+    activePaneId: fresh.id,
+  };
+}
+
 export function pruneEmptyPanes(
   node: WorkspaceNode | null,
 ): WorkspaceNode | null {
