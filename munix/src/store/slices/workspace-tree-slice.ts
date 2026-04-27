@@ -46,12 +46,13 @@ import {
   makeFreshPane,
   makeWorkspaceTab,
   pruneEmptyPanes,
+  removePathTabsFromPane,
   removePane,
   replaceNode,
-  basenameWithoutMarkdownExtension,
   closeOtherTabsInPane,
   closeTabsAfterInPane,
   closeUnpinnedTabsInPane,
+  renamePathTabsInPane,
   removeTabFromPane,
   togglePaneTabPinnedState,
 } from "./workspace-tree-helpers";
@@ -627,29 +628,16 @@ export const createWorkspaceTreeSlice: StateCreator<
         state.activeId,
       );
 
-      const matchPath = (p: string) => p === path || p.startsWith(`${path}/`);
-
       // 모든 pane 을 walk 해서 해당 path 들을 제거.
       let nextTree: WorkspaceNode = captured;
       let mutated = false;
       for (const pane of collectPanes(captured)) {
-        if (!pane.tabs.some((t) => matchPath(t.path))) continue;
+        const patch = removePathTabsFromPane(pane, path);
+        if (!patch) continue;
         mutated = true;
-        const removedIds = pane.tabs
-          .filter((t) => matchPath(t.path))
-          .map((t) => t.id);
-        const nextTabs = pane.tabs.filter((t) => !matchPath(t.path));
-        let nextActive = pane.activeTabId;
-        if (pane.activeTabId && removedIds.includes(pane.activeTabId)) {
-          nextActive = getNeighborTabIdAfterRemoval(
-            pane.tabs,
-            nextTabs,
-            pane.activeTabId,
-          );
-        }
         nextTree = patchPaneInTree(nextTree, pane.id, {
-          tabs: nextTabs,
-          activeTabId: nextActive,
+          tabs: patch.tabs,
+          activeTabId: patch.activeTabId,
         });
       }
       if (!mutated) return;
@@ -704,30 +692,10 @@ export const createWorkspaceTreeSlice: StateCreator<
       let nextTree: WorkspaceNode = captured;
       let mutated = false;
       for (const pane of collectPanes(captured)) {
-        const renamed = pane.tabs.map((t) => {
-          if (t.path === oldPath) {
-            return {
-              ...t,
-              path: newPath,
-              title: basenameWithoutMarkdownExtension(newPath),
-              titleDraft: undefined,
-            };
-          }
-          if (t.path.startsWith(`${oldPath}/`)) {
-            const np = `${newPath}${t.path.slice(oldPath.length)}`;
-            return {
-              ...t,
-              path: np,
-              title: basenameWithoutMarkdownExtension(np),
-              titleDraft: undefined,
-            };
-          }
-          return t;
-        });
-        if (renamed.some((t, i) => t !== pane.tabs[i])) {
-          mutated = true;
-          nextTree = patchPaneInTree(nextTree, pane.id, { tabs: renamed });
-        }
+        const tabs = renamePathTabsInPane(pane, oldPath, newPath);
+        if (!tabs) continue;
+        mutated = true;
+        nextTree = patchPaneInTree(nextTree, pane.id, { tabs });
       }
       if (!mutated) return;
 

@@ -196,6 +196,56 @@ export function togglePaneTabPinnedState(
   );
 }
 
+export function removePathTabsFromPane(
+  pane: PaneNode,
+  path: string,
+): PaneTabsPatch | null {
+  const matchPath = (tabPath: string) =>
+    tabPath === path || tabPath.startsWith(`${path}/`);
+  if (!pane.tabs.some((tab) => matchPath(tab.path))) return null;
+
+  const removedIds = pane.tabs
+    .filter((tab) => matchPath(tab.path))
+    .map((tab) => tab.id);
+  const tabs = pane.tabs.filter((tab) => !matchPath(tab.path));
+  const activeTabId =
+    pane.activeTabId && removedIds.includes(pane.activeTabId)
+      ? getNeighborTabIdAfterRemoval(pane.tabs, tabs, pane.activeTabId)
+      : pane.activeTabId;
+
+  return { tabs, activeTabId };
+}
+
+export function renamePathTabsInPane(
+  pane: PaneNode,
+  oldPath: string,
+  newPath: string,
+): Tab[] | null {
+  let mutated = false;
+  const tabs = pane.tabs.map((tab) => {
+    if (tab.path === oldPath) {
+      mutated = true;
+      return makeRenamedTab(tab, newPath);
+    }
+    if (tab.path.startsWith(`${oldPath}/`)) {
+      mutated = true;
+      return makeRenamedTab(tab, `${newPath}${tab.path.slice(oldPath.length)}`);
+    }
+    return tab;
+  });
+
+  return mutated ? tabs : null;
+}
+
+function makeRenamedTab(tab: Tab, path: string): Tab {
+  return {
+    ...tab,
+    path,
+    title: basenameWithoutMarkdownExtension(path),
+    titleDraft: undefined,
+  };
+}
+
 export function basenameWithoutMarkdownExtension(path: string): string {
   const i = path.lastIndexOf("/");
   return (i < 0 ? path : path.slice(i + 1)).replace(/\.md$/i, "");
