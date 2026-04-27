@@ -229,6 +229,30 @@ export const createWorkspaceTreeSlice: StateCreator<
     applyActivePaneSwap(nextTree, collectPanes(nextTree)[0]?.id ?? null);
   }
 
+  function patchPaneTabsAndCommit(
+    tree: WorkspaceNode,
+    paneId: string,
+    patch: { tabs: Tab[]; activeTabId?: string | null },
+  ): void {
+    commitPaneTabsMutation(patchPaneInTree(tree, paneId, patch), paneId);
+  }
+
+  function mirrorActivePaneTabsWithoutEditorOpen(nextTree: WorkspaceNode): void {
+    const state = get();
+    const activePane = state.activePaneId
+      ? findPane(nextTree, state.activePaneId)
+      : null;
+    if (activePane) {
+      set({
+        workspaceTree: nextTree,
+        tabs: activePane.tabs,
+        activeId: activePane.activeTabId,
+      });
+      return;
+    }
+    set({ workspaceTree: nextTree });
+  }
+
   return {
     workspaceTree: null,
     activePaneId: null,
@@ -446,28 +470,10 @@ export const createWorkspaceTreeSlice: StateCreator<
       if (!pane) return;
       const patch = removeTabFromPane(pane, tabId);
       if (!patch) return;
-      let nextTree = patchPaneInTree(captured, paneId, {
+      patchPaneTabsAndCommit(captured, paneId, {
         tabs: patch.tabs,
         activeTabId: patch.activeTabId,
       });
-      nextTree = pruneEmptyPanes(nextTree) ?? nextTree;
-
-      if (isPaneNode(nextTree)) {
-        collapseToSinglePane(nextTree);
-        return;
-      }
-
-      if (state.activePaneId === paneId) {
-        // 글로벌도 같이 swap (active pane mirror)
-        applyActivePaneSwap(
-          nextTree,
-          findPane(nextTree, paneId)
-            ? paneId
-            : (collectPanes(nextTree)[0]?.id ?? null),
-        );
-      } else {
-        set({ workspaceTree: nextTree });
-      }
     },
 
     closeOtherPaneTabs: (paneId, tabId) => {
@@ -484,11 +490,10 @@ export const createWorkspaceTreeSlice: StateCreator<
       const patch = closeOtherTabsInPane(pane, tabId);
       if (!patch) return;
 
-      const nextTree = patchPaneInTree(captured, paneId, {
+      patchPaneTabsAndCommit(captured, paneId, {
         tabs: patch.tabs,
         activeTabId: patch.activeTabId,
       });
-      commitPaneTabsMutation(nextTree, paneId);
     },
 
     closePaneTabsAfter: (paneId, tabId) => {
@@ -505,11 +510,10 @@ export const createWorkspaceTreeSlice: StateCreator<
       const patch = closeTabsAfterInPane(pane, tabId);
       if (!patch) return;
 
-      const nextTree = patchPaneInTree(captured, paneId, {
+      patchPaneTabsAndCommit(captured, paneId, {
         tabs: patch.tabs,
         activeTabId: patch.activeTabId,
       });
-      commitPaneTabsMutation(nextTree, paneId);
     },
 
     closeAllPaneTabs: (paneId) => {
@@ -526,11 +530,10 @@ export const createWorkspaceTreeSlice: StateCreator<
       const patch = closeUnpinnedTabsInPane(pane);
       if (!patch) return;
 
-      const nextTree = patchPaneInTree(captured, paneId, {
+      patchPaneTabsAndCommit(captured, paneId, {
         tabs: patch.tabs,
         activeTabId: patch.activeTabId,
       });
-      commitPaneTabsMutation(nextTree, paneId);
     },
 
     togglePaneTabPinned: (paneId, tabId) => {
@@ -546,8 +549,7 @@ export const createWorkspaceTreeSlice: StateCreator<
       if (!pane) return;
       const nextTabs = togglePaneTabPinnedState(pane, tabId);
       if (!nextTabs) return;
-      const nextTree = patchPaneInTree(captured, paneId, { tabs: nextTabs });
-      commitPaneTabsMutation(nextTree, paneId);
+      patchPaneTabsAndCommit(captured, paneId, { tabs: nextTabs });
     },
 
     createPaneTab: (paneId, path = "") => {
@@ -638,19 +640,7 @@ export const createWorkspaceTreeSlice: StateCreator<
         return;
       }
 
-      // active pane 의 새 PaneNode 를 글로벌로 mirror (editor 재오픈 없이).
-      const activePane = state.activePaneId
-        ? findPane(nextTree, state.activePaneId)
-        : null;
-      if (activePane) {
-        set({
-          workspaceTree: nextTree,
-          tabs: activePane.tabs,
-          activeId: activePane.activeTabId,
-        });
-      } else {
-        set({ workspaceTree: nextTree });
-      }
+      mirrorActivePaneTabsWithoutEditorOpen(nextTree);
     },
 
     updatePathInAllPanes: (oldPath, newPath) => {
@@ -675,19 +665,7 @@ export const createWorkspaceTreeSlice: StateCreator<
       }
       if (!mutated) return;
 
-      // active pane 의 새 PaneNode 를 글로벌로 mirror (editor 재오픈 없이).
-      const activePane = state.activePaneId
-        ? findPane(nextTree, state.activePaneId)
-        : null;
-      if (activePane) {
-        set({
-          workspaceTree: nextTree,
-          tabs: activePane.tabs,
-          activeId: activePane.activeTabId,
-        });
-      } else {
-        set({ workspaceTree: nextTree });
-      }
+      mirrorActivePaneTabsWithoutEditorOpen(nextTree);
     },
 
     splitPaneMove: (sourcePaneId, tabId, targetPaneId, zone) => {
