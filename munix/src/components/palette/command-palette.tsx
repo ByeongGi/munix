@@ -2,12 +2,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   Command,
-  FileText,
   Search,
   Hash,
-  Heading1,
-  Heading2,
-  Heading3,
   Heading,
   ArrowRight,
   type LucideIcon,
@@ -17,13 +13,11 @@ import { useSearchStore } from "@/store/search-store";
 import { useTabStore } from "@/store/tab-store";
 import { useTagStore } from "@/store/tag-store";
 import { useVaultStore } from "@/store/vault-store";
-import { cn } from "@/lib/cn";
 import { CommandDialog } from "@/components/ui/command-dialog";
 import { parseMode } from "./command-palette-utils";
 import type { PaletteItem } from "./palette-items";
-import {
-  usePaletteCommands,
-} from "./use-palette-commands";
+import { PaletteItemList } from "./palette-item-list";
+import { usePaletteCommands } from "./use-palette-commands";
 import { usePaletteItems } from "./use-palette-items";
 
 // ──────────────────────────────────────────────
@@ -40,13 +34,6 @@ interface CommandPaletteProps {
   onShowShortcuts: () => void;
   onOpenSettings: () => void;
   onSearchTag: (tag: string) => void;
-}
-
-function headingIcon(level: number): LucideIcon {
-  if (level === 1) return Heading1;
-  if (level === 2) return Heading2;
-  if (level === 3) return Heading3;
-  return Heading;
 }
 
 // ──────────────────────────────────────────────
@@ -211,121 +198,6 @@ export function CommandPalette({
     return t("palette:empty.noResults");
   }
 
-  function renderItem(item: PaletteItem, i: number) {
-    const isSelected = i === selectedIdx;
-    const baseClass = cn(
-      "flex w-full items-center gap-2 px-3 py-2 text-left text-sm",
-      isSelected
-        ? "bg-[var(--color-bg-hover)]"
-        : "hover:bg-[var(--color-bg-hover)]",
-    );
-
-    if (item.kind === "file") {
-      return (
-        <li key={`file-${item.hit.path}`}>
-          <button
-            type="button"
-            onClick={() => runItem(item)}
-            onMouseEnter={() => setSelectedIdx(i)}
-            className={baseClass}
-          >
-            <FileText className="h-3.5 w-3.5 shrink-0 text-[var(--color-text-tertiary)]" />
-            <div className="flex flex-1 flex-col overflow-hidden">
-              <span className="truncate">{item.hit.title}</span>
-              <span className="truncate text-[11px] text-[var(--color-text-tertiary)]">
-                {item.hit.path}
-              </span>
-            </div>
-          </button>
-        </li>
-      );
-    }
-
-    if (item.kind === "command") {
-      const Icon = item.cmd.icon;
-      return (
-        <li key={item.cmd.id}>
-          <button
-            type="button"
-            onClick={() => runItem(item)}
-            onMouseEnter={() => setSelectedIdx(i)}
-            className={baseClass}
-          >
-            <Icon className="h-3.5 w-3.5 shrink-0 text-[var(--color-text-tertiary)]" />
-            <span className="flex-1 truncate">{item.cmd.title}</span>
-            {item.cmd.shortcut && (
-              <span className="text-[11px] text-[var(--color-text-tertiary)]">
-                {item.cmd.shortcut}
-              </span>
-            )}
-          </button>
-        </li>
-      );
-    }
-
-    if (item.kind === "tag") {
-      return (
-        <li key={`tag-${item.tag}`}>
-          <button
-            type="button"
-            onClick={() => runItem(item)}
-            onMouseEnter={() => setSelectedIdx(i)}
-            className={baseClass}
-          >
-            <Hash className="h-3.5 w-3.5 shrink-0 text-[var(--color-text-tertiary)]" />
-            <span className="flex-1 truncate">
-              <span className="text-[var(--color-accent)]">#</span>
-              {item.tag}
-            </span>
-            <span className="text-[11px] text-[var(--color-text-tertiary)]">
-              {item.fileCount}
-            </span>
-          </button>
-        </li>
-      );
-    }
-
-    if (item.kind === "heading") {
-      const Icon = headingIcon(item.level);
-      return (
-        <li key={`heading-${item.index}`}>
-          <button
-            type="button"
-            onClick={() => runItem(item)}
-            onMouseEnter={() => setSelectedIdx(i)}
-            className={baseClass}
-          >
-            <Icon className="h-3.5 w-3.5 shrink-0 text-[var(--color-text-tertiary)]" />
-            <span className="flex-1 truncate">{item.text}</span>
-            <span className="text-[11px] text-[var(--color-text-tertiary)]">
-              H{item.level}
-            </span>
-          </button>
-        </li>
-      );
-    }
-
-    if (item.kind === "line") {
-      return (
-        <li key={`line-${item.lineNum}`}>
-          <button
-            type="button"
-            onClick={() => runItem(item)}
-            onMouseEnter={() => setSelectedIdx(i)}
-            className={baseClass}
-          >
-            <ArrowRight className="h-3.5 w-3.5 shrink-0 text-[var(--color-text-tertiary)]" />
-            <span className="flex-1 truncate">
-              {t("palette:action.jumpToLine", { line: item.lineNum })}
-            </span>
-          </button>
-        </li>
-      );
-    }
-
-    return null;
-  }
-
   const ModeIcon = modeIcon();
 
   return (
@@ -365,7 +237,13 @@ export function CommandPalette({
             : emptyMessage()}
         </li>
       ) : (
-        items.map((item, i) => renderItem(item, i))
+        <PaletteItemList
+          items={items}
+          selectedIndex={selectedIdx}
+          t={t}
+          onRun={runItem}
+          onSelect={setSelectedIdx}
+        />
       )}
     </CommandDialog>
   );
