@@ -9,12 +9,14 @@ interface InactivePaneTitleInputProps {
   path: string;
   titleDraft?: string;
   onRename: (name: string) => Promise<boolean>;
+  onSubmitTitle?: () => void;
 }
 
 export function InactivePaneTitleInput({
   path,
   titleDraft,
   onRename,
+  onSubmitTitle,
 }: InactivePaneTitleInputProps) {
   const { t } = useTranslation(["editor"]);
   const ws = useActiveWorkspaceStore();
@@ -153,13 +155,14 @@ export function InactivePaneTitleInput({
       }}
       onKeyDown={(event) => {
         if (event.key === "Enter") {
+          if (isComposingRef.current) return;
           event.preventDefault();
-          const next = event.currentTarget.value.trim();
-          keepTitleFocusRef.current = !!next && next !== baseNameRef.current;
-          requestRename(event.currentTarget.value, true);
+          userLeavingTitleRef.current = true;
+          keepTitleFocusRef.current = false;
+          requestRename(event.currentTarget.value);
           requestAnimationFrame(() => {
-            inputRef.current?.focus({ preventScroll: true });
-            isFocusedRef.current = true;
+            event.currentTarget.blur();
+            onSubmitTitle?.();
           });
         }
         if (event.key === "Tab") {

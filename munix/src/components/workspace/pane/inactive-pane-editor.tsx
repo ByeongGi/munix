@@ -85,6 +85,25 @@ export function InactivePaneEditor({
     },
     [frontmatterRef, requestSave, setFrontmatter],
   );
+  const handleEditorEmptyAreaMouseDown = useCallback(
+    (event: React.MouseEvent<HTMLDivElement>) => {
+      if (!editor || editor.isDestroyed || event.button !== 0) return;
+
+      const target = event.target as HTMLElement | null;
+      const editorRoot = editor.view.dom;
+      if (target && target !== editorRoot && editorRoot.contains(target)) {
+        return;
+      }
+
+      event.preventDefault();
+      editor.chain().focus("end").run();
+    },
+    [editor],
+  );
+  const focusEditorStart = useCallback(() => {
+    if (!editor || editor.isDestroyed) return;
+    editor.chain().focus("start").run();
+  }, [editor]);
 
   const handleRename = useInactivePaneRename({ path, waitForIdleSave });
 
@@ -111,12 +130,18 @@ export function InactivePaneEditor({
         path={path}
         titleDraft={titleDraft}
         onRename={handleRename}
+        onSubmitTitle={focusEditorStart}
       />
       <InactivePanePropertiesPanel
         frontmatter={frontmatter}
         onChange={handleFrontmatterChange}
       />
-      <EditorContent editor={editor} />
+      <div
+        className="munix-editor-content-surface"
+        onMouseDown={handleEditorEmptyAreaMouseDown}
+      >
+        <EditorContent editor={editor} />
+      </div>
     </div>
   );
 }

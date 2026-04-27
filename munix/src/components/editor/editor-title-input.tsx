@@ -7,6 +7,7 @@ import { useActiveWorkspaceStore } from "@/lib/active-vault";
 
 interface EditorTitleInputProps {
   className?: string;
+  onSubmitTitle?: () => void;
 }
 
 /** 제목 = 파일명. Obsidian 동작 매칭 (ADR-029):
@@ -15,7 +16,10 @@ interface EditorTitleInputProps {
  * - Escape → 직전 값으로 revert
  * - 외부 rename (watcher) → 포커스 안일 때만 입력란 동기화
  */
-export function EditorTitleInput({ className }: EditorTitleInputProps) {
+export function EditorTitleInput({
+  className,
+  onSubmitTitle,
+}: EditorTitleInputProps) {
   const { t } = useTranslation(["editor"]);
   const ws = useActiveWorkspaceStore();
   const currentPath = useEditorStore((s) => s.currentPath);
@@ -171,13 +175,14 @@ export function EditorTitleInput({ className }: EditorTitleInputProps) {
       }}
       onKeyDown={(e) => {
         if (e.key === "Enter") {
+          if (isComposingRef.current) return;
           e.preventDefault();
-          const next = e.currentTarget.value.trim();
-          keepTitleFocusRef.current = !!next && next !== baseNameRef.current;
-          requestRename(e.currentTarget.value, true);
+          userLeavingTitleRef.current = true;
+          keepTitleFocusRef.current = false;
+          requestRename(e.currentTarget.value);
           requestAnimationFrame(() => {
-            inputRef.current?.focus({ preventScroll: true });
-            isFocusedRef.current = true;
+            e.currentTarget.blur();
+            onSubmitTitle?.();
           });
         }
         if (e.key === "Tab") {
