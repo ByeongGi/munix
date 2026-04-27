@@ -13,19 +13,18 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { useEditorStore } from "@/store/editor-store";
-import { useRecentStore } from "@/store/recent-store";
 import { useSearchStore } from "@/store/search-store";
 import { useTabStore } from "@/store/tab-store";
 import { useTagStore } from "@/store/tag-store";
 import { useVaultStore } from "@/store/vault-store";
 import { cn } from "@/lib/cn";
 import { CommandDialog } from "@/components/ui/command-dialog";
-import type { SearchHit } from "@/lib/search-index";
-import { extractHeadings, parseMode } from "./command-palette-utils";
+import { parseMode } from "./command-palette-utils";
+import type { PaletteItem } from "./palette-items";
 import {
   usePaletteCommands,
-  type PaletteCommand,
 } from "./use-palette-commands";
+import { usePaletteItems } from "./use-palette-items";
 
 // ──────────────────────────────────────────────
 // Types
@@ -42,36 +41,6 @@ interface CommandPaletteProps {
   onOpenSettings: () => void;
   onSearchTag: (tag: string) => void;
 }
-
-interface HeadingItem {
-  kind: "heading";
-  text: string;
-  level: number;
-  index: number;
-}
-
-interface TagItem {
-  kind: "tag";
-  tag: string;
-  fileCount: number;
-}
-
-interface LineItem {
-  kind: "line";
-  lineNum: number;
-}
-
-interface CommandItem {
-  kind: "command";
-  cmd: PaletteCommand;
-}
-
-interface FileItem {
-  kind: "file";
-  hit: SearchHit;
-}
-
-type PaletteItem = CommandItem | FileItem | HeadingItem | TagItem | LineItem;
 
 function headingIcon(level: number): LucideIcon {
   if (level === 1) return Heading1;
@@ -101,15 +70,11 @@ export function CommandPalette({
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLUListElement>(null);
 
-  const searchIndex = useSearchStore((s) => s.index);
   const searchStatus = useSearchStore((s) => s.status);
   const buildSearchIndex = useSearchStore((s) => s.buildIndex);
-  const tagIndex = useTagStore((s) => s.index);
   const tagStatus = useTagStore((s) => s.status);
   const vaultInfo = useVaultStore((s) => s.info);
   const vaultFiles = useVaultStore((s) => s.files);
-  const recentPaths = useRecentStore((s) => s.paths);
-  const editorBody = useEditorStore((s) => s.body);
 
   useEffect(() => {
     if (open) {
@@ -144,87 +109,11 @@ export function CommandPalette({
   });
 
   const { mode, text } = useMemo(() => parseMode(query), [query]);
-
-  const items = useMemo<PaletteItem[]>(() => {
-    if (mode === "file") {
-      if (searchStatus !== "ready") return [];
-      const q = text.trim();
-      if (!q) {
-        const all = searchIndex.searchByTitle("", 100);
-        const byPath = new Map(all.map((h) => [h.path, h]));
-        const recent = recentPaths
-          .map((p) => byPath.get(p))
-          .filter((h): h is SearchHit => !!h);
-        const rest = all.filter((h) => !recentPaths.includes(h.path));
-        return [...recent, ...rest]
-          .slice(0, 30)
-          .map((hit) => ({ kind: "file" as const, hit }));
-      }
-      return searchIndex
-        .searchByTitle(q, 30)
-        .map((hit) => ({ kind: "file" as const, hit }));
-    }
-
-    if (mode === "command") {
-      const q = text.toLowerCase();
-      const filtered = q
-        ? commands.filter(
-            (c) =>
-              c.title.toLowerCase().includes(q) ||
-              c.keywords?.some((k) => k.toLowerCase().includes(q)),
-          )
-        : commands;
-      return filtered.map((cmd) => ({ kind: "command" as const, cmd }));
-    }
-
-    if (mode === "tag") {
-      if (tagStatus !== "ready") return [];
-      const q = text.toLowerCase().replace(/^#/, "");
-      const all = tagIndex.tags();
-      const filtered = q
-        ? all.filter((h) => h.tag.toLowerCase().includes(q))
-        : all;
-      return filtered.slice(0, 30).map((h) => ({
-        kind: "tag" as const,
-        tag: h.tag,
-        fileCount: h.count,
-      }));
-    }
-
-    if (mode === "heading") {
-      const headings = extractHeadings(editorBody);
-      const q = text.toLowerCase();
-      const filtered = q
-        ? headings.filter((h) => h.text.toLowerCase().includes(q))
-        : headings;
-      return filtered.map((h, i) => ({
-        kind: "heading" as const,
-        text: h.text,
-        level: h.level,
-        index: i,
-      }));
-    }
-
-    if (mode === "line") {
-      const n = parseInt(text, 10);
-      if (!isNaN(n) && n > 0) {
-        return [{ kind: "line" as const, lineNum: n }];
-      }
-      return [];
-    }
-
-    return [];
-  }, [
+  const { items } = usePaletteItems({
+    commands,
     mode,
     text,
-    commands,
-    searchIndex,
-    searchStatus,
-    recentPaths,
-    editorBody,
-    tagIndex,
-    tagStatus,
-  ]);
+  });
 
   useEffect(() => {
     setSelectedIdx(0);
