@@ -31,6 +31,17 @@ interface UseTabDndHandlersParams {
   vaultId: VaultId | null;
 }
 
+export interface TabDndItemProps {
+  dragging: boolean;
+  showLeftIndicator: boolean;
+  showRightIndicator: boolean;
+  onDragStart: (event: DragEvent<HTMLDivElement>) => void;
+  onDragOver: (event: DragEvent<HTMLDivElement>) => void;
+  onDragLeave: () => void;
+  onDrop: (event: DragEvent<HTMLDivElement>) => void;
+  onDragEnd: () => void;
+}
+
 export function useTabDndHandlers({
   activePaneId,
   movePaneTab,
@@ -46,7 +57,7 @@ export function useTabDndHandlers({
     setHoverIndex(null);
   };
 
-  const getTabDndProps = (tab: Tab, index: number) => {
+  const getTabDndProps = (tab: Tab, index: number): TabDndItemProps => {
     const isHovered = dragIndex !== null && hoverIndex === index;
 
     return {

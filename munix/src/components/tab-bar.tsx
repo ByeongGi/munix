@@ -16,11 +16,11 @@ import {
 import { TabBarShell } from "@/components/tab/tab-bar-shell";
 import { TabContextMenu } from "@/components/tab/tab-context-menu";
 import { TabSoftLimitBadge } from "@/components/tab/tab-soft-limit-badge";
-import { ActiveTabItem } from "@/components/tab/active-tab-item";
 import { EmptyTabItem } from "@/components/tab/empty-tab-item";
 import { NewTabButton } from "@/components/tab/new-tab-button";
 import { useTabDndHandlers } from "@/components/tab/use-tab-dnd-handlers";
 import { TabPaneActions } from "@/components/tab/tab-pane-actions";
+import { ActiveTabList } from "@/components/tab/active-tab-list";
 
 interface TabBarProps {
   onNewFile: () => void;
@@ -142,40 +142,21 @@ export function TabBar({ onNewFile }: TabBarProps) {
   return (
     <>
       <TabBarShell>
-        <div className="flex min-w-0 flex-1 items-end gap-px overflow-x-auto">
-          {tabs.map((tab, index) => {
-            const active = tab.id === activeId;
-            const dirty = isDirty(tab);
-            const dndProps = getTabDndProps(tab, index);
-            return (
-              <ActiveTabItem
-                key={tab.id}
-                tab={tab}
-                active={active}
-                dirty={dirty}
-                emptyTitle={t("tabs:emptyTab.title")}
-                closeLabel={t("tabs:aria.closeTab")}
-                {...dndProps}
-                onClick={() => activate(tab.id)}
-                onAuxClick={(e) => {
-                  if (e.button === 1) {
-                    e.preventDefault();
-                    closeTab(tab.id);
-                  }
-                }}
-                onContextMenu={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  setMenu({ x: e.clientX, y: e.clientY, tab });
-                }}
-                onClose={(e) => {
-                    e.stopPropagation();
-                    closeTab(tab.id);
-                  }}
-              />
-            );
-          })}
-        </div>
+        <ActiveTabList
+          tabs={tabs}
+          activeId={activeId}
+          emptyTitle={t("tabs:emptyTab.title")}
+          closeLabel={t("tabs:aria.closeTab")}
+          isDirty={isDirty}
+          getTabDndProps={getTabDndProps}
+          onActivate={activate}
+          onClose={closeTab}
+          onContextMenu={(event, tab) => {
+            event.preventDefault();
+            event.stopPropagation();
+            setMenu({ x: event.clientX, y: event.clientY, tab });
+          }}
+        />
         <TabSoftLimitBadge count={tabs.length} t={t} />
         <NewTabButton
           label={t("tabs:aria.newTab")}
