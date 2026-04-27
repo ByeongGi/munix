@@ -38,6 +38,16 @@ function canRequestInactiveEditorSave(status: InactiveEditorStatus): boolean {
   return status !== "conflict" && status !== "loading" && status !== "loadError";
 }
 
+function updateIndexesAfterInactiveSave(path: string, body: string) {
+  void useTagStore.getState().updatePath(path);
+  void useBacklinkStore.getState().updatePath(path);
+  const search = useSearchStore.getState();
+  if (search.status === "ready") {
+    search.index.updateDoc(path, body);
+    if (search.query) search.setQuery(search.query);
+  }
+}
+
 export function InactivePaneEditor({
   path,
   titleDraft,
@@ -165,14 +175,7 @@ export function InactivePaneEditor({
       setBaseModified(result.modified);
       setBody(nextBody);
       setStatus("ready");
-
-      void useTagStore.getState().updatePath(path);
-      void useBacklinkStore.getState().updatePath(path);
-      const search = useSearchStore.getState();
-      if (search.status === "ready") {
-        search.index.updateDoc(path, nextBody);
-        if (search.query) search.setQuery(search.query);
-      }
+      updateIndexesAfterInactiveSave(path, nextBody);
     } catch (e) {
       console.error("inactive pane editor save failed", e);
       setStatus("saveError");
