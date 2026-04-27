@@ -584,6 +584,5 @@ return (
 **문서 버전:** v0.1
 **작성일:** 2026-04-25
 **관련 문서:**
-- [마스터 설계](../mupe-design-v0.2.md)
 - [auto-save-spec.md](./auto-save-spec.md)
 - [keymap-spec.md](./keymap-spec.md)

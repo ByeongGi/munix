@@ -1679,7 +1679,6 @@ ADR-031 multi-vault-spec §17.1 의 Phase D — OS 레벨 멀티 윈도우 (Taur
 
 ## 참고
 
-- [마스터 설계](./munix-design-v0.3.md)
 - [스펙 문서](./specs/README.md)
 
 **다음 리뷰:** Phase 1 완료 후, 또는 중대한 요구사항 변경 시

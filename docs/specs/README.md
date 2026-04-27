@@ -1,6 +1,6 @@
 # Munix — 기능 상세 설계 (Specs)
 
-> 각 기능의 구체적인 설계 문서 모음. 마스터 설계([`../munix-design-v0.3.md`](../munix-design-v0.3.md))를 기반으로 한다.
+> 각 기능의 구체적인 설계 문서 모음.
 
 ---
 
@@ -99,7 +99,6 @@ multi-vault-spec ──┬──> vault-spec (VaultManager 도입)
 
 - **초안 작성일:** 2026-04-25
 - **모든 스펙 버전:** v0.1
-- **마스터 문서:** v0.3 ([../munix-design-v0.3.md](../munix-design-v0.3.md))
 - **최근 추가 (2026-04-25):** plugin-spec / terminal-spec / cli-spec (모두 proposed — [ADR-022](../decisions.md#adr-022-플러그인-시스템-extism-wasm), [ADR-023](../decisions.md#adr-023-터미널-플러그인-1호), [ADR-024](../decisions.md#adr-024-cli--uri-scheme-munix))
 - **최근 추가 (2026-04-26):** workspace-split-spec (proposed — Obsidian-style pane split + tab DnD)
 - **최근 추가 (2026-04-26):** vault-trust-spec (partial — 시스템 파일 관리자 reveal에 초기 적용)

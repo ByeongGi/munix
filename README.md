@@ -88,7 +88,6 @@ MIT — [`LICENSE`](./LICENSE) 참조.
 
 ## 문서
 
-- [`docs/munix-design-v0.3.md`](./docs/munix-design-v0.3.md)
 - [`docs/decisions.md`](./docs/decisions.md)
 - [`docs/implementation-plan.md`](./docs/implementation-plan.md)
 - [`docs/issues-log.md`](./docs/issues-log.md)
