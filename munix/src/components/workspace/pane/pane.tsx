@@ -41,6 +41,7 @@ import {
   classifyDropZone,
   dropZoneLabelKey,
 } from "./drop-zone";
+import { DropZoneOverlay } from "./drop-zone-overlay";
 import { EmptyPanePlaceholder } from "./empty-pane-placeholder";
 import { InactivePaneEditor } from "./inactive-pane-editor";
 import { MiniPaneTabStrip } from "./mini-pane-tab-strip";
@@ -288,10 +289,6 @@ export function Pane({
     [handleOuterDrop, isTabDragOverPaneContent],
   );
 
-  const overlayClass =
-    dropZone === null
-      ? null
-      : "pointer-events-none absolute z-10 bg-[var(--color-accent)]/22 border border-[var(--color-accent)]";
   const overlayStyle: React.CSSProperties | undefined = (() => {
     if (dropZone === null) return undefined;
     if (dropZone === "center") {
@@ -327,13 +324,12 @@ export function Pane({
         onDrop={handleOuterDrop}
       >
         {activeContent}
-        {overlayClass && (
+        {dropZone !== null ? (
           <DropZoneOverlay
-            className={overlayClass}
             style={overlayStyle}
             label={overlayLabel}
           />
-        )}
+        ) : null}
       </div>
     );
   }
@@ -479,33 +475,12 @@ export function Pane({
         onQuickOpen={onQuickOpen}
         onClose={() => closePane(pane.id)}
       />
-      {overlayClass && (
+      {dropZone !== null ? (
         <DropZoneOverlay
-          className={overlayClass}
           style={overlayStyle}
           label={overlayLabel}
         />
-      )}
-    </div>
-  );
-}
-
-function DropZoneOverlay({
-  className,
-  style,
-  label,
-}: {
-  className: string;
-  style: React.CSSProperties | undefined;
-  label: string | null;
-}) {
-  return (
-    <div className={className} style={style}>
-      {label && (
-        <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded bg-[var(--color-accent)] px-2 py-1 text-xs font-medium text-[var(--color-text-on-accent)] shadow-lg">
-          {label}
-        </span>
-      )}
+      ) : null}
     </div>
   );
 }
