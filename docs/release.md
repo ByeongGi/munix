@@ -18,6 +18,16 @@ pnpm release:local
 
 Tauri는 기본적으로 현재 OS용 설치 파일을 만든다. macOS / Windows / Linux 파일을 모두 배포하려면 각 OS 환경에서 같은 태그/버전으로 `pnpm release:local`을 한 번씩 실행한 뒤 `release-dist/` 내용을 한곳에 모아 업로드한다.
 
+## 개발자용 설치 경로
+
+일반 사용자용 DMG와 별도로, 개발자/파워유저에게는 CLI 설치 경로를 우선 안내한다. 이 스크립트는 Release DMG를 다운로드해 `~/Applications`에 설치하므로 Node.js/Rust 빌드 환경을 요구하지 않는다.
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/ByeongGi/munix/main/scripts/install-macos.sh | bash
+```
+
+스크립트와 자세한 설명은 [install.md](./install.md)를 참조한다.
+
 ## 아이콘 갱신
 
 아이콘 디자인이 확정되면 1024x1024 PNG를 `munix/src-tauri/icons/source.png`에 둔다.
@@ -85,4 +95,4 @@ spctl --assess --type execute --verbose=4 src-tauri/target/release/bundle/macos/
 - Linux: `.AppImage` 또는 `.deb`
 - 새 환경에서 첫 실행, vault 열기, 파일 저장, 이미지 표시를 확인한다.
 
-초기 릴리즈는 코드 서명 없이 배포한다. macOS Gatekeeper와 Windows SmartScreen 경고는 예상 동작이다.
+초기 릴리즈는 Apple Developer ID 서명과 notarization 없이 배포한다. macOS Gatekeeper와 Windows SmartScreen 경고는 예상 동작이다.

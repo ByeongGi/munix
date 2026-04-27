@@ -42,6 +42,28 @@
 - Rust 1.77+ (Cargo)
 - pnpm 9+
 
+### 설치
+
+개발자/파워유저는 CLI 설치 방식을 권장한다. 이 방식은 GitHub Release DMG를 다운로드해 `~/Applications/munix.app`에 설치하고 quarantine 속성을 제거한다. Node.js, Rust, pnpm 같은 빌드 환경은 필요 없다.
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/ByeongGi/munix/main/scripts/install-macos.sh | bash
+```
+
+설치 후:
+
+```bash
+open ~/Applications/munix.app
+```
+
+GitHub Release DMG도 제공하지만 현재 macOS notarization은 적용되어 있지 않다. 직접 설치 시 “damaged” 경고가 표시되면 공식 Release에서 받은 파일인지 확인한 뒤 아래 명령을 한 번 실행한다.
+
+```bash
+xattr -dr com.apple.quarantine /Applications/munix.app
+```
+
+자세한 설치 안내는 [`docs/install.md`](./docs/install.md)를 참조.
+
 ### 개발
 
 ```bash
