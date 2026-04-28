@@ -14,6 +14,7 @@ import { useSearchStore } from "@/store/search-store";
 import { useBacklinkStore } from "@/store/backlink-store";
 import { useTagStore } from "@/store/tag-store";
 import { cn } from "@/lib/cn";
+import { isMarkdownPath } from "@/lib/file-kind";
 
 function countWords(text: string): number {
   const trimmed = text.trim();
@@ -87,8 +88,9 @@ export function StatusBar() {
     backlinksStatus === "building" ||
     tagsStatus === "building";
 
-  const words = currentPath ? countWords(body) : null;
-  const chars = currentPath ? body.length : null;
+  const showTextStats = currentPath ? isMarkdownPath(currentPath) : false;
+  const words = showTextStats ? countWords(body) : null;
+  const chars = showTextStats ? body.length : null;
 
   return (
     <div className="relative z-20 flex h-7 shrink-0 items-center gap-3 border-t border-[var(--color-border-primary)] bg-[var(--color-bg-secondary)] px-3 text-[11px] text-[var(--color-text-tertiary)] shadow-[0_-1px_0_rgb(0_0_0_/_0.12)]">

@@ -1,6 +1,7 @@
 import type { ComponentProps, Dispatch, SetStateAction } from "react";
 
 import { EditorView } from "@/components/editor/editor-view";
+import { ImageViewer } from "@/components/image-viewer/image-viewer";
 import { AppSidebar } from "@/components/app-shell/app-sidebar";
 import type { SidebarTab } from "@/components/app-shell/types";
 import { AppTitleBar } from "@/components/app-shell/window-title-bar";
@@ -11,6 +12,7 @@ import { StatusBar } from "@/components/status-bar";
 import { TabBar } from "@/components/tab/tab-bar";
 import { cn } from "@/lib/cn";
 import { titleFromPath } from "@/lib/app-path-utils";
+import { isImagePath } from "@/lib/file-kind";
 import type { FileNode, VaultInfo } from "@/types/ipc";
 
 interface AppWorkspaceViewProps {
@@ -140,7 +142,14 @@ export function AppWorkspaceView({
             <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
               <TabBar onNewFile={() => createEmptyTab()} />
               {currentPath ? (
-                <EditorView className="min-h-0 min-w-0 flex-1" />
+                isImagePath(currentPath) ? (
+                  <ImageViewer
+                    path={currentPath}
+                    className="min-h-0 min-w-0 flex-1"
+                  />
+                ) : (
+                  <EditorView className="min-h-0 min-w-0 flex-1" />
+                )
               ) : (
                 <EmptyPanePlaceholder
                   onNewFile={() => void handleCreateFileAt("")}

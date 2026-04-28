@@ -81,6 +81,15 @@
     "resizeHint": "Drag to resize · double-click to reset",
     "altPlaceholder": "Image description"
   },
+  "imageViewer": {
+    "loading": "Loading image",
+    "loadError": "Could not load image.",
+    "zoomIn": "Zoom in",
+    "zoomOut": "Zoom out",
+    "fit": "Fit to screen",
+    "fitShort": "Fit",
+    "actualSize": "Actual size"
+  },
   "math": {
     "inlinePlaceholder": "LaTeX math",
     "blockPlaceholder": "LaTeX block math"

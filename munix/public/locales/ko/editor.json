@@ -80,6 +80,15 @@
     "resizeHint": "드래그로 크기 조절 · 더블클릭으로 원래 크기",
     "altPlaceholder": "이미지 설명"
   },
+  "imageViewer": {
+    "loading": "이미지를 불러오는 중",
+    "loadError": "이미지를 불러오지 못했습니다.",
+    "zoomIn": "확대",
+    "zoomOut": "축소",
+    "fit": "화면에 맞춤",
+    "fitShort": "맞춤",
+    "actualSize": "실제 크기"
+  },
   "math": {
     "inlinePlaceholder": "LaTeX 수식",
     "blockPlaceholder": "LaTeX 블록 수식"

@@ -4,12 +4,14 @@ import {
   FileText,
   File as FileIcon,
   Folder,
+  Image as ImageIcon,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useStore } from "zustand";
 import type { FileNode } from "@/types/ipc";
 import { useActiveWorkspaceStore } from "@/lib/active-vault";
 import { cn } from "@/lib/cn";
+import { isImagePath, isMarkdownPath, isOpenablePath } from "@/lib/file-kind";
 import { collectPanes } from "@/store/workspace-types";
 import { RenameInput } from "./rename-input";
 import type { FlatNode } from "./flatten";
@@ -70,7 +72,9 @@ export function FlatTreeRow({
   const isRenaming = renaming === node.path;
   const isDir = node.kind === "directory";
   const isOpen = isDir && expanded.has(node.path);
-  const isMd = !isDir && /\.md$/i.test(node.name);
+  const isMd = !isDir && isMarkdownPath(node.name);
+  const isImage = !isDir && isImagePath(node.name);
+  const isOpenable = !isDir && isOpenablePath(node.name);
   const titleDraft = useStore(ws, (s) => {
     if (!isMd) return undefined;
     const activeDraft = s.tabs.find(
@@ -85,7 +89,7 @@ export function FlatTreeRow({
   });
   const displayName =
     isMd && titleDraft !== undefined ? `${titleDraft}.md` : node.name;
-  const isDisabledFile = !isDir && !isMd;
+  const isDisabledFile = !isDir && !isOpenable;
   const isDragTarget = isDir && dragOverPath === node.path;
 
   const {
@@ -113,7 +117,7 @@ export function FlatTreeRow({
     onRowClick(e, node);
     if (e.shiftKey || e.metaKey || e.ctrlKey) return;
     if (isDir) toggleFolder(node.path);
-    else if (isMd) onSelect(node.path);
+    else if (isOpenable) onSelect(node.path);
   };
 
   return (
@@ -132,7 +136,7 @@ export function FlatTreeRow({
       className={cn(
         "group mx-1 flex h-8 items-center gap-1.5 rounded-md px-2 text-[15px] select-none",
         "text-sidebar-tree-text hover:bg-sidebar-item-hovered hover:text-sidebar-text",
-        (isDir || isMd) && !isRenaming && "cursor-pointer",
+        (isDir || isOpenable) && !isRenaming && "cursor-pointer",
         isDisabledFile && "cursor-default",
         (isActive || isSelected) &&
           "bg-sidebar-item-selected text-sidebar-text [&_svg]:text-sidebar-text",
@@ -164,6 +168,8 @@ export function FlatTreeRow({
         <Folder className="h-4 w-4 shrink-0 text-sidebar-tree-icon transition-colors group-hover:text-sidebar-text" />
       ) : isMd ? (
         <FileText className="h-4 w-4 shrink-0 text-sidebar-tree-icon transition-colors group-hover:text-sidebar-text" />
+      ) : isImage ? (
+        <ImageIcon className="h-4 w-4 shrink-0 text-sidebar-tree-icon transition-colors group-hover:text-sidebar-text" />
       ) : (
         <FileIcon className="h-4 w-4 shrink-0 opacity-60" />
       )}

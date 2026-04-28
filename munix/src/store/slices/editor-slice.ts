@@ -9,6 +9,7 @@
 import type { StateCreator } from "zustand";
 
 import { ipc } from "@/lib/ipc";
+import { isImagePath } from "@/lib/file-kind";
 import { parseDocument } from "@/lib/markdown";
 
 export type SaveStatus =
@@ -107,6 +108,17 @@ export const createEditorSlice: StateCreator<
 
   openFile: async (relPath) => {
     set({ status: { kind: "idle" } });
+    if (isImagePath(relPath)) {
+      set({
+        currentPath: relPath,
+        frontmatter: null,
+        body: "",
+        baseModified: null,
+        status: { kind: "idle" },
+      });
+      return;
+    }
+
     const content = await ipc.readFile(relPath);
     const parsed = parseDocument(content.content);
     set({
