@@ -27,6 +27,8 @@ interface MermaidRenderResult {
   error: string | null;
 }
 
+type MermaidRenderState = "idle" | "pending" | "rendering" | "done" | "error";
+
 const mermaidRenderCache = new Map<string, MermaidRenderResult>();
 let mermaidRenderQueue = Promise.resolve();
 let mermaidModulePromise: ReturnType<typeof importMermaid> | null = null;
@@ -259,7 +261,12 @@ function MermaidPreview({ source }: { source: string }) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isVisible, setIsVisible] = useState(false);
-  const [isRendering, setIsRendering] = useState(false);
+  const [renderState, setRenderState] =
+    useState<MermaidRenderState>("idle");
+  const isLoading =
+    renderState === "idle" ||
+    renderState === "pending" ||
+    renderState === "rendering";
 
   useEffect(() => {
     const wrapper = wrapperRef.current;
@@ -293,16 +300,18 @@ function MermaidPreview({ source }: { source: string }) {
     const target = container;
     const theme = getMermaidTheme();
     const cacheKey = `${theme}\n${source}`;
+    const cached = readMermaidCache(cacheKey);
+
+    if (cached) {
+      target.innerHTML = cached.svg;
+      setError(cached.error);
+      setRenderState(cached.error ? "error" : "done");
+      return;
+    }
 
     async function renderMermaid() {
-      const cached = readMermaidCache(cacheKey);
-      if (cached) {
-        target.innerHTML = cached.svg;
-        setError(cached.error);
-        return;
-      }
-
-      setIsRendering(true);
+      if (cancelled) return;
+      setRenderState("rendering");
       try {
         const result = await enqueueMermaidRender(async () => {
           const mermaid = await loadMermaid();
@@ -321,6 +330,7 @@ function MermaidPreview({ source }: { source: string }) {
         writeMermaidCache(cacheKey, result);
         target.innerHTML = result.svg;
         setError(result.error);
+        setRenderState("done");
       } catch (err) {
         if (cancelled) return;
         const result = {
@@ -330,11 +340,13 @@ function MermaidPreview({ source }: { source: string }) {
         writeMermaidCache(cacheKey, result);
         target.innerHTML = "";
         setError(result.error);
-      } finally {
-        if (!cancelled) setIsRendering(false);
+        setRenderState("error");
       }
     }
 
+    target.innerHTML = "";
+    setError(null);
+    setRenderState("pending");
     const cancelScheduledRender = scheduleMermaidRender(
       () => void renderMermaid(),
     );
@@ -349,9 +361,10 @@ function MermaidPreview({ source }: { source: string }) {
       ref={wrapperRef}
       contentEditable={false}
       className="munix-mermaid-preview"
+      aria-busy={isLoading}
     >
       <div ref={containerRef} className="munix-mermaid-canvas" />
-      {!isVisible || isRendering ? (
+      {isLoading ? (
         <div className="munix-mermaid-placeholder" role="status">
           <Loader2 className="h-4 w-4 animate-spin text-[var(--color-accent)]" />
           <span>{t("editor:mermaid.rendering")}</span>
