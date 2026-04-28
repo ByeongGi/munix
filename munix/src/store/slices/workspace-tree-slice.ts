@@ -26,6 +26,7 @@
 
 import type { StateCreator } from "zustand";
 
+import { closeTerminalSessionsForTabs } from "@/lib/terminal-session-registry";
 import {
   collectPanes,
   findPane,
@@ -36,7 +37,7 @@ import {
   type WorkspaceNode,
 } from "../workspace-types";
 import type { EditorSlice } from "./editor-slice";
-import { type Tab, type TabSlice } from "./tab-slice";
+import { isTerminalTab, type Tab, type TabSlice } from "./tab-slice";
 import {
   captureGlobalIntoActivePane,
   closePaneInWorkspace,
@@ -171,7 +172,7 @@ export const createWorkspaceTreeSlice: StateCreator<
     if (nextActiveTabId) {
       const tab = nextTabs.find((t) => t.id === nextActiveTabId);
       if (tab) {
-        if (!tab.path) {
+        if (isTerminalTab(tab) || !tab.path) {
           state.closeFile();
           return;
         }
@@ -192,7 +193,7 @@ export const createWorkspaceTreeSlice: StateCreator<
     const activeTab = pane.activeTabId
       ? pane.tabs.find((t) => t.id === pane.activeTabId)
       : null;
-    if (activeTab?.path) {
+    if (activeTab && !isTerminalTab(activeTab) && activeTab.path) {
       void get().openFile(activeTab.path);
     } else {
       get().closeFile();
@@ -302,6 +303,8 @@ export const createWorkspaceTreeSlice: StateCreator<
       const state = get();
       const tree = state.workspaceTree;
       if (tree === null) return;
+      const pane = findPane(tree, paneId);
+      if (pane) closeTerminalSessionsForTabs(pane.tabs);
 
       const captured = captureGlobalIntoActivePane(
         tree,
@@ -452,6 +455,7 @@ export const createWorkspaceTreeSlice: StateCreator<
       );
       const pane = findPane(captured, paneId);
       if (!pane) return;
+      closeTerminalSessionsForTabs(pane.tabs.filter((tab) => tab.id === tabId));
       const patch = removeTabFromPane(pane, tabId);
       if (!patch) return;
       patchPaneTabsAndCommit(captured, paneId, {
@@ -473,6 +477,12 @@ export const createWorkspaceTreeSlice: StateCreator<
       if (!pane) return;
       const patch = closeOtherTabsInPane(pane, tabId);
       if (!patch) return;
+      closeTerminalSessionsForTabs(
+        pane.tabs.filter(
+          (tab) =>
+            !patch.tabs.some((remainingTab) => remainingTab.id === tab.id),
+        ),
+      );
 
       patchPaneTabsAndCommit(captured, paneId, {
         tabs: patch.tabs,
@@ -493,6 +503,12 @@ export const createWorkspaceTreeSlice: StateCreator<
       if (!pane) return;
       const patch = closeTabsAfterInPane(pane, tabId);
       if (!patch) return;
+      closeTerminalSessionsForTabs(
+        pane.tabs.filter(
+          (tab) =>
+            !patch.tabs.some((remainingTab) => remainingTab.id === tab.id),
+        ),
+      );
 
       patchPaneTabsAndCommit(captured, paneId, {
         tabs: patch.tabs,
@@ -513,6 +529,12 @@ export const createWorkspaceTreeSlice: StateCreator<
       if (!pane) return;
       const patch = closeUnpinnedTabsInPane(pane);
       if (!patch) return;
+      closeTerminalSessionsForTabs(
+        pane.tabs.filter(
+          (tab) =>
+            !patch.tabs.some((remainingTab) => remainingTab.id === tab.id),
+        ),
+      );
 
       patchPaneTabsAndCommit(captured, paneId, {
         tabs: patch.tabs,

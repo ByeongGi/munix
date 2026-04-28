@@ -36,7 +36,7 @@ export function splitActivePane(zone: EdgeZone): void {
   if (!ws) return;
   const cur = readActiveTab(ws);
   const initialTab: Tab | undefined = cur
-    ? { id: makeTabId(), path: cur.path, title: cur.title }
+    ? { ...cur, id: makeTabId() }
     : undefined;
   ws.splitPane(ws.activePaneId, zone, initialTab);
 }

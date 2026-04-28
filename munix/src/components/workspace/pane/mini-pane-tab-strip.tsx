@@ -16,6 +16,7 @@ import {
   TAB_DND_MIME,
   parseTabPayload,
 } from "@/lib/dnd-mime";
+import { isTerminalTab } from "@/store/slices/tab-slice";
 import type { PaneNode } from "@/store/workspace-types";
 
 interface MiniPaneTabStripProps {
@@ -55,6 +56,8 @@ export function MiniPaneTabStrip({
   return (
     <div className="flex min-w-0 flex-1 items-end gap-px overflow-x-auto">
       {pane.tabs.map((tab, index) => {
+        const tabTitle = tab.path ? (tab.titleDraft ?? tab.title) : tab.title;
+        const displayTitle = tabTitle || emptyTabTitle;
         const isPaneActive = tab.id === pane.activeTabId;
         const isHovered = dragIndex !== null && hoverIndex === index;
         const showLeftIndicator = shouldShowLeftDropIndicator({
@@ -168,7 +171,7 @@ export function MiniPaneTabStrip({
                 : "bg-[var(--color-bg-secondary)] text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-hover)] hover:text-[var(--color-text-primary)]",
               dragIndex === index && "opacity-40",
             )}
-            title={tab.path}
+            title={tab.path || displayTitle}
           >
             {showLeftIndicator ? (
               <span className="absolute -left-px top-0 h-full w-[2px] bg-[var(--color-accent)]" />
@@ -180,7 +183,7 @@ export function MiniPaneTabStrip({
               {tab.pinned ? (
                 <Pin className="mr-1 inline h-3 w-3 text-[var(--color-accent)]" />
               ) : null}
-              {tab.path ? (tab.titleDraft ?? tab.title) : emptyTabTitle}
+              {isTerminalTab(tab) ? tab.title : displayTitle}
             </span>
             {isPaneActive ? (
               <span className="absolute inset-x-0 top-0 h-[3px] rounded-t-md bg-[var(--color-accent)]" />

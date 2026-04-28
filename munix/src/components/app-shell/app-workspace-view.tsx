@@ -1,4 +1,4 @@
-import type { ComponentProps, Dispatch, SetStateAction } from "react";
+import { type ComponentProps, type Dispatch, type SetStateAction } from "react";
 
 import { EditorView } from "@/components/editor/editor-view";
 import { ImageViewer } from "@/components/image-viewer/image-viewer";
@@ -10,9 +10,12 @@ import { EmptyPanePlaceholder } from "@/components/workspace/pane/empty-pane-pla
 import { WorkspaceRoot } from "@/components/workspace/root/workspace-root";
 import { StatusBar } from "@/components/status-bar";
 import { TabBar } from "@/components/tab/tab-bar";
+import { TerminalView } from "@/components/terminal/terminal-view";
 import { cn } from "@/lib/cn";
 import { titleFromPath } from "@/lib/app-path-utils";
 import { isImagePath } from "@/lib/file-kind";
+import { isTerminalTab } from "@/store/slices/tab-slice";
+import { useTabStore } from "@/store/tab-store";
 import type { FileNode, VaultInfo } from "@/types/ipc";
 
 interface AppWorkspaceViewProps {
@@ -77,6 +80,11 @@ export function AppWorkspaceView({
   onOpenSettings,
   onSearchSelect,
 }: AppWorkspaceViewProps) {
+  const tabs = useTabStore((s) => s.tabs);
+  const activeId = useTabStore((s) => s.activeId);
+  const openTerminalTab = useTabStore((s) => s.openTerminalTab);
+  const activeTab = tabs.find((tab) => tab.id === activeId);
+
   return (
     <>
       <AppTitleBar
@@ -133,6 +141,7 @@ export function AppWorkspaceView({
               subtitle={info.name}
               onQuickOpen={onQuickOpen}
               onNewFile={() => void handleCreateFileAt("")}
+              onOpenTerminal={openTerminalTab}
             />
           ) : null}
           <WorkspaceRoot
@@ -141,7 +150,13 @@ export function AppWorkspaceView({
           >
             <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
               <TabBar onNewFile={() => createEmptyTab()} />
-              {currentPath ? (
+              {isTerminalTab(activeTab) ? (
+                <TerminalView
+                  key={activeTab.id}
+                  terminalTabId={activeTab.id}
+                  className="min-h-0 min-w-0 flex-1"
+                />
+              ) : currentPath ? (
                 isImagePath(currentPath) ? (
                   <ImageViewer
                     path={currentPath}

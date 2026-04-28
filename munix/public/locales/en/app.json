@@ -49,6 +49,12 @@
     "quickOpen": "Quick open",
     "more": "More workspace actions"
   },
+  "terminal": {
+    "toggle": "Open or close terminal",
+    "title": "Vault terminal",
+    "error": "Could not open terminal.",
+    "exited": "[process exited]"
+  },
   "emptyPane": {
     "newFile": "Create new file (Mod+T)",
     "quickOpen": "Go to file (Mod+P)",

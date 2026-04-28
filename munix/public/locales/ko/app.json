@@ -49,6 +49,12 @@
     "quickOpen": "빠른 열기",
     "more": "작업 영역 더 보기"
   },
+  "terminal": {
+    "toggle": "터미널 열기/닫기",
+    "title": "Vault 터미널",
+    "error": "터미널을 열 수 없습니다.",
+    "exited": "[프로세스 종료]"
+  },
   "emptyPane": {
     "newFile": "새 파일 생성하기 (Mod+T)",
     "quickOpen": "파일로 이동하기 (Mod+P)",

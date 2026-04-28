@@ -113,6 +113,18 @@ export const ipc = {
   vaultRegistryClear: () => invoke<void>("vault_registry_clear"),
   /** ADR-031 C-6 후속: closed entry 만 정리 + 더 이상 참조되지 않는 path 의 trust 도 정리. */
   vaultRegistryClearClosed: () => invoke<void>("vault_registry_clear_closed"),
+
+  terminalSpawn: (cols: number, rows: number, vaultId?: string) =>
+    invoke<{ id: string }>("terminal_spawn", {
+      cols,
+      rows,
+      vaultId: vaultId ?? null,
+    }),
+  terminalWrite: (id: string, data: string) =>
+    invoke<void>("terminal_write", { id, data }),
+  terminalResize: (id: string, cols: number, rows: number) =>
+    invoke<void>("terminal_resize", { id, cols, rows }),
+  terminalKill: (id: string) => invoke<void>("terminal_kill", { id }),
 };
 
 export interface VaultRegistryEntry {

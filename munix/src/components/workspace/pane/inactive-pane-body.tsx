@@ -1,3 +1,5 @@
+import { TerminalView } from "@/components/terminal/terminal-view";
+import { isTerminalTab } from "@/store/slices/tab-slice";
 import type { PaneNode } from "@/store/workspace-types";
 import { EmptyPanePlaceholder } from "./empty-pane-placeholder";
 import { InactivePaneEditor } from "./inactive-pane-editor";
@@ -16,6 +18,16 @@ export function InactivePaneBody({
   onQuickOpen,
 }: InactivePaneBodyProps) {
   const activeTab = pane.tabs.find((tab) => tab.id === pane.activeTabId);
+
+  if (isTerminalTab(activeTab)) {
+    return (
+      <TerminalView
+        key={activeTab.id}
+        terminalTabId={activeTab.id}
+        className="min-h-0 min-w-0 flex-1"
+      />
+    );
+  }
 
   if (pane.tabs.length === 0 || activeTab?.path === "") {
     return (

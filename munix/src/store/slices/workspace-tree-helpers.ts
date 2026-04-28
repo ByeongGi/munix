@@ -11,7 +11,7 @@ import {
   type SplitNode,
   type WorkspaceNode,
 } from "../workspace-types";
-import { makeTabId, type Tab } from "./tab-slice";
+import { isTerminalTab, makeTabId, type Tab } from "./tab-slice";
 
 export type EdgeZone = Exclude<DropZone, "center">;
 
@@ -91,6 +91,7 @@ export function makeRootPane(tabs: Tab[], activeTabId: string | null): PaneNode 
 export function makeWorkspaceTab(path = ""): Tab {
   return {
     id: makeTabId(),
+    kind: "document",
     path,
     title: basenameWithoutMarkdownExtension(path),
   };
@@ -376,7 +377,7 @@ export function removePathTabsFromPane(
   path: string,
 ): PaneTabsPatch | null {
   const matchPath = (tabPath: string) =>
-    tabPath === path || tabPath.startsWith(`${path}/`);
+    tabPath !== "" && (tabPath === path || tabPath.startsWith(`${path}/`));
   if (!pane.tabs.some((tab) => matchPath(tab.path))) return null;
 
   const removedIds = pane.tabs
@@ -398,6 +399,7 @@ export function renamePathTabsInPane(
 ): Tab[] | null {
   let mutated = false;
   const tabs = pane.tabs.map((tab) => {
+    if (!tab.path || isTerminalTab(tab)) return tab;
     if (tab.path === oldPath) {
       mutated = true;
       return makeRenamedTab(tab, newPath);

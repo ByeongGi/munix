@@ -2,6 +2,7 @@ import type { DragEvent, MouseEvent } from "react";
 import { Pin, X } from "lucide-react";
 
 import { cn } from "@/lib/cn";
+import { isTerminalTab } from "@/store/slices/tab-slice";
 import type { Tab } from "@/store/tab-store";
 
 interface ActiveTabItemProps {
@@ -43,6 +44,9 @@ export function ActiveTabItem({
   onContextMenu,
   onClose,
 }: ActiveTabItemProps) {
+  const tabTitle = tab.path ? (tab.titleDraft ?? tab.title) : tab.title;
+  const displayTitle = tabTitle || emptyTitle;
+
   return (
     <div
       draggable
@@ -62,7 +66,7 @@ export function ActiveTabItem({
           : "bg-[var(--color-bg-secondary)] text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-hover)] hover:text-[var(--color-text-primary)]",
         dragging && "opacity-40",
       )}
-      title={tab.path || emptyTitle}
+      title={tab.path || displayTitle}
     >
       {showLeftIndicator ? (
         <span className="absolute -left-px top-0 h-full w-[2px] bg-[var(--color-accent)]" />
@@ -74,7 +78,7 @@ export function ActiveTabItem({
         {tab.pinned ? (
           <Pin className="mr-1 inline h-3 w-3 text-[var(--color-accent)]" />
         ) : null}
-        {tab.path ? (tab.titleDraft ?? tab.title) : emptyTitle}
+        {isTerminalTab(tab) ? tab.title : displayTitle}
       </span>
       <button
         type="button"

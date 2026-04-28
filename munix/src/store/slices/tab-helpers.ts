@@ -1,4 +1,5 @@
 import type { Tab } from "./tab-slice";
+import { isTerminalTab } from "./tab-slice";
 
 export function basename(path: string): string {
   const i = path.lastIndexOf("/");
@@ -18,7 +19,7 @@ export function promoteEmptyTab(
 ): { tabs: Tab[]; tab: Tab } | null {
   if (!activeId) return null;
   const active = tabs.find((tab) => tab.id === activeId);
-  if (!active || active.path !== "") return null;
+  if (!active || isTerminalTab(active) || active.path !== "") return null;
 
   const promoted: Tab = { ...active, path, title: basename(path) };
   return {
@@ -98,6 +99,7 @@ export function renamePathInTabs(
   newPath: string,
 ): Tab[] {
   return tabs.map((tab) => {
+    if (!tab.path || isTerminalTab(tab)) return tab;
     if (tab.path === oldPath) {
       return {
         ...tab,
@@ -125,7 +127,7 @@ export function removePathFromTabs(
   path: string,
 ): { tabs: Tab[]; activeId: string | null } | null {
   const matchesPath = (tabPath: string) =>
-    tabPath === path || tabPath.startsWith(`${path}/`);
+    tabPath !== "" && (tabPath === path || tabPath.startsWith(`${path}/`));
   const removed = tabs.filter((tab) => matchesPath(tab.path));
   if (removed.length === 0) return null;
 

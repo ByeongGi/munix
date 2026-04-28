@@ -27,6 +27,7 @@ import {
   hydrateWorkspaceStore,
   type WorkspaceStoreHook,
 } from "./workspace-registry";
+import { isTerminalTab } from "./slices/tab-slice";
 
 const DOCK_VISIBLE_KEY = "munix:vaultDockVisible";
 
@@ -46,7 +47,7 @@ async function restoreActiveWorkspaceFile(
   const state = store.getState();
   const activeTab = state.tabs.find((tab) => tab.id === state.activeId);
   if (!activeTab) return;
-  if (!activeTab.path) {
+  if (isTerminalTab(activeTab) || !activeTab.path) {
     state.closeFile();
     return;
   }

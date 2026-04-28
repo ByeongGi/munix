@@ -1,7 +1,7 @@
 import { useStore } from "zustand";
 import { useTranslation } from "react-i18next";
 import { useTabStore, type Tab } from "@/store/tab-store";
-import { makeTabId } from "@/store/slices/tab-slice";
+import { isTerminalTab, makeTabId } from "@/store/slices/tab-slice";
 import { useEditorStore } from "@/store/editor-store";
 import { useActiveWorkspaceStore } from "@/lib/active-vault";
 import { useVaultDockStore } from "@/store/vault-dock-store";
@@ -107,6 +107,7 @@ export function TabBar({ onNewFile }: TabBarProps) {
   }
 
   const isDirty = (tab: Tab): boolean => {
+    if (isTerminalTab(tab)) return false;
     if (tab.path !== currentPath) return false;
     return (
       status.kind === "dirty" ||

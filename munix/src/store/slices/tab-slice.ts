@@ -10,6 +10,7 @@ import type { StateCreator } from "zustand";
 
 import { useEditorStore } from "@/store/editor-store";
 import { useRecentStore } from "@/store/recent-store";
+import { closeTerminalSessionsForTabs } from "@/lib/terminal-session-registry";
 import {
   collectPanes,
   findPane,
@@ -34,8 +35,11 @@ import {
 /** 탭 soft limit — 초과 시 경고 표시. 강제 차단은 아님. */
 export const TAB_SOFT_LIMIT = 10;
 
+export type TabKind = "document" | "terminal";
+
 export interface Tab {
   id: string;
+  kind?: TabKind;
   path: string;
   title: string;
   titleDraft?: string;
@@ -47,6 +51,7 @@ export interface TabSlice {
   activeId: string | null;
 
   openTab: (path: string) => void;
+  openTerminalTab: () => void;
   createEmptyTab: () => void;
   promoteActiveEmptyTab: (path: string) => boolean;
   closeTab: (id: string) => void;
@@ -68,6 +73,21 @@ export interface TabSlice {
 /** Client-side tab IDs are ephemeral workspace identifiers, not persisted file IDs. */
 export function makeTabId(): string {
   return `tab-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+export function isTerminalTab(
+  tab: Tab | null | undefined,
+): tab is Tab & { kind: "terminal" } {
+  return tab?.kind === "terminal";
+}
+
+export function makeTerminalTab(): Tab {
+  return {
+    id: makeTabId(),
+    kind: "terminal",
+    path: "",
+    title: "Terminal",
+  };
 }
 
 function patchTitleDraftInTree(
@@ -110,7 +130,11 @@ function syncEditorToActiveTab(tabs: Tab[], activeId: string | null): void {
     return;
   }
   const tab = tabs.find((item) => item.id === activeId);
-  if (tab) void openFileInEditor(tab.path);
+  if (!tab || isTerminalTab(tab)) {
+    void closeEditorFile();
+    return;
+  }
+  void openFileInEditor(tab.path);
 }
 
 export function defaultTabSlice(): TabSlice {
@@ -118,6 +142,7 @@ export function defaultTabSlice(): TabSlice {
     tabs: [],
     activeId: null,
     openTab: () => {},
+    openTerminalTab: () => {},
     createEmptyTab: () => {},
     promoteActiveEmptyTab: () => false,
     closeTab: () => {},
@@ -162,7 +187,9 @@ export const createTabSlice: StateCreator<TabFullSlice, [], [], TabSlice> = (
   activeId: null,
 
   openTab: (path) => {
-    const existing = get().tabs.find((t) => t.path === path);
+    const existing = get().tabs.find(
+      (t) => !isTerminalTab(t) && t.path === path,
+    );
     if (existing) {
       set({ activeId: existing.id });
       void openFileInEditor(existing.path);
@@ -171,6 +198,21 @@ export const createTabSlice: StateCreator<TabFullSlice, [], [], TabSlice> = (
     const tab: Tab = { id: makeTabId(), path, title: basename(path) };
     set((s) => ({ tabs: [...s.tabs, tab], activeId: tab.id }));
     void openFileInEditor(path);
+  },
+
+  openTerminalTab: () => {
+    const tab = makeTerminalTab();
+    const { workspaceTree, activePaneId, tabs } = get();
+    const nextTabs = [...tabs, tab];
+    const nextTree = workspaceTree
+      ? patchActivePaneTabs(workspaceTree, activePaneId, nextTabs, tab.id)
+      : null;
+    if (nextTree) {
+      set({ tabs: nextTabs, activeId: tab.id, workspaceTree: nextTree });
+    } else {
+      set({ tabs: nextTabs, activeId: tab.id });
+    }
+    void closeEditorFile();
   },
 
   createEmptyTab: () => {
@@ -230,6 +272,7 @@ export const createTabSlice: StateCreator<TabFullSlice, [], [], TabSlice> = (
     }
 
     const { tabs, activeId } = get();
+    closeTerminalSessionsForTabs(tabs.filter((tab) => tab.id === id));
     const next = closeTabInList(tabs, activeId, id);
     if (!next) return;
     set({ tabs: next.tabs, activeId: next.activeId });
@@ -243,12 +286,19 @@ export const createTabSlice: StateCreator<TabFullSlice, [], [], TabSlice> = (
       return;
     }
 
-    const next = closeOtherTabsInList(get().tabs, id);
+    const tabs = get().tabs;
+    const next = closeOtherTabsInList(tabs, id);
     if (!next) return;
+    closeTerminalSessionsForTabs(
+      tabs.filter(
+        (tab) =>
+          !next.tabs.some((remainingTab) => remainingTab.id === tab.id),
+      ),
+    );
     const target = next.tabs.find((tab) => tab.id === next.activeId);
     set({ tabs: next.tabs, activeId: next.activeId });
     if (!target) return;
-    void openFileInEditor(target.path);
+    syncEditorToActiveTab(next.tabs, next.activeId);
   },
 
   closeAll: () => {
@@ -258,7 +308,14 @@ export const createTabSlice: StateCreator<TabFullSlice, [], [], TabSlice> = (
       return;
     }
 
-    const next = closeUnpinnedTabsInList(get().tabs, get().activeId);
+    const tabs = get().tabs;
+    const next = closeUnpinnedTabsInList(tabs, get().activeId);
+    closeTerminalSessionsForTabs(
+      tabs.filter(
+        (tab) =>
+          !next.tabs.some((remainingTab) => remainingTab.id === tab.id),
+      ),
+    );
     set({ tabs: next.tabs, activeId: next.activeId });
     syncEditorToActiveTab(next.tabs, next.activeId);
   },
@@ -270,8 +327,15 @@ export const createTabSlice: StateCreator<TabFullSlice, [], [], TabSlice> = (
       return;
     }
 
-    const next = closeTabsAfterInList(get().tabs, get().activeId, id);
+    const tabs = get().tabs;
+    const next = closeTabsAfterInList(tabs, get().activeId, id);
     if (!next) return;
+    closeTerminalSessionsForTabs(
+      tabs.filter(
+        (tab) =>
+          !next.tabs.some((remainingTab) => remainingTab.id === tab.id),
+      ),
+    );
     set({ tabs: next.tabs, activeId: next.activeId });
     if (next.activeChanged) syncEditorToActiveTab(next.tabs, next.activeId);
   },
@@ -290,14 +354,14 @@ export const createTabSlice: StateCreator<TabFullSlice, [], [], TabSlice> = (
     const tab = get().tabs.find((t) => t.id === id);
     if (!tab) return;
     set({ activeId: id });
-    void openFileInEditor(tab.path);
+    syncEditorToActiveTab(get().tabs, id);
   },
 
   activateIndex: (i) => {
     const tab = get().tabs[i];
     if (!tab) return;
     set({ activeId: tab.id });
-    void openFileInEditor(tab.path);
+    syncEditorToActiveTab(get().tabs, tab.id);
   },
 
   activateNext: () => {
@@ -308,7 +372,7 @@ export const createTabSlice: StateCreator<TabFullSlice, [], [], TabSlice> = (
     const tab = tabs[nextIdx];
     if (!tab) return;
     set({ activeId: tab.id });
-    void openFileInEditor(tab.path);
+    syncEditorToActiveTab(tabs, tab.id);
   },
 
   activatePrev: () => {
@@ -319,7 +383,7 @@ export const createTabSlice: StateCreator<TabFullSlice, [], [], TabSlice> = (
     const tab = tabs[prevIdx];
     if (!tab) return;
     set({ activeId: tab.id });
-    void openFileInEditor(tab.path);
+    syncEditorToActiveTab(tabs, tab.id);
   },
 
   setTitleDraft: (path, draft) => {
@@ -360,5 +424,8 @@ export const createTabSlice: StateCreator<TabFullSlice, [], [], TabSlice> = (
     set({ tabs: next });
   },
 
-  resetTabs: () => set({ tabs: [], activeId: null }),
+  resetTabs: () => {
+    closeTerminalSessionsForTabs(get().tabs);
+    set({ tabs: [], activeId: null });
+  },
 });
