@@ -28,6 +28,7 @@
 | EDT-10 | 링크 호버 프리뷰 | P2 |
 | EDT-11 | YAML frontmatter 보존 | P1 |
 | EDT-12 | Placeholder 표시 (빈 문서) | P0 |
+| EDT-13 | Mermaid fenced code block 미리보기 | P1 |
 
 ### 2.2 비기능 요구사항
 
@@ -88,6 +89,7 @@ function serializeDocument(doc: ParsedDocument): string;
 |------|------|---------|--------|
 | StarterKit | heading, paragraph, list, blockquote, hr 등 | 표준 MD | - |
 | CodeBlockLowlight | 코드 블록 + 구문 강조 | ` ```lang ` | Cmd+Alt+C |
+| MermaidBlockView (커스텀) | `mermaid` 코드 블록 미리보기 | ` ```mermaid ` | - |
 | Link | 링크 | `[text](url)` | Cmd+K |
 | Image | 이미지 | `![alt](path)` | - |
 | Table + Row + Cell + Header | 테이블 | GFM 테이블 | - |
@@ -142,6 +144,7 @@ const slashCommands: SlashCommand[] = [
   // Media
   { id: 'image', title: '이미지', keywords: ['image', 'img'], group: 'media', ... },
   { id: 'code', title: '코드', keywords: ['code', 'snippet'], group: 'advanced', ... },
+  { id: 'mermaid', title: 'Mermaid', keywords: ['mermaid', 'diagram', 'flowchart'], group: 'advanced', ... },
   { id: 'quote', title: '인용', keywords: ['quote', 'blockquote'], group: 'advanced', ... },
   { id: 'divider', title: '구분선', keywords: ['hr', 'divider'], group: 'advanced', ... },
   { id: 'table', title: '표', keywords: ['table'], group: 'advanced', ... },
@@ -266,13 +269,60 @@ lowlight 기본 포함 + 자주 쓰는 언어:
 - 좌측: 줄 번호 (선택적, 설정)
 - Tab 키 → 2칸 공백 삽입 (tab out은 Shift+Tab)
 
+### 9.2.1 Obsidian Live Preview식 입력 흐름
+
+코드 블록 입력은 Obsidian Live Preview에 맞춘다.
+
+- 빈 줄에서 ` ``` ` 입력 시 즉시 fenced code block을 만든다.
+- 생성되는 Markdown 구조는 opening/closing fence가 모두 있는 형태다.
+- 커서는 opening fence와 closing fence 사이의 편집 영역에 위치한다.
+- 코드 블록 내부는 그대로 편집 가능해야 한다.
+- 코드 블록 안에 포커스가 있는 동안은 edit 모드로 유지한다.
+- 커서가 코드 블록 밖으로 벗어나거나 blur되면 preview/read 모드로 전환할 수 있다.
+- 일반 code block은 syntax highlight preview, `mermaid` code block은 Mermaid diagram preview 대상이다.
+- 다시 클릭하거나 Enter/편집 버튼을 누르면 edit 모드로 돌아간다.
+
+예상 생성 형태:
+
+````md
+```
+커서 위치
+```
+````
+
+언어가 필요한 경우:
+
+- 사용자는 opening fence language token을 편집할 수 있어야 한다.
+- ` ``` ` 생성 직후 opening fence 쪽 language 입력을 방해하면 안 된다.
+- slash command 또는 language dropdown으로 `ts`, `mermaid` 같은 token을 설정할 수 있어야 한다.
+
 ### 9.3 MD 매핑
 
-```md
+````md
 ```typescript
 const x = 1;
 ```
+````
+
+### 9.4 Mermaid 구분값
+
+Mermaid는 별도 노드 문법이 아니라 코드 블록의 info string으로 구분한다.
+
+````md
+```mermaid
+flowchart TD
+  A[Start] --> B[End]
 ```
+````
+
+판정 정책:
+
+- 첫 번째 info string token이 `mermaid`이면 Mermaid block으로 렌더한다.
+- token 비교는 case-insensitive다. 예: `Mermaid`, `MERMAID`.
+- `mermaid title="..."` 같은 meta string은 보존하되 v1 렌더 옵션에는 반영하지 않는다.
+- `mmd`, `diagram`, `flowchart` alias는 v1에서 Mermaid로 자동 판정하지 않는다.
+- 새로 삽입하는 블록은 canonical ` ```mermaid `를 사용한다.
+- 상세 케이스는 [mermaid-spec.md](./mermaid-spec.md) 참조.
 
 ---
 
@@ -356,6 +406,7 @@ function useFrontmatter(filePath: string): {
 | Strike `~~` | ✅ | GFM |
 | Inline code `` ` `` | ✅ | |
 | Code block ` ``` ` | ✅ | 언어 지정 가능 |
+| Mermaid ` ```mermaid ` | 🟡 | proposed, [mermaid-spec.md](./mermaid-spec.md) |
 | Link `[text](url)` | ✅ | |
 | Image `![alt](src)` | ✅ | |
 | Bullet list `-`, `*` | ✅ | |
@@ -380,7 +431,7 @@ function useFrontmatter(filePath: string): {
 | `1. ` | 번호 매기기 |
 | `[] ` | 체크리스트 |
 | `> ` | 인용 |
-| ` ``` ` | 코드 블록 |
+| ` ``` ` | fenced 코드 블록 생성 + 내부 edit 모드 진입 |
 | `---` + Enter | 구분선 |
 | `**text**` | Bold |
 | `*text*` | Italic |

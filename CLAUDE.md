@@ -33,7 +33,7 @@
 | 이미지 처리 | **image crate** (Rust) |
 | 라이선스 | **MIT** |
 
-**버전 요구:** Node 20 LTS+, Rust 1.77+
+**버전 요구:** Node 24+, Rust 1.77+
 
 ---
 

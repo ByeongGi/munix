@@ -2,30 +2,92 @@
  * NodeView 컴포넌트(CodeBlockView)와 Tiptap extension(CodeBlockWithLang)을 같이
  * export. image-node.tsx와 동일 패턴 — extension은 fast-refresh 대상 아님.
  */
-import { useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   NodeViewContent,
   NodeViewWrapper,
   ReactNodeViewRenderer,
   type NodeViewProps,
 } from "@tiptap/react";
+import type { Editor } from "@tiptap/core";
 import { CodeBlockLowlight } from "@tiptap/extension-code-block-lowlight";
-import { Copy, Check } from "lucide-react";
+import { Copy, Check, Pencil, Eye, AlertTriangle } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/cn";
 import { ipc } from "@/lib/ipc";
 
-function CodeBlockView({ node, updateAttributes, extension }: NodeViewProps) {
+const MERMAID_LANGUAGE = "mermaid";
+const MERMAID_RENDER_ROOT_MARGIN = "800px 0px";
+const MERMAID_RENDER_DEBOUNCE_MS = 80;
+
+interface MermaidRenderResult {
+  svg: string;
+  error: string | null;
+}
+
+const mermaidRenderCache = new Map<string, MermaidRenderResult>();
+let mermaidRenderQueue = Promise.resolve();
+
+function isMermaidLanguage(language: string | null | undefined): boolean {
+  return language?.trim().split(/\s+/)[0]?.toLowerCase() === MERMAID_LANGUAGE;
+}
+
+function isSelectionInsideNode(editor: Editor, getPos: NodeViewProps["getPos"]) {
+  const pos = typeof getPos === "function" ? getPos() : null;
+  if (typeof pos !== "number") return false;
+  const { from, to } = editor.state.selection;
+  const node = editor.state.doc.nodeAt(pos);
+  if (!node) return false;
+  return from >= pos && to <= pos + node.nodeSize;
+}
+
+function getMermaidTheme(): "default" | "dark" {
+  return document.documentElement.getAttribute("data-theme") === "light"
+    ? "default"
+    : "dark";
+}
+
+function enqueueMermaidRender(
+  task: () => Promise<MermaidRenderResult>,
+): Promise<MermaidRenderResult> {
+  const run = mermaidRenderQueue.then(task, task);
+  mermaidRenderQueue = run.then(
+    () => undefined,
+    () => undefined,
+  );
+  return run;
+}
+
+function CodeBlockView({
+  node,
+  updateAttributes,
+  extension,
+  editor,
+  getPos,
+}: NodeViewProps) {
   const { t } = useTranslation(["editor"]);
   const lowlight = extension.options.lowlight as {
     listLanguages: () => string[];
   };
   // lowlight 가 이미 `plaintext` 를 포함하므로 dedupe — 중복 시 React key 충돌 경고.
-  const languages = Array.from(
-    new Set(["plaintext", ...lowlight.listLanguages()]),
-  ).sort();
   const current = (node.attrs.language as string | null) ?? "plaintext";
+  const languages = useMemo(
+    () =>
+      Array.from(
+        new Set([
+          "plaintext",
+          MERMAID_LANGUAGE,
+          current,
+          ...lowlight.listLanguages(),
+        ]),
+      )
+        .filter(Boolean)
+        .sort(),
+    [current, lowlight],
+  );
+  const isMermaid = isMermaidLanguage(current);
   const [copied, setCopied] = useState(false);
+  const [isEditingMermaid, setIsEditingMermaid] = useState(false);
 
   const onCopy = async () => {
     try {
@@ -37,12 +99,66 @@ function CodeBlockView({ node, updateAttributes, extension }: NodeViewProps) {
     }
   };
 
+  useEffect(() => {
+    if (!isMermaid) return;
+
+    const syncEditMode = () => {
+      if (!isSelectionInsideNode(editor, getPos)) setIsEditingMermaid(false);
+    };
+
+    editor.on("selectionUpdate", syncEditMode);
+    editor.on("blur", syncEditMode);
+    return () => {
+      editor.off("selectionUpdate", syncEditMode);
+      editor.off("blur", syncEditMode);
+    };
+  }, [editor, getPos, isMermaid]);
+
+  const showMermaidPreview = isMermaid && !isEditingMermaid;
+
   return (
-    <NodeViewWrapper className="munix-codeblock relative my-4">
+    <NodeViewWrapper
+      className={cn(
+        "munix-codeblock relative my-4",
+        isMermaid && "munix-mermaid-block",
+      )}
+      onDoubleClick={() => {
+        if (isMermaid) setIsEditingMermaid(true);
+      }}
+    >
       <div
         contentEditable={false}
         className="absolute right-2 top-2 z-10 flex items-center gap-1"
       >
+        {isMermaid ? (
+          <button
+            type="button"
+            onClick={() => setIsEditingMermaid((value) => !value)}
+            className={cn(
+              "flex h-6 items-center gap-1 rounded border px-1.5 text-[11px]",
+              "border-[var(--color-border-primary)] bg-[var(--color-bg-tertiary)]",
+              "text-[var(--color-text-tertiary)] hover:text-[var(--color-text-primary)]",
+              "opacity-0 transition-opacity",
+            )}
+            aria-label={
+              showMermaidPreview
+                ? t("editor:mermaid.edit")
+                : t("editor:mermaid.preview")
+            }
+          >
+            {showMermaidPreview ? (
+              <>
+                <Pencil className="h-3 w-3" />
+                <span>{t("editor:mermaid.editLabel")}</span>
+              </>
+            ) : (
+              <>
+                <Eye className="h-3 w-3" />
+                <span>{t("editor:mermaid.previewLabel")}</span>
+              </>
+            )}
+          </button>
+        ) : null}
         <button
           type="button"
           onClick={onCopy}
@@ -83,10 +199,130 @@ function CodeBlockView({ node, updateAttributes, extension }: NodeViewProps) {
           ))}
         </select>
       </div>
-      <pre>
+      {showMermaidPreview ? (
+        <MermaidPreview source={node.textContent} />
+      ) : null}
+      <pre className={showMermaidPreview ? "sr-only" : undefined}>
         <NodeViewContent />
       </pre>
     </NodeViewWrapper>
+  );
+}
+
+function MermaidPreview({ source }: { source: string }) {
+  const { t } = useTranslation(["editor"]);
+  const wrapperRef = useRef<HTMLDivElement | null>(null);
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [isVisible, setIsVisible] = useState(false);
+  const [isRendering, setIsRendering] = useState(false);
+
+  useEffect(() => {
+    const wrapper = wrapperRef.current;
+    if (!wrapper) return;
+
+    if (!("IntersectionObserver" in window)) {
+      setIsVisible(true);
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry?.isIntersecting) {
+          setIsVisible(true);
+          observer.disconnect();
+        }
+      },
+      { root: null, rootMargin: MERMAID_RENDER_ROOT_MARGIN },
+    );
+    observer.observe(wrapper);
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    if (!isVisible) return;
+
+    const container = containerRef.current;
+    if (!container) return;
+
+    let cancelled = false;
+    const target = container;
+    const theme = getMermaidTheme();
+    const cacheKey = `${theme}\n${source}`;
+
+    async function renderMermaid() {
+      const cached = mermaidRenderCache.get(cacheKey);
+      if (cached) {
+        target.innerHTML = cached.svg;
+        setError(cached.error);
+        return;
+      }
+
+      setIsRendering(true);
+      try {
+        const result = await enqueueMermaidRender(async () => {
+          const mermaid = (await import("mermaid")).default;
+          mermaid.initialize({
+            startOnLoad: false,
+            securityLevel: "strict",
+            theme,
+          });
+          const renderResult = await mermaid.render(
+            `munix-mermaid-${crypto.randomUUID()}`,
+            source || "\n",
+          );
+          return { svg: renderResult.svg, error: null };
+        });
+        if (cancelled) return;
+        mermaidRenderCache.set(cacheKey, result);
+        target.innerHTML = result.svg;
+        setError(result.error);
+      } catch (err) {
+        if (cancelled) return;
+        const result = {
+          svg: "",
+          error: err instanceof Error ? err.message : String(err),
+        };
+        mermaidRenderCache.set(cacheKey, result);
+        target.innerHTML = "";
+        setError(result.error);
+      } finally {
+        if (!cancelled) setIsRendering(false);
+      }
+    }
+
+    const timer = window.setTimeout(
+      () => void renderMermaid(),
+      MERMAID_RENDER_DEBOUNCE_MS,
+    );
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [isVisible, source]);
+
+  return (
+    <div
+      ref={wrapperRef}
+      contentEditable={false}
+      className="munix-mermaid-preview"
+    >
+      <div ref={containerRef} className="munix-mermaid-canvas" />
+      {!isVisible || isRendering ? (
+        <div className="munix-mermaid-placeholder" role="status">
+          {t("editor:mermaid.rendering")}
+        </div>
+      ) : null}
+      {error ? (
+        <div className="munix-mermaid-error" role="status">
+          <AlertTriangle className="h-4 w-4 shrink-0" />
+          <div>
+            <div className="font-medium">{t("editor:mermaid.renderError")}</div>
+            <pre>{error}</pre>
+          </div>
+        </div>
+      ) : null}
+    </div>
   );
 }
 

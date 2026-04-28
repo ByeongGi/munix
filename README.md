@@ -39,7 +39,7 @@ open ~/Applications/munix.app
 
 ### 개발 환경
 
-- Node.js 20 LTS+
+- Node.js 24+
 - Rust 1.77+ (Cargo)
 - pnpm 9+
 
@@ -90,5 +90,6 @@ MIT — [`LICENSE`](./LICENSE) 참조.
 
 - [`docs/decisions.md`](./docs/decisions.md)
 - [`docs/implementation-plan.md`](./docs/implementation-plan.md)
+- [`docs/app-architecture-mermaid.md`](./docs/app-architecture-mermaid.md)
 - [`docs/issues-log.md`](./docs/issues-log.md)
 - [`docs/release.md`](./docs/release.md)

@@ -99,6 +99,14 @@
     "copied": "Copied",
     "copyLabel": "Copy"
   },
+  "mermaid": {
+    "edit": "Edit Mermaid",
+    "editLabel": "Edit",
+    "preview": "Preview Mermaid",
+    "previewLabel": "Preview",
+    "rendering": "Rendering diagram",
+    "renderError": "Mermaid render failed"
+  },
   "wikilink": {
     "noMatch": "No matching files",
     "notFound": "[wikilink] '{{target}}' not found in vault."
@@ -145,6 +153,10 @@
     "codeBlock": {
       "title": "Code block",
       "description": "Block for code"
+    },
+    "mermaid": {
+      "title": "Mermaid diagram",
+      "description": "Insert a Mermaid code block"
     },
     "blockquote": {
       "title": "Quote",

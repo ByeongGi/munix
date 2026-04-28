@@ -155,6 +155,32 @@ export function getSlashItems(
       },
     },
     {
+      id: "mermaid",
+      titleKey: "editor:slashCommands.mermaid.title",
+      descKey: "editor:slashCommands.mermaid.description",
+      searchTerms: [
+        "mermaid",
+        "diagram",
+        "flowchart",
+        "sequence",
+        "chart",
+        "graph",
+        "다이어그램",
+        "플로우차트",
+      ],
+      icon: Code,
+      group: "block",
+      run: ({ editor, range }) => {
+        editor
+          .chain()
+          .focus()
+          .deleteRange(range)
+          .setCodeBlock({ language: "mermaid" })
+          .insertContent("flowchart TD\n  A[Start] --> B[End]")
+          .run();
+      },
+    },
+    {
       id: "blockquote",
       titleKey: "editor:slashCommands.blockquote.title",
       descKey: "editor:slashCommands.blockquote.description",

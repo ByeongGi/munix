@@ -1090,9 +1090,67 @@ pre {
   display: none;
 }
 
-/* 코드 블럭 hover 시 복사 버튼 표시 */
-.tiptap .munix-codeblock:hover button[aria-label="코드 복사"] {
+/* 코드 블럭 hover 시 액션 버튼 표시 */
+.tiptap .munix-codeblock:hover button {
   opacity: 1;
+}
+
+.tiptap .munix-mermaid-block {
+  border: 1px solid var(--color-border-primary);
+  border-radius: 8px;
+  background: var(--color-bg-tertiary);
+}
+
+.tiptap .munix-mermaid-block pre {
+  margin: 0;
+}
+
+.tiptap .munix-mermaid-preview {
+  min-height: 160px;
+  padding: 2.75rem 1rem 1rem;
+  overflow-x: auto;
+}
+
+.tiptap .munix-mermaid-canvas {
+  display: flex;
+  min-height: 112px;
+  align-items: center;
+  justify-content: center;
+}
+
+.tiptap .munix-mermaid-canvas svg {
+  max-width: 100%;
+  height: auto;
+}
+
+.tiptap .munix-mermaid-placeholder {
+  display: flex;
+  min-height: 112px;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-tertiary);
+  font-size: 0.8125rem;
+}
+
+.tiptap .munix-mermaid-error {
+  display: flex;
+  gap: 0.625rem;
+  border: 1px solid var(--color-callout-warning-border);
+  border-radius: 6px;
+  padding: 0.75rem;
+  color: var(--color-callout-warning);
+  background: color-mix(
+    in srgb,
+    var(--color-callout-warning-border) 16%,
+    transparent
+  );
+}
+
+.tiptap .munix-mermaid-error pre {
+  margin: 0.375rem 0 0;
+  white-space: pre-wrap;
+  color: var(--color-text-secondary);
+  background: transparent;
 }
 
 /* Heading fold — chevron + hidden 형제 */

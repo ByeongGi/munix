@@ -98,6 +98,14 @@
     "copied": "복사됨",
     "copyLabel": "복사"
   },
+  "mermaid": {
+    "edit": "Mermaid 편집",
+    "editLabel": "편집",
+    "preview": "Mermaid 미리보기",
+    "previewLabel": "미리보기",
+    "rendering": "다이어그램 렌더링 중",
+    "renderError": "Mermaid 렌더링 실패"
+  },
   "wikilink": {
     "noMatch": "일치하는 파일 없음",
     "notFound": "[wikilink] '{{target}}' 파일을 vault에서 찾지 못했습니다."
@@ -144,6 +152,10 @@
     "codeBlock": {
       "title": "코드 블록",
       "description": "코드 표시용 블록"
+    },
+    "mermaid": {
+      "title": "Mermaid 다이어그램",
+      "description": "Mermaid 코드 블록 삽입"
     },
     "blockquote": {
       "title": "인용",
