@@ -2,6 +2,8 @@ import { invoke } from "@tauri-apps/api/core";
 import type {
   FileContent,
   FileNode,
+  MarkdownBatchItem,
+  MarkdownFileContent,
   VaultInfo,
   WriteResult,
 } from "@/types/ipc";
@@ -36,6 +38,16 @@ export const ipc = {
   readFile: (relPath: string, vaultId?: string) =>
     invoke<FileContent>("read_file", {
       relPath,
+      vaultId: vaultId ?? null,
+    }),
+  readMarkdownFile: (relPath: string, vaultId?: string) =>
+    invoke<MarkdownFileContent>("read_markdown_file", {
+      relPath,
+      vaultId: vaultId ?? null,
+    }),
+  readMarkdownBatch: (relPaths: string[], vaultId?: string) =>
+    invoke<MarkdownBatchItem[]>("read_markdown_batch", {
+      relPaths,
       vaultId: vaultId ?? null,
     }),
   writeFile: (

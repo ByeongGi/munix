@@ -99,6 +99,10 @@
     "copied": "Copied",
     "copyLabel": "Copy"
   },
+  "documentLoading": {
+    "title": "Loading document",
+    "description": "Preparing a large document."
+  },
   "mermaid": {
     "edit": "Edit Mermaid",
     "editLabel": "Edit",

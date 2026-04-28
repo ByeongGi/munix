@@ -31,12 +31,12 @@ fn run_clipboard_command(program: &str, args: &[&str], text: &str) -> Result<(),
 pub fn write_text(text: &str) -> Result<(), String> {
     #[cfg(target_os = "macos")]
     {
-        return run_clipboard_command("pbcopy", &[], text);
+        run_clipboard_command("pbcopy", &[], text)
     }
 
     #[cfg(target_os = "windows")]
     {
-        return run_clipboard_command("clip", &[], text);
+        run_clipboard_command("clip", &[], text)
     }
 
     #[cfg(all(unix, not(target_os = "macos")))]

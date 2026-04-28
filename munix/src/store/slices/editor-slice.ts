@@ -10,7 +10,6 @@ import type { StateCreator } from "zustand";
 
 import { ipc } from "@/lib/ipc";
 import { isImagePath } from "@/lib/file-kind";
-import { parseDocument } from "@/lib/markdown";
 
 export type SaveStatus =
   | { kind: "idle" }
@@ -30,6 +29,8 @@ export interface EditorSlice {
   currentPath: string | null;
   frontmatter: Record<string, unknown> | null;
   body: string;
+  sourceVersion: number;
+  isOpening: boolean;
   baseModified: number | null;
   status: SaveStatus;
   flushSave: FlushFn | null;
@@ -62,6 +63,8 @@ export function defaultEditorSlice(): EditorSlice {
     currentPath: null,
     frontmatter: null,
     body: "",
+    sourceVersion: 0,
+    isOpening: false,
     baseModified: null,
     status: { kind: "idle" },
     flushSave: null,
@@ -97,6 +100,8 @@ export const createEditorSlice: StateCreator<
   currentPath: null,
   frontmatter: null,
   body: "",
+  sourceVersion: 0,
+  isOpening: false,
   baseModified: null,
   status: { kind: "idle" },
   flushSave: null,
@@ -107,27 +112,49 @@ export const createEditorSlice: StateCreator<
   pendingPropertyFocus: false,
 
   openFile: async (relPath) => {
-    set({ status: { kind: "idle" } });
     if (isImagePath(relPath)) {
       set({
         currentPath: relPath,
         frontmatter: null,
         body: "",
+        sourceVersion: get().sourceVersion + 1,
+        isOpening: false,
         baseModified: null,
         status: { kind: "idle" },
       });
       return;
     }
 
-    const content = await ipc.readFile(relPath);
-    const parsed = parseDocument(content.content);
     set({
       currentPath: relPath,
-      frontmatter: parsed.frontmatter,
-      body: parsed.body,
-      baseModified: content.modified,
+      frontmatter: null,
+      body: "",
+      isOpening: true,
+      baseModified: null,
       status: { kind: "idle" },
     });
+
+    try {
+      const content = await ipc.readMarkdownFile(relPath);
+      if (get().currentPath !== relPath) return;
+      set({
+        frontmatter: content.frontmatter,
+        body: content.body,
+        sourceVersion: get().sourceVersion + 1,
+        isOpening: false,
+        baseModified: content.modified,
+        status: { kind: "idle" },
+      });
+    } catch (error) {
+      if (get().currentPath !== relPath) return;
+      set({
+        isOpening: false,
+        status: {
+          kind: "error",
+          error: error instanceof Error ? error.message : String(error),
+        },
+      });
+    }
   },
 
   closeFile: () =>
@@ -135,6 +162,8 @@ export const createEditorSlice: StateCreator<
       currentPath: null,
       frontmatter: null,
       body: "",
+      sourceVersion: get().sourceVersion + 1,
+      isOpening: false,
       baseModified: null,
       status: { kind: "idle" },
     }),
@@ -142,14 +171,28 @@ export const createEditorSlice: StateCreator<
   reloadFromDisk: async () => {
     const { currentPath } = get();
     if (!currentPath) return;
-    const content = await ipc.readFile(currentPath);
-    const parsed = parseDocument(content.content);
-    set({
-      frontmatter: parsed.frontmatter,
-      body: parsed.body,
-      baseModified: content.modified,
-      status: { kind: "idle" },
-    });
+    set({ isOpening: true, status: { kind: "idle" } });
+    try {
+      const content = await ipc.readMarkdownFile(currentPath);
+      if (get().currentPath !== currentPath) return;
+      set({
+        frontmatter: content.frontmatter,
+        body: content.body,
+        sourceVersion: get().sourceVersion + 1,
+        isOpening: false,
+        baseModified: content.modified,
+        status: { kind: "idle" },
+      });
+    } catch (error) {
+      if (get().currentPath !== currentPath) return;
+      set({
+        isOpening: false,
+        status: {
+          kind: "error",
+          error: error instanceof Error ? error.message : String(error),
+        },
+      });
+    }
   },
 
   setStatus: (status) => set({ status }),

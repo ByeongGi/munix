@@ -1,6 +1,7 @@
 mod commands;
 mod clipboard;
 mod error;
+mod markdown;
 mod settings;
 mod state;
 mod thumbnail;
@@ -48,6 +49,8 @@ pub fn run() {
             commands::vault::trust_path,
             commands::fs::list_files,
             commands::fs::read_file,
+            commands::fs::read_markdown_file,
+            commands::fs::read_markdown_batch,
             commands::fs::write_file,
             commands::fs::create_file,
             commands::fs::create_folder,

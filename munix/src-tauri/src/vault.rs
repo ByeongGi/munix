@@ -4,6 +4,7 @@ use std::time::UNIX_EPOCH;
 use serde::Serialize;
 
 use crate::error::{VaultError, VaultResult};
+use crate::markdown::parse_markdown;
 
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -34,6 +35,25 @@ pub struct FileNode {
 #[derive(Debug, Clone, Serialize)]
 pub struct FileContent {
     pub content: String,
+    pub modified: i64,
+    pub size: u64,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MarkdownFileContent {
+    pub frontmatter: Option<serde_json::Value>,
+    pub body: String,
+    pub modified: i64,
+    pub size: u64,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MarkdownBatchItem {
+    pub path: String,
+    pub frontmatter: Option<serde_json::Value>,
+    pub body: String,
     pub modified: i64,
     pub size: u64,
 }
@@ -150,38 +170,7 @@ impl Vault {
 
     /// rel_path를 vault 내부의 절대 경로로 변환. traversal 차단.
     pub fn resolve(&self, rel_path: &str) -> VaultResult<PathBuf> {
-        if rel_path.is_empty() || rel_path.starts_with('/') || rel_path.starts_with('\\') {
-            return Err(VaultError::PathTraversal(rel_path.to_string()));
-        }
-
-        use std::path::Component;
-        for comp in Path::new(rel_path).components() {
-            match comp {
-                Component::ParentDir => {
-                    return Err(VaultError::PathTraversal(rel_path.to_string()));
-                }
-                Component::Normal(_) | Component::CurDir => {}
-                _ => return Err(VaultError::PathTraversal(rel_path.to_string())),
-            }
-        }
-
-        let joined = self.root.join(rel_path);
-
-        if let Ok(canonical) = joined.canonicalize() {
-            if !canonical.starts_with(&self.root) {
-                return Err(VaultError::PathTraversal(rel_path.to_string()));
-            }
-        } else if let Some(parent) = joined.parent() {
-            // 아직 존재하지 않는 파일(create_file 대상)이면 부모만 검증
-            if parent.exists() {
-                let canonical_parent = parent.canonicalize()?;
-                if !canonical_parent.starts_with(&self.root) {
-                    return Err(VaultError::PathTraversal(rel_path.to_string()));
-                }
-            }
-        }
-
-        Ok(joined)
+        resolve_path(&self.root, rel_path)
     }
 
     pub fn info(&self, id: &str) -> VaultResult<VaultInfo> {
@@ -196,21 +185,7 @@ impl Vault {
     }
 
     pub fn list_all(&self) -> VaultResult<Vec<FileNode>> {
-        let mut result = Vec::new();
-        walk(&self.root, &self.root, &mut result, false)?;
-        Ok(result)
-    }
-
-    pub fn read_file(&self, rel_path: &str) -> VaultResult<FileContent> {
-        validate_md_extension(rel_path)?;
-        let path = self.resolve(rel_path)?;
-        let content = std::fs::read_to_string(&path)?;
-        let meta = std::fs::metadata(&path)?;
-        Ok(FileContent {
-            content,
-            modified: mtime_secs(&meta),
-            size: meta.len(),
-        })
+        list_all_at_root(&self.root)
     }
 
     pub fn write_file(
@@ -391,14 +366,14 @@ impl Vault {
             "png", "jpg", "jpeg", "gif", "webp", "svg", "bmp", "avif",
         ];
         if !ALLOWED.contains(&clean_ext.as_str()) {
-            return Err(VaultError::InvalidName(format!("ext: {}", ext)));
+            return Err(VaultError::InvalidName(format!("ext: {ext}")));
         }
 
         let date = chrono::Utc::now().format("%Y%m%d").to_string();
         let id = uuid::Uuid::new_v4().to_string();
         let short = &id[..8];
-        let filename = format!("{}-{}.{}", date, short, clean_ext);
-        let rel_path = format!("assets/{}", filename);
+        let filename = format!("{date}-{short}.{clean_ext}");
+        let rel_path = format!("assets/{filename}");
 
         let abs = self.root.join(&rel_path);
         if let Some(parent) = abs.parent() {
@@ -477,6 +452,61 @@ impl Vault {
     }
 }
 
+pub fn list_all_at_root(root: &Path) -> VaultResult<Vec<FileNode>> {
+    let mut result = Vec::new();
+    walk(root, root, &mut result, false)?;
+    Ok(result)
+}
+
+pub fn read_file_at_root(root: &Path, rel_path: &str) -> VaultResult<FileContent> {
+    validate_md_extension(rel_path)?;
+    let path = resolve_path(root, rel_path)?;
+    let content = std::fs::read_to_string(&path)?;
+    let meta = std::fs::metadata(&path)?;
+    Ok(FileContent {
+        content,
+        modified: mtime_secs(&meta),
+        size: meta.len(),
+    })
+}
+
+pub fn read_markdown_file_at_root(
+    root: &Path,
+    rel_path: &str,
+) -> VaultResult<MarkdownFileContent> {
+    validate_md_extension(rel_path)?;
+    let path = resolve_path(root, rel_path)?;
+    let content = std::fs::read_to_string(&path)?;
+    let meta = std::fs::metadata(&path)?;
+    let parsed = parse_markdown(content);
+
+    Ok(MarkdownFileContent {
+        frontmatter: parsed.frontmatter,
+        body: parsed.body,
+        modified: mtime_secs(&meta),
+        size: meta.len(),
+    })
+}
+
+pub fn read_markdown_batch_at_root(
+    root: &Path,
+    rel_paths: Vec<String>,
+) -> Vec<MarkdownBatchItem> {
+    rel_paths
+        .into_iter()
+        .filter_map(|path| {
+            let content = read_markdown_file_at_root(root, &path).ok()?;
+            Some(MarkdownBatchItem {
+                path,
+                frontmatter: content.frontmatter,
+                body: content.body,
+                modified: content.modified,
+                size: content.size,
+            })
+        })
+        .collect()
+}
+
 #[cfg(target_os = "macos")]
 fn trash_delete(path: &Path) -> VaultResult<()> {
     // macOS에서 기본 DeleteMethod::Finder는 AppleScript로 Finder를 호출하는데,
@@ -491,6 +521,40 @@ fn trash_delete(path: &Path) -> VaultResult<()> {
 #[cfg(not(target_os = "macos"))]
 fn trash_delete(path: &Path) -> VaultResult<()> {
     trash::delete(path).map_err(|e| VaultError::Io(e.to_string()))
+}
+
+fn resolve_path(root: &Path, rel_path: &str) -> VaultResult<PathBuf> {
+    if rel_path.is_empty() || rel_path.starts_with('/') || rel_path.starts_with('\\') {
+        return Err(VaultError::PathTraversal(rel_path.to_string()));
+    }
+
+    use std::path::Component;
+    for comp in Path::new(rel_path).components() {
+        match comp {
+            Component::ParentDir => {
+                return Err(VaultError::PathTraversal(rel_path.to_string()));
+            }
+            Component::Normal(_) | Component::CurDir => {}
+            _ => return Err(VaultError::PathTraversal(rel_path.to_string())),
+        }
+    }
+
+    let joined = root.join(rel_path);
+
+    if let Ok(canonical) = joined.canonicalize() {
+        if !canonical.starts_with(root) {
+            return Err(VaultError::PathTraversal(rel_path.to_string()));
+        }
+    } else if let Some(parent) = joined.parent() {
+        if parent.exists() {
+            let canonical_parent = parent.canonicalize()?;
+            if !canonical_parent.starts_with(root) {
+                return Err(VaultError::PathTraversal(rel_path.to_string()));
+            }
+        }
+    }
+
+    Ok(joined)
 }
 
 /// 파일/폴더 이름(basename) 자체의 안전성 검증.
@@ -511,15 +575,13 @@ pub fn validate_name(name: &str) -> VaultResult<()> {
         )
     }) {
         return Err(VaultError::InvalidName(format!(
-            "forbidden character: {}",
-            name
+            "forbidden character: {name}"
         )));
     }
     // 제어 문자 차단
     if name.chars().any(|c| (c as u32) < 0x20) {
         return Err(VaultError::InvalidName(format!(
-            "control character: {}",
-            name
+            "control character: {name}"
         )));
     }
     // Windows 예약어 (확장자 제거 후 비교)
@@ -530,16 +592,12 @@ pub fn validate_name(name: &str) -> VaultResult<()> {
         "LPT6", "LPT7", "LPT8", "LPT9",
     ];
     if RESERVED.contains(&stem_upper.as_str()) {
-        return Err(VaultError::InvalidName(format!(
-            "reserved name: {}",
-            name
-        )));
+        return Err(VaultError::InvalidName(format!("reserved name: {name}")));
     }
     // Windows에서 trailing dot/space는 자동 제거되어 충돌 유발
     if name.ends_with('.') || name.ends_with(' ') {
         return Err(VaultError::InvalidName(format!(
-            "trailing dot or space: {}",
-            name
+            "trailing dot or space: {name}"
         )));
     }
     Ok(())

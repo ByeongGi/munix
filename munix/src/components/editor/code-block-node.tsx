@@ -11,7 +11,7 @@ import {
 } from "@tiptap/react";
 import type { Editor } from "@tiptap/core";
 import { CodeBlockLowlight } from "@tiptap/extension-code-block-lowlight";
-import { Copy, Check, Pencil, Eye, AlertTriangle } from "lucide-react";
+import { Copy, Check, Pencil, Eye, AlertTriangle, Loader2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/cn";
 import { ipc } from "@/lib/ipc";
@@ -19,6 +19,8 @@ import { ipc } from "@/lib/ipc";
 const MERMAID_LANGUAGE = "mermaid";
 const MERMAID_RENDER_ROOT_MARGIN = "800px 0px";
 const MERMAID_RENDER_DEBOUNCE_MS = 80;
+const MERMAID_RENDER_IDLE_TIMEOUT_MS = 1200;
+const MERMAID_RENDER_CACHE_LIMIT = 80;
 
 interface MermaidRenderResult {
   svg: string;
@@ -27,6 +29,7 @@ interface MermaidRenderResult {
 
 const mermaidRenderCache = new Map<string, MermaidRenderResult>();
 let mermaidRenderQueue = Promise.resolve();
+let mermaidModulePromise: ReturnType<typeof importMermaid> | null = null;
 
 function isMermaidLanguage(language: string | null | undefined): boolean {
   return language?.trim().split(/\s+/)[0]?.toLowerCase() === MERMAID_LANGUAGE;
@@ -56,6 +59,47 @@ function enqueueMermaidRender(
     () => undefined,
   );
   return run;
+}
+
+async function importMermaid() {
+  return (await import("mermaid")).default;
+}
+
+function loadMermaid() {
+  mermaidModulePromise ??= importMermaid();
+  return mermaidModulePromise;
+}
+
+function readMermaidCache(key: string): MermaidRenderResult | null {
+  const cached = mermaidRenderCache.get(key);
+  if (!cached) return null;
+  mermaidRenderCache.delete(key);
+  mermaidRenderCache.set(key, cached);
+  return cached;
+}
+
+function writeMermaidCache(key: string, result: MermaidRenderResult): void {
+  mermaidRenderCache.set(key, result);
+  if (mermaidRenderCache.size <= MERMAID_RENDER_CACHE_LIMIT) return;
+  const oldest = mermaidRenderCache.keys().next().value;
+  if (oldest) mermaidRenderCache.delete(oldest);
+}
+
+function scheduleMermaidRender(callback: () => void): () => void {
+  let cleanup: () => void = () => {};
+  const timer = window.setTimeout(() => {
+    if ("requestIdleCallback" in window) {
+      const idleId = window.requestIdleCallback(callback, {
+        timeout: MERMAID_RENDER_IDLE_TIMEOUT_MS,
+      });
+      cleanup = () => window.cancelIdleCallback(idleId);
+      return;
+    }
+    callback();
+  }, MERMAID_RENDER_DEBOUNCE_MS);
+
+  cleanup = () => window.clearTimeout(timer);
+  return () => cleanup();
 }
 
 function CodeBlockView({
@@ -251,7 +295,7 @@ function MermaidPreview({ source }: { source: string }) {
     const cacheKey = `${theme}\n${source}`;
 
     async function renderMermaid() {
-      const cached = mermaidRenderCache.get(cacheKey);
+      const cached = readMermaidCache(cacheKey);
       if (cached) {
         target.innerHTML = cached.svg;
         setError(cached.error);
@@ -261,7 +305,7 @@ function MermaidPreview({ source }: { source: string }) {
       setIsRendering(true);
       try {
         const result = await enqueueMermaidRender(async () => {
-          const mermaid = (await import("mermaid")).default;
+          const mermaid = await loadMermaid();
           mermaid.initialize({
             startOnLoad: false,
             securityLevel: "strict",
@@ -274,7 +318,7 @@ function MermaidPreview({ source }: { source: string }) {
           return { svg: renderResult.svg, error: null };
         });
         if (cancelled) return;
-        mermaidRenderCache.set(cacheKey, result);
+        writeMermaidCache(cacheKey, result);
         target.innerHTML = result.svg;
         setError(result.error);
       } catch (err) {
@@ -283,7 +327,7 @@ function MermaidPreview({ source }: { source: string }) {
           svg: "",
           error: err instanceof Error ? err.message : String(err),
         };
-        mermaidRenderCache.set(cacheKey, result);
+        writeMermaidCache(cacheKey, result);
         target.innerHTML = "";
         setError(result.error);
       } finally {
@@ -291,13 +335,12 @@ function MermaidPreview({ source }: { source: string }) {
       }
     }
 
-    const timer = window.setTimeout(
+    const cancelScheduledRender = scheduleMermaidRender(
       () => void renderMermaid(),
-      MERMAID_RENDER_DEBOUNCE_MS,
     );
     return () => {
       cancelled = true;
-      window.clearTimeout(timer);
+      cancelScheduledRender();
     };
   }, [isVisible, source]);
 
@@ -310,7 +353,13 @@ function MermaidPreview({ source }: { source: string }) {
       <div ref={containerRef} className="munix-mermaid-canvas" />
       {!isVisible || isRendering ? (
         <div className="munix-mermaid-placeholder" role="status">
-          {t("editor:mermaid.rendering")}
+          <Loader2 className="h-4 w-4 animate-spin text-[var(--color-accent)]" />
+          <span>{t("editor:mermaid.rendering")}</span>
+          <div className="munix-mermaid-placeholder-lines" aria-hidden="true">
+            <i />
+            <i />
+            <i />
+          </div>
         </div>
       ) : null}
       {error ? (

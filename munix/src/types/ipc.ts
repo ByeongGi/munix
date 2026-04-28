@@ -23,6 +23,17 @@ export interface FileContent {
   size: number;
 }
 
+export interface MarkdownFileContent {
+  frontmatter: Record<string, unknown> | null;
+  body: string;
+  modified: number;
+  size: number;
+}
+
+export interface MarkdownBatchItem extends MarkdownFileContent {
+  path: string;
+}
+
 export interface WriteResult {
   modified: number;
   size: number;

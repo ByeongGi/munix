@@ -50,7 +50,7 @@ pub fn ensure_thumbnail(vault_root: &Path, rel_path: &str) -> VaultResult<PathBu
     let hash = sha1_hex(&bytes);
 
     let cache_dir = vault_root.join(".munix").join("cache").join("thumbs");
-    let cache_path = cache_dir.join(format!("{}.jpg", hash));
+    let cache_path = cache_dir.join(format!("{hash}.jpg"));
 
     if cache_path.exists() {
         return Ok(cache_path);
@@ -59,11 +59,11 @@ pub fn ensure_thumbnail(vault_root: &Path, rel_path: &str) -> VaultResult<PathBu
     std::fs::create_dir_all(&cache_dir)?;
 
     let img = ImageReader::open(&src)
-        .map_err(|e| VaultError::Io(format!("thumbnail open: {}", e)))?
+        .map_err(|e| VaultError::Io(format!("thumbnail open: {e}")))?
         .with_guessed_format()
-        .map_err(|e| VaultError::Io(format!("thumbnail format: {}", e)))?
+        .map_err(|e| VaultError::Io(format!("thumbnail format: {e}")))?
         .decode()
-        .map_err(|e| VaultError::Io(format!("thumbnail decode: {}", e)))?;
+        .map_err(|e| VaultError::Io(format!("thumbnail decode: {e}")))?;
 
     let (w, h) = (img.width(), img.height());
     let resized = if w <= THUMB_MAX_DIM && h <= THUMB_MAX_DIM {
@@ -89,7 +89,7 @@ pub fn ensure_thumbnail(vault_root: &Path, rel_path: &str) -> VaultResult<PathBu
                 rgb.height(),
                 image::ExtendedColorType::Rgb8,
             )
-            .map_err(|e| VaultError::Io(format!("thumbnail encode: {}", e)))?;
+            .map_err(|e| VaultError::Io(format!("thumbnail encode: {e}")))?;
     }
     std::fs::rename(&tmp_path, &cache_path)?;
 
@@ -131,7 +131,7 @@ fn sha1_hex(bytes: &[u8]) -> String {
     let result = hasher.finalize();
     let mut hex = String::with_capacity(result.len() * 2);
     for b in result.iter() {
-        hex.push_str(&format!("{:02x}", b));
+        hex.push_str(&format!("{b:02x}"));
     }
     hex
 }

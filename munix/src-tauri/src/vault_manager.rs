@@ -170,6 +170,19 @@ impl VaultManager {
         f(&entry.vault)
     }
 
+    /// vault root clone — long-running filesystem work can happen after the
+    /// registry lock is released.
+    pub fn root_path(&self, id: &str) -> VaultResult<PathBuf> {
+        let guard = self
+            .vaults
+            .read()
+            .map_err(|e| VaultError::Io(format!("vaults rwlock poisoned: {e}")))?;
+        let entry = guard
+            .get(id)
+            .ok_or_else(|| VaultError::VaultNotFound(id.to_string()))?;
+        Ok(entry.vault.root().to_path_buf())
+    }
+
     /// vault의 recent_writes에 abs path 기록 (self-write suppression).
     pub fn record_writes(&self, id: &str, paths: &[&Path]) -> VaultResult<()> {
         let guard = self

@@ -1,5 +1,11 @@
 import { useEditor, EditorContent } from "@tiptap/react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  startTransition,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import { createEditorExtensions } from "@/components/editor/extensions";
 import { useAutoSave } from "@/hooks/use-auto-save";
 import { useEditorStore } from "@/store/editor-store";
@@ -13,13 +19,15 @@ import { EditorTitleInput } from "@/components/editor/editor-title-input";
 import { ErrorBoundary } from "@/components/error-boundary";
 import { BlockMenu } from "@/components/editor/block-menu";
 import { DragHandle } from "@tiptap/extension-drag-handle-react";
-import { GripVertical } from "lucide-react";
+import { GripVertical, Loader2 } from "lucide-react";
 import { useKeymapMatcher } from "@/hooks/use-keymap";
 import { preprocessMarkdown } from "@/lib/editor-preprocess";
 import {
   focusEditorEndOnEmptySurface,
   focusEditorStartOnNextFrame,
 } from "@/components/editor/editor-focus";
+
+const DEFER_DOCUMENT_HYDRATION_MIN_LENGTH = 80_000;
 
 interface EditorViewProps {
   className?: string;
@@ -40,6 +48,8 @@ export function EditorView({ className }: EditorViewProps) {
   const { t } = useTranslation(["editor", "common"]);
   const currentPath = useEditorStore((s) => s.currentPath);
   const body = useEditorStore((s) => s.body);
+  const sourceVersion = useEditorStore((s) => s.sourceVersion);
+  const isOpening = useEditorStore((s) => s.isOpening);
   const pendingJumpHeading = useEditorStore((s) => s.pendingJumpHeading);
   const pendingJumpLine = useEditorStore((s) => s.pendingJumpLine);
   const [searchOpen, setSearchOpen] = useState(false);
@@ -54,6 +64,9 @@ export function EditorView({ className }: EditorViewProps) {
   } | null>(null);
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const scrolledPathRef = useRef<string | null>(null);
+  const appliedSourceVersionRef = useRef<number | null>(null);
+  const [isHydrating, setIsHydrating] = useState(false);
+  const isDocumentLoading = isOpening || isHydrating;
 
   const handleNodeChange = useCallback(({ pos }: { pos: number | null }) => {
     blockPosRef.current = pos;
@@ -91,10 +104,10 @@ export function EditorView({ className }: EditorViewProps) {
           store.requestSave?.();
         },
       }),
-      content: preprocessMarkdown(body),
+      content: "",
       // 파일 열 때 문서 시작으로 커서 → 스크롤 상단 고정
       // 검색 결과 클릭일 땐 별도 useEffect에서 match 위치로 스크롤
-      autofocus: hasPendingSearch ? false : "start",
+      autofocus: false,
       editorProps: {
         attributes: {
           class: cn(
@@ -167,23 +180,21 @@ export function EditorView({ className }: EditorViewProps) {
   useEffect(() => {
     if (!editor) return;
     if (editor.isDestroyed) return;
+    if (isOpening) {
+      setIsHydrating(false);
+      return;
+    }
     const pathChanged = scrolledPathRef.current !== currentPath;
     scrolledPathRef.current = currentPath;
 
-    const storage = editor.storage as unknown as {
-      markdown: { getMarkdown: () => string };
-    };
-    const current = storage.markdown.getMarkdown();
-    if (current !== body) {
-      editor.commands.setContent(preprocessMarkdown(body), {
-        emitUpdate: false,
-      });
-    }
+    let cancelled = false;
+    let frameId = 0;
+    let timerId = 0;
 
-    // vault 검색에서 결과 클릭으로 파일이 열린 경우, 동일 쿼리로 인파일 하이라이트
-    const pending = useEditorStore.getState().pendingSearchQuery;
-    const pendingLine = useEditorStore.getState().pendingJumpLine;
-    if (pending) {
+    const runPendingSearch = () => {
+      const pending = useEditorStore.getState().pendingSearchQuery;
+      const pendingLine = useEditorStore.getState().pendingJumpLine;
+      if (!pending) return false;
       useEditorStore.getState().setPendingSearchQuery(null);
       requestAnimationFrame(() => {
         if (editor.isDestroyed) return;
@@ -193,17 +204,76 @@ export function EditorView({ className }: EditorViewProps) {
         }
         setSearchOpen(true);
       });
+      return true;
+    };
+
+    if (appliedSourceVersionRef.current !== sourceVersion) {
+      appliedSourceVersionRef.current = sourceVersion;
+      const applySource = () => {
+        if (cancelled || editor.isDestroyed) return;
+        editor.commands.setContent(preprocessMarkdown(body), {
+          emitUpdate: false,
+        });
+        setIsHydrating(false);
+        const handledSearch = runPendingSearch();
+        if (!handledSearch && !hasPendingSearch && currentPath) {
+          focusEditorStartOnNextFrame(editor);
+        }
+      };
+
+      if (body.length < DEFER_DOCUMENT_HYDRATION_MIN_LENGTH) {
+        applySource();
+        return () => {
+          cancelled = true;
+        };
+      }
+
+      startTransition(() => setIsHydrating(true));
+      frameId = window.requestAnimationFrame(() => {
+        timerId = window.setTimeout(applySource, 0);
+      });
     } else {
+      const handledSearch = runPendingSearch();
       // 평범하게 파일을 새로 연 경우에만 스크롤 상단으로 고정한다.
       // 입력으로 body store가 갱신될 때마다 실행하면 커서가 맨 위로 튄다.
-      if (pathChanged && scrollRef.current) scrollRef.current.scrollTop = 0;
+      if (!handledSearch && pathChanged && scrollRef.current) {
+        scrollRef.current.scrollTop = 0;
+      }
     }
-  }, [editor, body, currentPath, jumpToSourceLine]);
+
+    return () => {
+      cancelled = true;
+      if (frameId) window.cancelAnimationFrame(frameId);
+      if (timerId) window.clearTimeout(timerId);
+    };
+  }, [
+    editor,
+    body,
+    currentPath,
+    hasPendingSearch,
+    isOpening,
+    jumpToSourceLine,
+    sourceVersion,
+  ]);
+
+  useEffect(() => {
+    if (!editor || !isHydrating) return;
+    const cancel = window.setTimeout(() => {
+      if (editor.isDestroyed) return;
+      const storage = editor.storage as unknown as {
+        markdown: { getMarkdown: () => string };
+      };
+      if (storage.markdown.getMarkdown() === body) {
+        setIsHydrating(false);
+      }
+    }, 3000);
+    return () => window.clearTimeout(cancel);
+  }, [body, editor, isHydrating]);
 
   useAutoSave(editor);
 
   useEffect(() => {
-    if (!editor || !pendingJumpHeading) return;
+    if (!editor || !pendingJumpHeading || isHydrating) return;
     useEditorStore.getState().setPendingJumpHeading(null);
     editor.state.doc.descendants((node, pos) => {
       if (
@@ -218,10 +288,10 @@ export function EditorView({ className }: EditorViewProps) {
         return false;
       }
     });
-  }, [editor, pendingJumpHeading]);
+  }, [editor, isHydrating, pendingJumpHeading]);
 
   useEffect(() => {
-    if (!editor || pendingJumpLine === null) return;
+    if (!editor || pendingJumpLine === null || isHydrating) return;
     if (useEditorStore.getState().pendingSearchQuery !== null) return;
     useEditorStore.getState().setPendingJumpLine(null);
     const jumped = jumpToSourceLine(pendingJumpLine);
@@ -245,7 +315,7 @@ export function EditorView({ className }: EditorViewProps) {
         // DOM 위치 계산 실패 시 무시
       }
     }
-  }, [editor, jumpToSourceLine, pendingJumpLine]);
+  }, [editor, isHydrating, jumpToSourceLine, pendingJumpLine]);
 
   const matchEditor = useKeymapMatcher("editor");
   useEffect(() => {
@@ -286,7 +356,7 @@ export function EditorView({ className }: EditorViewProps) {
         </ErrorBoundary>
         <BubbleMenuBar editor={editor} />
         <TableMenu editor={editor} />
-        {editor && (
+        {editor ? (
           <DragHandle
             editor={editor}
             onNodeChange={handleNodeChange}
@@ -302,7 +372,7 @@ export function EditorView({ className }: EditorViewProps) {
               <GripVertical className="h-4 w-4" />
             </button>
           </DragHandle>
-        )}
+        ) : null}
         {blockMenu && editor && (
           <BlockMenu
             editor={editor}
@@ -311,9 +381,47 @@ export function EditorView({ className }: EditorViewProps) {
             onClose={handleBlockMenuClose}
           />
         )}
-        <div className="munix-editor-content-surface">
-          <EditorContent editor={editor} />
+        <div
+          className={cn(
+            "munix-editor-content-surface",
+            isDocumentLoading && "munix-editor-content-surface-loading",
+          )}
+        >
+          {isDocumentLoading ? (
+            <DocumentLoadingState />
+          ) : null}
+          <EditorContent
+            editor={editor}
+            className={cn(isDocumentLoading && "munix-editor-content-hidden")}
+            aria-hidden={isDocumentLoading}
+          />
         </div>
+      </div>
+    </div>
+  );
+}
+
+function DocumentLoadingState() {
+  const { t } = useTranslation(["editor"]);
+
+  return (
+    <div className="munix-document-loader" role="status" aria-live="polite">
+      <div className="munix-document-loader-header">
+        <Loader2 className="h-4 w-4 animate-spin text-[var(--color-accent)]" />
+        <div>
+          <div className="munix-document-loader-title">
+            {t("editor:documentLoading.title")}
+          </div>
+          <div className="munix-document-loader-description">
+            {t("editor:documentLoading.description")}
+          </div>
+        </div>
+      </div>
+      <div className="munix-document-loader-lines" aria-hidden="true">
+        <span />
+        <span />
+        <span />
+        <span />
       </div>
     </div>
   );

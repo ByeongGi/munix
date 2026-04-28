@@ -4,7 +4,6 @@ import { useVaultStore } from "@/store/vault-store";
 import { useVaultDockStore } from "@/store/vault-dock-store";
 import { getWorkspaceStore } from "@/store/workspace-registry";
 import { ipc } from "@/lib/ipc";
-import { parseDocument } from "@/lib/markdown";
 
 interface FileChangeEvent {
   vaultId: string;
@@ -53,11 +52,10 @@ export function useVaultWatcher(): void {
         } else if (/\.md$/i.test(path)) {
           void (async () => {
             try {
-              const content = await ipc.readFile(path, vaultId);
-              const parsed = parseDocument(content.content);
+              const content = await ipc.readMarkdownFile(path, vaultId);
               const cur = getWorkspaceStore(vaultId).getState().search;
               if (cur.status !== "ready") return;
-              cur.index.updateDoc(path, parsed.body);
+              cur.index.updateDoc(path, content.body);
               if (cur.query) cur.setQuery(cur.query);
             } catch {
               // read 실패는 무시 (파일이 곧 다시 사라질 수도)

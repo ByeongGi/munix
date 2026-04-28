@@ -8,26 +8,17 @@ export interface ParsedDocument {
 /** YAML frontmatter (`---\n…\n---\n`) 와 본문을 분리. gray-matter는 Node `Buffer`
  * 전역에 의존해 브라우저(WebView)에서 throw 하므로 직접 라인 스캔으로 처리. */
 export function parseDocument(raw: string): ParsedDocument {
-  if (!raw.startsWith("---")) {
+  if (!raw.startsWith("---\n") && !raw.startsWith("---\r\n")) {
     return { frontmatter: null, body: raw };
   }
-  const lines = raw.split(/\r?\n/);
-  // 첫 줄이 정확히 `---` 이어야 frontmatter 블록 — `---foo` 같은 문서 구분선과 구별.
-  if (lines[0] !== "---") {
+
+  const match = /^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/.exec(raw);
+  if (!match) {
     return { frontmatter: null, body: raw };
   }
-  let endIdx = -1;
-  for (let i = 1; i < lines.length; i += 1) {
-    if (lines[i] === "---") {
-      endIdx = i;
-      break;
-    }
-  }
-  if (endIdx < 0) {
-    return { frontmatter: null, body: raw };
-  }
-  const yamlStr = lines.slice(1, endIdx).join("\n");
-  const body = lines.slice(endIdx + 1).join("\n");
+
+  const yamlStr = match[1] ?? "";
+  const body = raw.slice(match[0].length);
   try {
     const data = yaml.load(yamlStr);
     const frontmatter =

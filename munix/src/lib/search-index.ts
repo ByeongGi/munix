@@ -1,6 +1,5 @@
 import MiniSearch from "minisearch";
 import { ipc } from "@/lib/ipc";
-import { parseDocument } from "@/lib/markdown";
 import type { FileNode } from "@/types/ipc";
 
 export interface IndexedDoc {
@@ -49,21 +48,16 @@ export class VaultSearchIndex {
   async build(files: FileNode[], vaultId?: string): Promise<void> {
     const paths = flattenFiles(files);
     const docs: IndexedDoc[] = [];
-    for (const path of paths) {
-      try {
-        const content = await ipc.readFile(path, vaultId);
-        const parsed = parseDocument(content.content);
-        const name = path.split("/").pop() ?? path;
-        const doc: IndexedDoc = {
-          id: path,
-          title: name.replace(/\.md$/i, ""),
-          body: parsed.body,
-        };
-        docs.push(doc);
-        this.docs.set(path, doc);
-      } catch {
-        // 개별 파일 읽기 실패는 무시
-      }
+    const contents = await ipc.readMarkdownBatch(paths, vaultId);
+    for (const content of contents) {
+      const name = content.path.split("/").pop() ?? content.path;
+      const doc: IndexedDoc = {
+        id: content.path,
+        title: name.replace(/\.md$/i, ""),
+        body: content.body,
+      };
+      docs.push(doc);
+      this.docs.set(content.path, doc);
     }
     // 기존 인덱스 재초기화
     this.mini.removeAll();

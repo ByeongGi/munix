@@ -1,5 +1,4 @@
 import { ipc } from "@/lib/ipc";
-import { parseDocument } from "@/lib/markdown";
 import type { FileNode } from "@/types/ipc";
 
 // 인라인 태그: #foo, #project/subtag — 단어 경계 직전이 공백/줄 시작/문장부호
@@ -59,22 +58,16 @@ export class TagIndex {
   async build(files: FileNode[], vaultId?: string): Promise<void> {
     this.byTag.clear();
     this.byPath.clear();
-    for (const p of flattenMd(files)) {
-      try {
-        const content = await ipc.readFile(p, vaultId);
-        const parsed = parseDocument(content.content);
-        this.applyPath(p, parsed.body, parsed.frontmatter);
-      } catch {
-        // skip
-      }
+    const contents = await ipc.readMarkdownBatch(flattenMd(files), vaultId);
+    for (const content of contents) {
+      this.applyPath(content.path, content.body, content.frontmatter);
     }
   }
 
   async updateDoc(path: string, vaultId?: string): Promise<void> {
     try {
-      const content = await ipc.readFile(path, vaultId);
-      const parsed = parseDocument(content.content);
-      this.applyPath(path, parsed.body, parsed.frontmatter);
+      const content = await ipc.readMarkdownFile(path, vaultId);
+      this.applyPath(path, content.body, content.frontmatter);
     } catch {
       this.removeDoc(path);
     }

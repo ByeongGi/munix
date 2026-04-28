@@ -1,5 +1,4 @@
 import { ipc } from "@/lib/ipc";
-import { parseDocument } from "@/lib/markdown";
 import type { FileNode } from "@/types/ipc";
 
 const WIKILINK_RE = /\[\[([^\]|\n]+)(?:\|[^\]\n]+)?\]\]/g;
@@ -37,14 +36,9 @@ export class BacklinkIndex {
     this.reverse.clear();
     this.bodies.clear();
     const paths = flattenMd(files);
-    for (const p of paths) {
-      try {
-        const content = await ipc.readFile(p, vaultId);
-        const parsed = parseDocument(content.content);
-        this.applyPath(p, parsed.body);
-      } catch {
-        // skip unreadable
-      }
+    const contents = await ipc.readMarkdownBatch(paths, vaultId);
+    for (const content of contents) {
+      this.applyPath(content.path, content.body);
     }
   }
 
@@ -68,9 +62,8 @@ export class BacklinkIndex {
 
   async updateDoc(path: string, vaultId?: string): Promise<void> {
     try {
-      const content = await ipc.readFile(path, vaultId);
-      const parsed = parseDocument(content.content);
-      this.applyPath(path, parsed.body);
+      const content = await ipc.readMarkdownFile(path, vaultId);
+      this.applyPath(path, content.body);
     } catch {
       this.removeDoc(path);
     }

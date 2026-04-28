@@ -6,7 +6,11 @@ use crate::error::{VaultError, VaultResult};
 use crate::state::AppState;
 use crate::thumbnail;
 use crate::trust;
-use crate::vault::{FileContent, FileNode, WriteResult};
+use crate::vault::{
+    list_all_at_root, read_file_at_root, read_markdown_batch_at_root,
+    read_markdown_file_at_root, FileContent, FileNode, MarkdownBatchItem,
+    MarkdownFileContent, WriteResult,
+};
 use crate::vault_manager::VaultId;
 
 #[tauri::command]
@@ -15,7 +19,8 @@ pub async fn list_files(
     state: State<'_, AppState>,
 ) -> VaultResult<Vec<FileNode>> {
     let id = resolve_id(&state, vault_id)?;
-    state.vault_manager.with_vault(&id, |vault| vault.list_all())
+    let root = state.vault_manager.root_path(&id)?;
+    spawn_blocking_vault(move || list_all_at_root(&root)).await
 }
 
 #[tauri::command]
@@ -25,9 +30,30 @@ pub async fn read_file(
     state: State<'_, AppState>,
 ) -> VaultResult<FileContent> {
     let id = resolve_id(&state, vault_id)?;
-    state
-        .vault_manager
-        .with_vault(&id, |vault| vault.read_file(&rel_path))
+    let root = state.vault_manager.root_path(&id)?;
+    spawn_blocking_vault(move || read_file_at_root(&root, &rel_path)).await
+}
+
+#[tauri::command]
+pub async fn read_markdown_file(
+    rel_path: String,
+    vault_id: Option<VaultId>,
+    state: State<'_, AppState>,
+) -> VaultResult<MarkdownFileContent> {
+    let id = resolve_id(&state, vault_id)?;
+    let root = state.vault_manager.root_path(&id)?;
+    spawn_blocking_vault(move || read_markdown_file_at_root(&root, &rel_path)).await
+}
+
+#[tauri::command]
+pub async fn read_markdown_batch(
+    rel_paths: Vec<String>,
+    vault_id: Option<VaultId>,
+    state: State<'_, AppState>,
+) -> VaultResult<Vec<MarkdownBatchItem>> {
+    let id = resolve_id(&state, vault_id)?;
+    let root = state.vault_manager.root_path(&id)?;
+    spawn_blocking_vault(move || Ok(read_markdown_batch_at_root(&root, rel_paths))).await
 }
 
 #[tauri::command]
@@ -243,6 +269,17 @@ pub async fn save_property_types(
         .with_vault(&id, |vault| vault.write_property_types(&types))?;
     state.vault_manager.record_writes(&id, &[&abs])?;
     Ok(())
+}
+
+async fn spawn_blocking_vault<T>(
+    f: impl FnOnce() -> VaultResult<T> + Send + 'static,
+) -> VaultResult<T>
+where
+    T: Send + 'static,
+{
+    tokio::task::spawn_blocking(f)
+        .await
+        .map_err(|e| VaultError::Io(format!("blocking task failed: {e}")))?
 }
 
 /// `.munix/workspace.json` 읽기 (ADR-031 D2). 파일 없으면 None.
