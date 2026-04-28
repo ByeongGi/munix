@@ -15,6 +15,7 @@ import { createLowlight, common } from "lowlight";
 import { SlashCommand } from "./slash-menu/slash-command";
 import { TableDeleteFix } from "./table-delete-fix";
 import { SearchHighlight } from "./search-highlight";
+import { SelectionVisibility } from "./selection-visibility";
 import { CodeBlockWithLang } from "./code-block-node";
 import { CalloutDecoration } from "./callout-decoration";
 import { MunixHighlight } from "./highlight-ext";
@@ -85,6 +86,7 @@ export function createEditorExtensions(
     }),
     SlashCommand,
     SearchHighlight,
+    SelectionVisibility,
     CalloutDecoration,
     Wikilink,
     WikilinkSuggestion,

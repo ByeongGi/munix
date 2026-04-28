@@ -279,7 +279,8 @@
   white-space: pre-wrap;
 }
 
-.tiptap.prose :where(pre, table, img, video, iframe, .munix-math-block-wrapper) {
+.tiptap.prose
+  :where(pre, table, img, video, iframe, .munix-math-block-wrapper) {
   max-width: 100%;
 }
 
@@ -291,8 +292,51 @@
   height: auto;
 }
 
-.tiptap ::selection {
-  background: var(--color-accent-selection);
+.tiptap [data-munix-horizontal-rule] {
+  position: relative;
+  height: 10px;
+  margin: 1rem 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.tiptap [data-munix-horizontal-rule]::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: 2px;
+  background: color-mix(in srgb, var(--color-border-primary) 72%, transparent);
+  transform: translateY(-50%);
+}
+
+.tiptap [data-munix-horizontal-rule]::selection,
+.tiptap [data-munix-horizontal-rule] *::selection {
+  background: transparent;
+}
+
+.tiptap::selection,
+.tiptap *::selection {
+  background: rgb(94 234 212 / 0.34);
+  color: var(--color-text-primary);
+}
+
+.tiptap .munix-all-selected-text {
+  background-color: rgb(94 234 212 / 0.34);
+  color: var(--color-text-primary);
+}
+
+.tiptap [data-munix-horizontal-rule].munix-selected-node {
+  background: transparent;
+}
+
+.tiptap [data-munix-horizontal-rule].munix-selected-node::after {
+  height: 3px;
+  background: rgb(94 234 212 / 0.48);
 }
 
 /* Light 모드: system 선호를 따를 때 OR 사용자가 data-theme="light" 강제했을 때 */
@@ -608,11 +652,13 @@ select {
     scrollbar-color: rgb(10 10 10 / 0.18) transparent;
   }
 
-  :root:not([data-theme="dark"]) .munix-sidebar-scroll::-webkit-scrollbar-thumb {
+  :root:not([data-theme="dark"])
+    .munix-sidebar-scroll::-webkit-scrollbar-thumb {
     background-color: rgb(10 10 10 / 0.14);
   }
 
-  :root:not([data-theme="dark"]) .munix-sidebar-scroll::-webkit-scrollbar-thumb:hover {
+  :root:not([data-theme="dark"])
+    .munix-sidebar-scroll::-webkit-scrollbar-thumb:hover {
     background-color: rgb(10 10 10 / 0.24);
   }
 }
@@ -718,10 +764,25 @@ pre {
   border-radius: 4px;
 }
 
+.tiptap [data-munix-horizontal-rule].ProseMirror-selectednode {
+  outline: none;
+  background: transparent;
+}
+
+.tiptap [data-munix-horizontal-rule].ProseMirror-selectednode::after {
+  height: 3px;
+  background: rgb(94 234 212 / 0.58);
+}
+
 .tiptap :where(em, i) {
   font-family:
-    "Helvetica Neue", Arial, "Pretendard Variable", "Pretendard", system-ui,
-    -apple-system, sans-serif;
+    "Helvetica Neue",
+    Arial,
+    "Pretendard Variable",
+    "Pretendard",
+    system-ui,
+    -apple-system,
+    sans-serif;
   font-style: italic;
   font-synthesis: style;
 }
@@ -840,10 +901,18 @@ pre {
   border-color: var(--color-accent);
   background: var(--color-accent);
 }
-.tiptap ul[data-type="taskList"] li > label input[type="checkbox"]:checked::after {
+.tiptap
+  ul[data-type="taskList"]
+  li
+  > label
+  input[type="checkbox"]:checked::after {
   transform: rotate(45deg) scale(1);
 }
-.tiptap ul[data-type="taskList"] li > label input[type="checkbox"]:focus-visible {
+.tiptap
+  ul[data-type="taskList"]
+  li
+  > label
+  input[type="checkbox"]:focus-visible {
   outline: none;
   box-shadow: var(--shadow-focus);
 }

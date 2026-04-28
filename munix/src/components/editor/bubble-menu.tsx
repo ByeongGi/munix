@@ -1,5 +1,6 @@
 import { BubbleMenu as TiptapBubbleMenu } from "@tiptap/react/menus";
 import type { Editor } from "@tiptap/react";
+import { NodeSelection } from "@tiptap/pm/state";
 import {
   useCallback,
   useEffect,
@@ -136,6 +137,14 @@ export function BubbleMenuBar({ editor }: BubbleMenuBarProps) {
       editor={editor}
       options={{ placement: "top" }}
       shouldShow={({ editor: e, state }) => {
+        const { selection } = state;
+        if (
+          selection instanceof NodeSelection &&
+          selection.node.type.name === "horizontalRule"
+        ) {
+          return false;
+        }
+
         const { from, to } = state.selection;
         if (from === to) return false;
         // 코드 블럭 내부에서는 숨김
