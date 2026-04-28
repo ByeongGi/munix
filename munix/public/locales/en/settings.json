@@ -111,6 +111,7 @@
       "editor.italic": { "description": "Italic" },
       "editor.strikethrough": { "description": "Strikethrough" },
       "editor.inlineCode": { "description": "Inline code" },
+      "editor.toggleTaskChecked": { "description": "Toggle to-do checked state" },
       "editor.undo": { "description": "Undo" },
       "editor.redo": { "description": "Redo" },
       "editor.moveBlockUp": { "description": "Move current block up" },

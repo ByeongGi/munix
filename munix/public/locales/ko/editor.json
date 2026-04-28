@@ -44,10 +44,18 @@
   "bubbleMenu": {
     "bold": "굵게 (Mod+B)",
     "italic": "기울임 (Mod+I)",
+    "underline": "밑줄",
     "strike": "취소선 (Mod+Shift+X)",
     "code": "인라인 코드 (Mod+E)",
     "highlight": "하이라이트 (==text==)",
-    "link": "링크 (Mod+K)"
+    "link": "링크 (Mod+K)",
+    "linkPlaceholder": "URL 붙여넣기",
+    "linkTextPlaceholder": "보여줄 텍스트",
+    "linkUrlPlaceholder": "연결할 URL",
+    "linkApply": "링크 적용",
+    "linkRemove": "링크 제거",
+    "linkClear": "비우기",
+    "linkClose": "닫기"
   },
   "tableMenu": {
     "addRowBefore": "위에 행 추가",

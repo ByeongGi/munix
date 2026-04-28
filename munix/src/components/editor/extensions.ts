@@ -3,6 +3,7 @@ import Placeholder from "@tiptap/extension-placeholder";
 import TaskList from "@tiptap/extension-task-list";
 import TaskItem from "@tiptap/extension-task-item";
 import Link from "@tiptap/extension-link";
+import Underline from "@tiptap/extension-underline";
 import { VaultImage } from "./image-node";
 import { ImagePaste } from "./image-paste";
 import { Table } from "@tiptap/extension-table";
@@ -25,6 +26,7 @@ import { HorizontalRuleNode } from "./horizontal-rule-node";
 import { HorizontalRuleEnter } from "./horizontal-rule-enter";
 import { BlockShortcuts } from "./block-shortcuts";
 import { IndentShortcuts } from "./indent-shortcuts";
+import { TaskShortcuts } from "./task-shortcuts";
 import { HeadingFold } from "./heading-fold";
 import { InlineMath, BlockMath, MathInputRules } from "./math";
 import { FootnoteRef, FootnoteBlock } from "./footnote";
@@ -63,6 +65,7 @@ export function createEditorExtensions(
       autolink: true,
       protocols: ["http", "https", "mailto"],
     }),
+    Underline,
     VaultImage,
     ImagePaste,
     Table.configure({ resizable: true, allowTableNodeSelection: true }),
@@ -90,6 +93,7 @@ export function createEditorExtensions(
     HorizontalRuleEnter,
     BlockShortcuts,
     IndentShortcuts,
+    TaskShortcuts,
     HeadingFold,
     InlineMath,
     BlockMath,

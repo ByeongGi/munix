@@ -174,6 +174,13 @@ export const KEYMAP_REGISTRY: KeymapEntry[] = [
     editable: false,
   },
   {
+    id: "editor.toggleTaskChecked",
+    defaultKey: "mod+enter",
+    scope: "editor",
+    group: "editor",
+    editable: false,
+  },
+  {
     id: "editor.undo",
     defaultKey: "mod+z",
     scope: "editor",

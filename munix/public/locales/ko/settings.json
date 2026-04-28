@@ -111,6 +111,7 @@
       "editor.italic": { "description": "기울임" },
       "editor.strikethrough": { "description": "취소선" },
       "editor.inlineCode": { "description": "인라인 코드" },
+      "editor.toggleTaskChecked": { "description": "할 일 체크 상태 토글" },
       "editor.undo": { "description": "되돌리기" },
       "editor.redo": { "description": "다시 실행" },
       "editor.moveBlockUp": { "description": "현재 블록 위로 이동" },

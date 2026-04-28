@@ -718,6 +718,24 @@ pre {
   border-radius: 4px;
 }
 
+.tiptap :where(em, i) {
+  font-family:
+    "Helvetica Neue", Arial, "Pretendard Variable", "Pretendard", system-ui,
+    -apple-system, sans-serif;
+  font-style: italic;
+  font-synthesis: style;
+}
+
+.tiptap :where(s, del, strike) {
+  text-decoration: none;
+  background-image: linear-gradient(currentColor, currentColor);
+  background-position: 0 54%;
+  background-repeat: repeat-x;
+  background-size: 100% 0.08em;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+}
+
 /* 표 기본 스타일 */
 .tiptap table {
   border-collapse: collapse;
@@ -782,7 +800,9 @@ pre {
   justify-content: center;
   flex-shrink: 0;
   width: 1.35rem;
-  margin-top: 0.2rem;
+  height: calc(var(--editor-font-size) * var(--leading-editor));
+  margin: 0;
+  line-height: inherit;
   user-select: none;
 }
 .tiptap ul[data-type="taskList"] li > label input[type="checkbox"] {
@@ -831,9 +851,27 @@ pre {
   flex: 1;
   min-width: 0;
 }
+.tiptap ul[data-type="taskList"] li > div > p {
+  margin-block: 0;
+}
+.tiptap ul[data-type="taskList"] li > div > :first-child {
+  margin-top: 0;
+}
+.tiptap ul[data-type="taskList"] li > div > :last-child {
+  margin-bottom: 0;
+}
 .tiptap ul[data-type="taskList"] li[data-checked="true"] > div {
-  text-decoration: line-through;
   opacity: 0.55;
+}
+.tiptap ul[data-type="taskList"] li[data-checked="true"] > div > p {
+  display: inline;
+  text-decoration: none;
+  background-image: linear-gradient(currentColor, currentColor);
+  background-position: 0 54%;
+  background-repeat: repeat-x;
+  background-size: 100% 0.08em;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
 }
 
 /* ────────────────────────────────

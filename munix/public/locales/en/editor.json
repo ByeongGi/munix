@@ -44,10 +44,18 @@
   "bubbleMenu": {
     "bold": "Bold (Mod+B)",
     "italic": "Italic (Mod+I)",
+    "underline": "Underline",
     "strike": "Strikethrough (Mod+Shift+X)",
     "code": "Inline code (Mod+E)",
     "highlight": "Highlight (==text==)",
-    "link": "Link (Mod+K)"
+    "link": "Link (Mod+K)",
+    "linkPlaceholder": "Paste URL",
+    "linkTextPlaceholder": "Display text",
+    "linkUrlPlaceholder": "Destination URL",
+    "linkApply": "Apply link",
+    "linkRemove": "Remove link",
+    "linkClear": "Clear",
+    "linkClose": "Close"
   },
   "tableMenu": {
     "addRowBefore": "Insert row above",
