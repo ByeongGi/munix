@@ -82,6 +82,7 @@ export function AppWorkspaceView({
 }: AppWorkspaceViewProps) {
   const tabs = useTabStore((s) => s.tabs);
   const activeId = useTabStore((s) => s.activeId);
+  const closeTab = useTabStore((s) => s.closeTab);
   const openTerminalTab = useTabStore((s) => s.openTerminalTab);
   const activeTab = tabs.find((tab) => tab.id === activeId);
 
@@ -154,6 +155,7 @@ export function AppWorkspaceView({
                 <TerminalView
                   key={activeTab.id}
                   terminalTabId={activeTab.id}
+                  onExited={() => closeTab(activeTab.id)}
                   className="min-h-0 min-w-0 flex-1"
                 />
               ) : currentPath ? (

@@ -583,6 +583,34 @@ select {
   outline-offset: 2px;
 }
 
+[data-munix-terminal-viewport="true"] {
+  caret-color: transparent !important;
+  outline: none !important;
+}
+
+[data-munix-terminal-viewport="true"]:focus,
+[data-munix-terminal-viewport="true"]:focus-visible {
+  outline: none !important;
+}
+
+[data-munix-terminal-viewport="true"] > br {
+  display: none !important;
+}
+
+[data-munix-terminal-viewport="true"] textarea {
+  background: transparent !important;
+  box-shadow: none !important;
+  caret-color: transparent !important;
+  color: transparent !important;
+  height: 0 !important;
+  left: -10000px !important;
+  outline: none !important;
+  pointer-events: none !important;
+  resize: none !important;
+  top: -10000px !important;
+  width: 0 !important;
+}
+
 ::selection {
   background: var(--color-accent-selection);
 }

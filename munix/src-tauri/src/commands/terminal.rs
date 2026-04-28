@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::io::{Read, Write};
 use std::path::PathBuf;
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex};
 use std::thread;
 
 use portable_pty::{native_pty_system, Child, CommandBuilder, MasterPty, PtySize};
@@ -44,7 +44,7 @@ struct TerminalSession {
 
 #[derive(Default)]
 pub struct TerminalManager {
-    sessions: Mutex<HashMap<String, TerminalSession>>,
+    sessions: Arc<Mutex<HashMap<String, TerminalSession>>>,
 }
 
 fn default_shell() -> String {
@@ -70,7 +70,12 @@ fn emit_terminal_data(app: &AppHandle, id: &str, bytes: &[u8]) {
     );
 }
 
-fn spawn_reader(app: AppHandle, id: String, mut reader: Box<dyn Read + Send>) {
+fn spawn_reader(
+    app: AppHandle,
+    id: String,
+    mut reader: Box<dyn Read + Send>,
+    sessions: Arc<Mutex<HashMap<String, TerminalSession>>>,
+) {
     thread::spawn(move || {
         let mut buf = [0_u8; 8192];
         loop {
@@ -79,6 +84,10 @@ fn spawn_reader(app: AppHandle, id: String, mut reader: Box<dyn Read + Send>) {
                 Ok(n) => emit_terminal_data(&app, &id, &buf[..n]),
                 Err(_) => break,
             }
+        }
+
+        if let Ok(mut sessions) = sessions.lock() {
+            sessions.remove(&id);
         }
 
         let _ = app.emit(TERMINAL_EXIT_EVENT, TerminalExitPayload { id });
@@ -125,7 +134,12 @@ pub async fn terminal_spawn(
         .map_err(|e| VaultError::Io(e.to_string()))?;
 
     let terminal_id = Uuid::new_v4().to_string();
-    spawn_reader(app, terminal_id.clone(), reader);
+    spawn_reader(
+        app,
+        terminal_id.clone(),
+        reader,
+        state.terminal_manager.sessions.clone(),
+    );
 
     let mut sessions = state
         .terminal_manager

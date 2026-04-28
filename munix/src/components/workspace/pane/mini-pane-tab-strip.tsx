@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Pin, Plus, X } from "lucide-react";
+import { Pin, Plus, TerminalIcon, X } from "lucide-react";
 
 import { cn } from "@/lib/cn";
 import {
@@ -182,6 +182,9 @@ export function MiniPaneTabStrip({
             <span className="min-w-0 flex-1 truncate">
               {tab.pinned ? (
                 <Pin className="mr-1 inline h-3 w-3 text-[var(--color-accent)]" />
+              ) : null}
+              {isTerminalTab(tab) ? (
+                <TerminalIcon className="mr-1 inline h-3 w-3 align-[-2px] text-[var(--color-text-tertiary)]" />
               ) : null}
               {isTerminalTab(tab) ? tab.title : displayTitle}
             </span>

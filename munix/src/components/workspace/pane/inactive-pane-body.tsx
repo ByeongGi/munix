@@ -1,4 +1,7 @@
+import { useStore } from "zustand";
+
 import { TerminalView } from "@/components/terminal/terminal-view";
+import { useActiveWorkspaceStore } from "@/lib/active-vault";
 import { isTerminalTab } from "@/store/slices/tab-slice";
 import type { PaneNode } from "@/store/workspace-types";
 import { EmptyPanePlaceholder } from "./empty-pane-placeholder";
@@ -17,6 +20,8 @@ export function InactivePaneBody({
   onNewFile,
   onQuickOpen,
 }: InactivePaneBodyProps) {
+  const ws = useActiveWorkspaceStore();
+  const closePaneTab = useStore(ws, (s) => s.closePaneTab);
   const activeTab = pane.tabs.find((tab) => tab.id === pane.activeTabId);
 
   if (isTerminalTab(activeTab)) {
@@ -24,6 +29,7 @@ export function InactivePaneBody({
       <TerminalView
         key={activeTab.id}
         terminalTabId={activeTab.id}
+        onExited={() => closePaneTab(pane.id, activeTab.id)}
         className="min-h-0 min-w-0 flex-1"
       />
     );

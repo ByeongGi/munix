@@ -1,273 +1,387 @@
 # Terminal 상세 설계 — Munix
 
-> 상태: **초안 (proposed)**. [ADR-023](../decisions.md#adr-023-터미널-플러그인-1호) 채택 후 확정.
-> 플러그인 시스템 위 1호 reference 플러그인 (코어 기능 X).
+> 상태: **부분 구현 / 확장 스펙 정리 중**.
+> 현재 구현은 코어 기능으로 `ghostty-web` 렌더러와 Rust `portable-pty`를 사용한다.
+> 터미널은 별도 하단 토글 패널이 아니라 workspace pane 안의 **tab kind** 중 하나로 동작한다.
 
 ---
 
 ## 1. 목적
 
-- vault 안에서 git/build/grep 등 셸 명령 실행 — 노트 ↔ 코드 워크플로우 결합
-- 플러그인 시스템 ([plugin-spec.md](./plugin-spec.md))의 reference 구현 — capability 모델 검증
-- 옵시디언 Terminal 플러그인 사용자 멘탈 모델과 일치
+- vault 안에서 git/build/grep/test 같은 셸 작업을 노트 작성 흐름과 같은 workspace에서 처리한다.
+- 문서 탭, 이미지 탭과 같은 방식으로 터미널을 열고 닫고 이동하고 split 할 수 있게 한다.
+- Obsidian/VS Code/cmux에 가까운 “파일 작업 + 터미널” 멘탈 모델을 제공한다.
+- 추후 플러그인 시스템이 들어오더라도 현재 코어 PTY 모델을 capability 기반 host API로 옮길 수 있게 경계를 유지한다.
 
-## 2. 요구사항
+## 2. 현재 구현 요약
 
-### 2.1 기능 요구사항
+| 영역 | 현재 선택 |
+|---|---|
+| Renderer | `ghostty-web` |
+| PTY backend | Rust `portable-pty` |
+| IPC | Tauri command + event |
+| Workspace 통합 | `Tab.kind = "terminal"` |
+| 기본 cwd | active vault root |
+| 세션 생명주기 | terminal tab id 기준 registry 관리 |
+| Split 지원 | 기존 workspace split/pane 시스템 재사용 |
 
-| ID | 요구사항 | 우선순위 |
-|---|---|---|
-| TRM-01 | 사이드/하단 패널에 터미널 띄우기 | P0 |
-| TRM-02 | PTY spawn (vault 디렉터리 cwd) | P0 |
-| TRM-03 | 키 입력 → PTY → 출력 표시 (xterm.js) | P0 |
-| TRM-04 | 리사이즈 → PTY size 동기 | P0 |
-| TRM-05 | 다중 터미널 탭 | P1 |
-| TRM-06 | 셸 선택 (zsh/bash/fish/pwsh) | P1 |
-| TRM-07 | 출력에서 파일 경로 클릭 → 노트로 열기 | P2 |
-| TRM-08 | 색상 테마 Munix 토큰 연동 | P1 |
-| TRM-09 | Windows ConPTY 호환 | P0 |
-| TRM-10 | macOS / Linux PTY 호환 | P0 |
-| TRM-11 | 검색 (xterm-addon-search) | P2 |
-| TRM-12 | 분할 (split) | P2 |
+현재 터미널은 `workspace-header`의 터미널 버튼으로 새 terminal tab을 만들고, active tab이 terminal이면 `TerminalView`를 렌더한다. split pane의 비활성 pane도 active tab이 terminal이면 같은 `TerminalView` 렌더 경로를 사용한다.
 
-### 2.2 비기능 요구사항
+## 3. 요구사항
 
-- 입력 → 출력 지연 < 16ms
-- 터미널 1개당 메모리 < 50MB
-- 100k 라인 스크롤백 부드러움 (xterm-addon-canvas 또는 webgl)
+### 3.1 기능 요구사항
 
----
+| ID | 요구사항 | 우선순위 | 상태 |
+|---|---|---|---|
+| TRM-01 | 터미널은 현재 active vault root를 cwd로 열려야 한다 | P0 | 구현 |
+| TRM-02 | 터미널은 workspace tab의 한 종류여야 한다 | P0 | 구현 |
+| TRM-03 | 여러 터미널 탭을 열 수 있어야 한다 | P0 | 부분 구현 |
+| TRM-04 | workspace split 기능으로 터미널 탭을 분할 배치할 수 있어야 한다 | P0 | 구현 경로 연결 |
+| TRM-05 | 키 입력, 제어키, 조합키가 PTY로 전달되어 shell completion이 동작해야 한다 | P0 | 검증 필요 |
+| TRM-06 | 터미널 폰트는 JetBrainsMono Nerd Font 계열을 우선 사용해 glyph가 깨지지 않아야 한다 | P0 | 필요 |
+| TRM-07 | `Ctrl` + `+`, `Ctrl` + `-`로 터미널 폰트 크기를 조절할 수 있어야 한다 | P0 | 필요 |
+| TRM-08 | container resize 시 terminal cols/rows와 PTY size가 동기화되어야 한다 | P0 | 구현 |
+| TRM-09 | 터미널 탭을 닫으면 연결된 PTY session도 종료해야 한다 | P0 | 구현 |
+| TRM-10 | 터미널 탭 전환 시 session이 즉시 죽지 않아야 한다 | P0 | 구현 |
+| TRM-11 | shell exit 시 탭은 유지하고 종료 상태를 표시해야 한다 | P1 | 구현 |
+| TRM-12 | 셸 프로필(zsh/bash/fish/pwsh)을 선택할 수 있어야 한다 | P1 | 미구현 |
+| TRM-13 | 터미널 탭 이름을 변경할 수 있어야 한다 | P1 | 미구현 |
+| TRM-14 | 터미널 scrollback 검색을 지원해야 한다 | P2 | 미구현 |
+| TRM-15 | URL 또는 파일 경로 클릭 액션을 지원해야 한다 | P2 | 미구현 |
+| TRM-16 | command finished / long running job 알림을 지원해야 한다 | P2 | 미구현 |
 
-## 3. 데이터 모델
+### 3.2 비기능 요구사항
 
-### 3.1 Plugin manifest
+- 입력 지연은 체감상 즉시여야 한다. 목표: keydown → PTY write < 16ms.
+- 터미널 1개당 기본 scrollback은 10,000 lines 이상을 지원한다.
+- 거대 출력 중에도 editor/workspace UI가 멈추지 않아야 한다.
+- active vault 외부 경로를 cwd로 열 수 없어야 한다.
+- 터미널 UI는 Munix dark token과 어긋나지 않아야 한다.
 
-```json
-{
-  "name": "terminal",
-  "version": "0.1.0",
-  "displayName": "Terminal",
-  "munixApiVersion": "1.0",
-  "capabilities": {
-    "required": ["pty", "fs:vault", "ui:panel"],
-    "optional": ["net"]
-  },
-  "ui": {
-    "panel": {
-      "position": "bottom",
-      "title": "Terminal",
-      "icon": "terminal"
-    }
-  },
-  "commands": [
-    { "id": "terminal.open", "title": "Terminal: Open New", "shortcut": "Ctrl+`" },
-    { "id": "terminal.split", "title": "Terminal: Split" }
-  ]
-}
+## 4. UX 정책
+
+### 4.1 열기 위치
+
+- 기본 터미널 cwd는 현재 active vault root다.
+- 현재 열린 문서가 하위 폴더에 있어도 v1 기본값은 vault root다.
+- 추후 P1 옵션으로 “현재 파일 폴더에서 열기”를 제공할 수 있다.
+- vault가 없으면 터미널 열기 버튼은 no-op 또는 disabled 처리한다.
+
+### 4.2 탭 동작
+
+- 터미널은 빈 문서 탭이 아니라 `kind: "terminal"`인 별도 탭이다.
+- 터미널 탭의 `path`는 빈 문자열이며 파일 rename/delete 동기화 대상에서 제외한다.
+- 터미널 탭은 dirty 상태를 갖지 않는다.
+- 터미널 탭은 기존 tab DnD, close, close others, close after, pin, split 동작을 재사용한다.
+- 터미널 탭을 split하면 새 pane에서 별도 terminal tab session으로 열린다.
+
+### 4.3 키 입력과 자동 완성
+
+터미널 내부 focus 상태에서는 다음 입력이 앱 전역 단축키보다 우선한다.
+
+| 입력 | 기대 동작 |
+|---|---|
+| 문자 입력 | PTY로 그대로 전달 |
+| `Tab` | shell completion으로 전달 |
+| `Ctrl` + 문자 | PTY 제어키로 전달 |
+| `Option/Alt` 조합 | shell/meta key로 전달 |
+| 방향키/Home/End/PageUp/PageDown | terminal escape sequence로 전달 |
+| IME 입력 | 조합 완료 후 shell 입력으로 전달 |
+| `Cmd` 조합 | macOS 앱 단축키와 충돌하는 항목만 앱에서 처리 |
+
+주의할 점:
+
+- `Tab`이 focus 이동으로 빠지면 자동 완성이 깨진다.
+- `Ctrl+C`, `Ctrl+D`, `Ctrl+Z`, `Ctrl+R`, `Ctrl+L`, `Ctrl+A`, `Ctrl+E`는 반드시 shell로 전달되어야 한다.
+- terminal focus 중에는 editor keymap, command palette keymap, workspace split keymap이 개입하지 않아야 한다.
+- 단, 앱 레벨의 `Cmd+W`, `Cmd+T`, `Cmd+P` 같은 macOS 기본 조합은 유지할 수 있다.
+
+### 4.4 폰트
+
+기본 font-family 우선순위:
+
+```css
+"JetBrainsMono Nerd Font Mono", "JetBrainsMono Nerd Font",
+"JetBrains Mono", "SFMono-Regular", Consolas, "Liberation Mono", monospace
 ```
 
-### 3.2 PTY 세션 (Rust 측)
+요구사항:
 
-```rust
-struct PtySession {
-  id: SessionId,                   // UUID
-  shell: String,                    // /bin/zsh, /bin/bash, ...
-  cwd: PathBuf,                     // vault root 또는 사용자 지정
-  env: HashMap<String, String>,
-  master: Box<dyn MasterPty>,       // portable-pty
-  child: Box<dyn Child>,
-  reader_handle: JoinHandle<()>,    // 출력 → 플러그인으로 stream
-}
-```
+- Nerd Font glyph가 필요한 prompt(starship, powerlevel10k 등)가 깨지지 않아야 한다.
+- 번들 폰트가 있다면 CSS `@font-face`로 등록하고, terminal renderer 옵션에도 같은 family를 지정한다.
+- 사용자가 시스템에 Nerd Font를 설치하지 않아도 기본 아이콘 glyph가 가능한 한 보장되어야 한다.
+- fallback 때문에 셀 폭이 흔들리면 안 된다. terminal font는 mono 계열만 사용한다.
 
-### 3.3 플러그인 측 (WASM)
+### 4.5 폰트 크기 조절
 
-```rust
-struct TerminalState {
-  sessions: HashMap<SessionId, SessionInfo>,
-  active: Option<SessionId>,
-}
+터미널 focus 상태에서:
 
-struct SessionInfo {
-  id: SessionId,
-  title: String,
-  cwd: String,
-  exited: Option<i32>,
-}
-```
+| 단축키 | 동작 |
+|---|---|
+| `Ctrl` + `+` | terminal font size +1 |
+| `Ctrl` + `=` | terminal font size +1 |
+| `Ctrl` + `-` | terminal font size -1 |
+| `Ctrl` + `0` | terminal font size reset |
 
----
+정책:
 
-## 4. API/인터페이스
+- 기본 크기: 13px.
+- 최소: 10px.
+- 최대: 24px.
+- 변경 후 즉시 fit/resize를 다시 수행하고 PTY `cols/rows`를 동기화한다.
+- P1에서 사용자 설정으로 저장한다. v1에서는 session-local 또는 app-local 중 하나로 시작해도 된다.
+- macOS에서도 사용자 요청 기준으로 `Ctrl` 조합을 우선 지원한다. `Cmd` 조합은 앱 확대/축소와 충돌 가능성이 있어 별도 결정 전까지 제외한다.
 
-### 4.1 Host function (Munix 코어 → 플러그인이 호출)
+## 5. 데이터 모델
 
-```rust
-host_fn!(pty_spawn(shell: String, cwd: String, env: Vec<(String, String)>) -> SessionId);
-host_fn!(pty_write(id: SessionId, data: Vec<u8>));
-host_fn!(pty_resize(id: SessionId, cols: u16, rows: u16));
-host_fn!(pty_kill(id: SessionId));
-host_fn!(pty_list() -> Vec<SessionId>);
-```
-
-### 4.2 Plugin event (Munix → 플러그인)
-
-```rust
-#[plugin_fn]
-pub fn on_pty_output(id: SessionId, data: Vec<u8>) -> FnResult<()>;
-
-#[plugin_fn]
-pub fn on_pty_exit(id: SessionId, code: i32) -> FnResult<()>;
-```
-
-### 4.3 Plugin → UI (postMessage)
+### 5.1 Tab
 
 ```ts
-// iframe → host
-type ToHost =
-  | { type: 'spawn'; shell: string; cwd: string }
-  | { type: 'input'; sessionId: string; data: Uint8Array }
-  | { type: 'resize'; sessionId: string; cols: number; rows: number };
+type TabKind = "document" | "terminal";
 
-// host → iframe
-type FromHost =
-  | { type: 'output'; sessionId: string; data: Uint8Array }
-  | { type: 'exit'; sessionId: string; code: number };
+interface Tab {
+  id: string;
+  kind?: TabKind; // 기존 workspace 저장 데이터 호환을 위해 document는 optional
+  path: string;
+  title: string;
+  titleDraft?: string;
+  pinned?: boolean;
+}
 ```
 
-### 4.4 Renderer
+terminal tab:
 
-- **xterm.js 5.x**
-- `xterm-addon-fit` (리사이즈 자동 계산)
-- `xterm-addon-web-links` (URL 클릭)
-- `xterm-addon-search` (검색 P2)
-- `xterm-addon-canvas` 또는 `xterm-addon-webgl` (성능)
-- Munix 토큰 → xterm 테마 매핑:
-  ```ts
-  const xtermTheme = {
-    background: 'var(--color-bg-primary)',
-    foreground: 'var(--color-fg-primary)',
-    cursor: 'var(--color-accent)',
-    // ANSI 16색은 별도 토큰 (--color-ansi-*)
-  };
-  ```
+```ts
+const terminalTab: Tab = {
+  id: "tab-...",
+  kind: "terminal",
+  path: "",
+  title: "Terminal",
+};
+```
 
----
+### 5.2 Renderer session registry
 
-## 5. UI/UX 플로우
+```ts
+const terminalSessionsByTabId = new Map<string, string>();
 
-### 5.1 첫 활성화
+function getTerminalSessionId(tabId: string): string | null;
+function setTerminalSessionId(tabId: string, sessionId: string): void;
+function closeTerminalSessionForTab(tabId: string): void;
+function closeTerminalSessionsForTabs(tabs: { id: string; kind?: string }[]): void;
+```
 
-1. 플러그인 설치 → capability 승인 모달:
-   ```
-   Terminal v0.1.0
-   필요한 권한:
-   🔴 pty — 셸/PTY를 spawn합니다
-   🟡 fs:vault — vault 디렉터리를 cwd로 사용
-   🟢 ui:panel — 하단 패널 등록
-   ```
-2. 사용자 승인 → 패널 등록 + `Ctrl+`` 단축키 등록
+역할:
 
-### 5.2 새 터미널 열기
+- React component mount/unmount와 PTY session 생명주기를 분리한다.
+- terminal tab을 닫는 액션에서만 PTY를 kill한다.
+- tab switch로 `TerminalView`가 unmount되어도 session id는 유지한다.
 
-- Command palette: "Terminal: Open New"
-- 단축키: `` Ctrl+` `` (커스터마이징 가능)
-- 기본 셸: `$SHELL` 환경 변수, 없으면 `/bin/sh` (Win: `pwsh.exe` → `cmd.exe` 폴백)
-- cwd: 현재 vault root
+### 5.3 Rust PTY session
 
-### 5.3 패널 동작
+```rust
+struct TerminalSession {
+  child: Box<dyn portable_pty::Child + Send>,
+  writer: Box<dyn Write + Send>,
+  pty: Box<dyn portable_pty::MasterPty + Send>,
+}
 
-- **탭**: 다중 터미널, 우클릭 → 이름 변경/닫기
-- **분할** (P2): 가로/세로 분할
-- **검색** (P2): `Ctrl+F`로 스크롤백 검색
-- **닫기**: 셸 종료 시 "exited (code N)" 표시 후 탭 자동 닫기 옵션
+struct TerminalManager {
+  sessions: Mutex<HashMap<String, TerminalSession>>,
+}
+```
 
-### 5.4 vault 이동 시
+### 5.4 IPC payload
 
-- 활성 터미널 있을 때 vault 전환 → prompt: "터미널을 종료할까요? 유지할까요?"
-- 유지 선택 시 cwd는 그대로, 패널은 새 vault로 따라감
+```ts
+interface TerminalSpawnResult {
+  id: string;
+}
 
----
+interface TerminalDataPayload {
+  id: string;
+  data: string;
+}
 
-## 6. 에러 처리
+interface TerminalExitPayload {
+  id: string;
+}
+```
+
+## 6. API/인터페이스
+
+### 6.1 Tauri commands
+
+```rust
+#[tauri::command]
+async fn terminal_spawn(cols: u16, rows: u16, vault_id: Option<String>) -> Result<TerminalSpawnResult, String>;
+
+#[tauri::command]
+async fn terminal_write(id: String, data: String) -> Result<(), String>;
+
+#[tauri::command]
+async fn terminal_resize(id: String, cols: u16, rows: u16) -> Result<(), String>;
+
+#[tauri::command]
+async fn terminal_kill(id: String) -> Result<(), String>;
+```
+
+### 6.2 Tauri events
+
+| Event | Payload | 설명 |
+|---|---|---|
+| `terminal:data` | `{ id, data }` | PTY stdout/stderr stream |
+| `terminal:exit` | `{ id }` | child process 종료 |
+
+### 6.3 Store actions
+
+```ts
+interface TabSlice {
+  openTerminalTab: () => void;
+}
+```
+
+동작:
+
+1. `makeTerminalTab()`으로 terminal tab 생성
+2. active pane이 있으면 pane tabs에 반영
+3. active tab을 terminal tab으로 변경
+4. editor current file은 close 처리
+
+## 7. UI 구성
+
+### 7.1 Header action
+
+- Workspace header에 terminal icon button을 둔다.
+- 클릭하면 toggle이 아니라 새 terminal tab을 연다.
+- active terminal tab 여부에 따라 버튼 active state를 표시하지 않는다. “새 terminal” 명령으로 해석한다.
+
+### 7.2 TerminalView
+
+필수 구성:
+
+- 상단 toolbar: terminal icon + title
+- terminal viewport: `ghostty-web` mount 영역
+- error state: spawn/init 실패 표시
+- exit state: session exit 메시지 출력
+
+Renderer 옵션:
+
+```ts
+new Terminal({
+  cursorBlink: true,
+  fontFamily: TERMINAL_FONT_FAMILY,
+  fontSize: 13,
+  scrollback: 10000,
+  theme: terminalTheme,
+});
+```
+
+### 7.3 Split pane
+
+- active pane content는 `activeTab.kind` 기준으로 editor/image/terminal을 선택한다.
+- inactive pane content도 같은 기준으로 terminal을 렌더할 수 있어야 한다.
+- split tab clone 시 terminal tab은 새 id를 가져야 한다. 새 id는 새 PTY session으로 이어진다.
+
+## 8. 에러 처리
 
 | 케이스 | 처리 |
 |---|---|
-| PTY spawn 실패 (셸 경로 잘못) | 알림 + 셸 경로 재선택 prompt |
-| 자식 프로세스 죽음 | 패널에 "exited (code N)" 표시, 탭 유지 (재시작 버튼) |
-| `pty` capability 거부 | 셸 실행 차단 + 사유 표시 ("이 vault는 PTY를 허용하지 않습니다") |
-| Windows ConPTY 미지원 (Win10 1809 미만) | 알림 + 플러그인 비활성화 |
-| WSL 경로 혼동 | 사용자가 `wsl.exe` 셸 직접 설정 |
+| vault 없음 | 터미널 버튼 no-op 또는 disabled |
+| PTY spawn 실패 | terminal surface에 error state 표시 |
+| shell 경로 없음 | OS 기본 shell fallback 후 실패 시 error |
+| write 실패 | session 종료로 간주하고 exit 메시지 |
+| resize 실패 | 무시 가능하나 dev mode에서 warn |
+| terminal init 실패 | error state 표시, tab은 유지 |
+| tab close 중 kill 실패 | dev mode warn, UI는 닫기 지속 |
 
----
+## 9. 엣지 케이스
 
-## 7. 엣지 케이스
+- GUI 앱으로 실행한 macOS Tauri는 `$PATH`가 interactive shell과 다를 수 있다.
+- `Ctrl+S`는 shell flow control에 걸릴 수 있다. 기본적으로 shell에 전달하되 문서 저장 단축키와 충돌하지 않게 terminal focus를 우선한다.
+- `Ctrl+Space`는 IME/OS 단축키와 충돌할 수 있다.
+- terminal tab이 workspace persist에 저장되면 앱 재시작 시 shell을 자동 복원할지 결정해야 한다. v1 기본은 tab만 복원하거나 terminal tab을 drop하는 정책 중 하나를 선택해야 한다.
+- tab switch 동안 출력된 내용은 renderer buffer 복원 문제가 있다. session은 유지되지만 화면 scrollback 재연결 정책은 별도 설계가 필요하다.
+- vim/less/htop 같은 alternate screen 앱은 resize와 key event 전달을 별도로 검증해야 한다.
 
-- **vault 이동 시 PTY**: 기본 동작은 prompt — 종료/유지 선택
-- **macOS dev 모드 sandbox**: portable-pty가 child spawn 가능한지 검증 (entitlement 필요할 수도)
-- **Windows ConPTY**: Win10 1809+ 필수. 그 이전은 미지원 명시
-- **WSL 사용자**: 자동 감지 어려움. 사용자가 `wsl.exe -d Ubuntu` 형태로 셸 직접 설정
-- **알트 스크린 (vim, htop)**: xterm.js가 alt screen mode 정상 처리하는지 검증
-- **거대 출력 (cat 거대 파일)**: xterm 스크롤백 한도(기본 1000) 초과 시 truncate. 사용자가 한도 조절
-- **bracketed paste**: 활성화되어야 vim 등에서 자동 들여쓰기 비활성
+## 10. 테스트 케이스
 
----
+### 10.1 P0 수동 검증
 
-## 8. 테스트 케이스
-
+- terminal button 클릭 → 새 terminal tab 생성
+- `pwd` 실행 → 현재 vault root 출력
 - `echo hello` → 출력 표시
-- `vim` 같은 alt screen 앱 → mouse/키 정상
-- `htop` → 갱신 부드러움
-- 큰 출력 (`cat 100k_lines.txt`) → 스크롤 부드러움 (16ms 지연 이내)
-- 리사이즈 시 줄바꿈 정상 (`stty size` 확인)
-- Windows ConPTY 동일 시나리오 검증
-- starship/p10k prompt 글리프 표시 (너드 폰트 의존)
-- ANSI 컬러 256색 + truecolor 정확
-- vault 외부 경로 cwd 시도 → 거부
+- `Tab` completion → 파일/명령 자동완성 동작
+- `Ctrl+C` → 실행 중 프로세스 interrupt
+- `Ctrl+D` → shell exit
+- `Ctrl+R` → shell history search
+- `Ctrl+L` → clear screen
+- `Ctrl++`, `Ctrl+-`, `Ctrl+0` → 폰트 크기 조절/초기화
+- terminal tab split right/down → 새 pane에서 terminal 표시
+- terminal tab close → backend session kill
+
+### 10.2 PTY/렌더링 검증
+
+- `stty size`가 pane resize 후 rows/cols와 일치
+- `vim` 실행 후 입력/ESC/저장/종료 정상
+- `less` 또는 `man`에서 스크롤/검색 정상
+- `htop`류 alternate screen 앱에서 화면 깨짐 없음
+- starship 또는 powerlevel10k prompt glyph가 깨지지 않음
+- 큰 출력(`yes | head -n 10000`)에서 UI가 멈추지 않음
+
+### 10.3 회귀 검증
+
+- terminal tab active 상태에서 파일 rename/delete watcher가 terminal tab을 건드리지 않음
+- terminal tab은 dirty indicator가 표시되지 않음
+- terminal tab을 닫은 뒤 같은 tab id session이 registry에 남지 않음
+- vault 전환 시 active terminal tab이면 editor current file이 닫힌 상태로 유지
+
+## 11. 향후 확장
+
+### P1
+
+- shell profile 설정(zsh/bash/fish/pwsh)
+- terminal tab rename
+- terminal font size 설정 저장
+- “현재 파일 폴더에서 열기” 옵션
+- terminal session restart button
+- terminal copy/paste 메뉴
+
+### P2
+
+- scrollback 검색
+- URL/file path link handling
+- command status 알림
+- shell integration(zsh/bash hook)
+- terminal output capture to markdown
+- workspace restore 시 terminal session 복원 정책
+
+### 플러그인 전환 가능성
+
+현재는 코어 기능으로 구현하지만, 추후 plugin system 도입 시 다음 경계로 옮길 수 있다.
+
+- Rust PTY command → plugin host function
+- terminal UI → plugin panel/tab contribution
+- session capability → `pty`, `fs:vault`
+- keyboard/focus policy는 core workspace가 계속 관리
+
+## 12. 의존 관계
+
+- [workspace-split-spec.md](./workspace-split-spec.md): pane/tab/split 구조
+- [keymap-spec.md](./keymap-spec.md): terminal focus 중 keymap 우선순위
+- [theme-spec.md](./theme-spec.md): terminal theme/font token
+- [vault-spec.md](./vault-spec.md): active vault root와 path validation
+- [vault-trust-spec.md](./vault-trust-spec.md): shell/PTY 권한 모델
+
+## 13. 참고 구현
+
+- cmux: terminal tab/split UX, Ghostty 계열 렌더링 참고
+- VS Code integrated terminal: key event/focus 정책, terminal profiles, shell integration 참고
+- Obsidian terminal plugin 계열: vault cwd 기반 terminal UX 참고
 
 ---
 
-## 9. 오픈 이슈
-
-- [ ] **xterm.js vs ghostty-web** — v1.2에 재평가 (libghostty API 안정화 후)
-- [ ] 셸 검색 PATH (사용자 PATH vs 앱 PATH 차이 — Tauri는 보통 GUI 앱 PATH가 줄어있음)
-- [ ] starship/p10k 같은 prompt 호환성 — 너드 폰트 글리프 의존도 (Phase 6 폰트 번들과 연결)
-- [ ] 터미널 출력을 .md 파일에 캡처 기능 (P2)
-- [ ] 백그라운드 잡 알림 통합 (cmux의 OSC 9/99/777 패턴)
-- [ ] 분할 레이아웃 저장/복원 (workspace state)
-- [ ] 셸 통합 (zsh/bash hook) — directory tracking, command 종료 알림
-- [ ] tmux 연동 — vault attach 시 자동 attach?
-
----
-
-## 10. 의존 관계
-
-- **선행 ADR**: [ADR-022](../decisions.md#adr-022-플러그인-시스템-extism-wasm) (플러그인 시스템 자체)
-- **연관 ADR**: [ADR-023](../decisions.md#adr-023-터미널-플러그인-1호) (이 spec의 결정 근거)
-- **연관 spec**: [plugin-spec.md](./plugin-spec.md) (host function 모델), [theme-spec.md](./theme-spec.md) (xterm 테마 매핑)
-- **외부 의존**:
-  - [portable-pty](https://github.com/wez/wezterm/tree/main/pty) (Rust, MIT)
-  - [xterm.js](https://xtermjs.org) (TS, MIT)
-  - JBMono Nerd Font Mono (폰트 번들 — implementation-plan.md Phase 6)
-
----
-
-## 11. 참고 구현 (Prior Art)
-
-구현 시 다음 프로젝트들을 적극 참조:
-
-- **[lavs9/obsidian-ghostty-terminal](https://github.com/lavs9/obsidian-ghostty-terminal)** ⭐ 핵심 참조
-  - **옵시디언 + Ghostty 통합 플러그인** — 우리의 모델과 가장 유사 (vault 컨텍스트 + 터미널)
-  - 참고 포인트: 사이드 패널 UI 패턴, vault cwd 동기, 키 바인딩, 셸 spawn 흐름, 옵시디언 라이프사이클과 PTY 정리
-  - 차이점: 옵시디언은 JS 플러그인 (Munix는 WASM), Ghostty 직접 (Munix는 v1.1에 xterm.js)
-- **[cmux](https://github.com/manaflow-ai/cmux)** — macOS 네이티브 + libghostty 직접 임베드
-  - 참고 포인트: vertical tabs, split, OSC 9/99/777 알림 패턴, Unix socket API
-  - Munix는 다른 길(WebView)을 가지지만 UX 패턴은 차용 가능
-- **[VS Code integrated terminal](https://github.com/microsoft/vscode/tree/main/src/vs/workbench/contrib/terminal)** — xterm.js 통합의 정전
-  - 참고 포인트: addon 통합, 검색, 분할, profile 시스템, shell integration (zsh/bash hook), 알림
-
----
-
-**문서 버전:** v0.1 (초안)
+**문서 버전:** v0.2
 **작성일:** 2026-04-25
-**상태:** Proposed — 다음 세션 정식 채택 + 플러그인 시스템 구현 후 v0.2로 업데이트
+**최근 업데이트:** 2026-04-29
+**상태:** Partial Implementation — P0 기본 동작 정의 완료
