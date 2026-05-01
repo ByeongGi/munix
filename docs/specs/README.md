@@ -17,7 +17,7 @@
 | 7 | [settings-spec.md](./settings-spec.md) | 설정 스키마, 저장, UI | 6 | 구현 |
 | 8 | [theme-spec.md](./theme-spec.md) | 컬러 토큰, 다크모드, 타이포 | 6 | 구현 |
 | 9 | [plugin-spec.md](./plugin-spec.md) 🆕 | Extism WASM 플러그인 시스템 (capability 기반) | 7+ | **proposed** |
-| 10 | [terminal-spec.md](./terminal-spec.md) 🆕 | 터미널 (workspace tab, ghostty-web + portable-pty) | 7+ | **partial** |
+| 10 | [terminal-spec.md](./terminal-spec.md) 🆕 | 터미널 (workspace tab, xterm.js + portable-pty) | 7+ | **구현** |
 | 11 | [cli-spec.md](./cli-spec.md) 🆕 | CLI + URI scheme (`munix://`) — 3계층 출시 | 6/7+ | **proposed** |
 | 12 | [i18n-spec.md](./i18n-spec.md) | 다국어 지원 (i18next 26 + react-i18next 17, 영/한 + 점진적) | 6/7+ | **구현 (Phase A)** |
 | 13 | [workspace-split-spec.md](./workspace-split-spec.md) 🆕 | Obsidian-style 분할 패널, pane별 탭, 탭 DnD split | 7+ | **proposed** |

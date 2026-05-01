@@ -13,7 +13,7 @@ pnpm release:local
 - `pnpm release:local`: lint/build 확인, Tauri 번들 생성, 릴리즈 산출물 수집을 순서대로 실행한다.
 - `pnpm icon:generate`: 디자인 완료 후 `src-tauri/icons/source.png`를 기준으로 Tauri 아이콘 세트를 갱신한다.
 - `pnpm release:check`: ESLint와 frontend production build를 확인한다.
-- `pnpm release:build`: 현재 OS용 Tauri 번들을 생성한다. macOS에서는 `pnpm tauri build` wrapper가 최신 Ghostty 소스를 준비하고 `native-libghostty` feature로 빌드한다.
+- `pnpm release:build`: 현재 OS용 Tauri 번들을 생성한다.
 - `pnpm release:collect`: 현재 OS의 번들 파일을 `release-dist/v{version}/{platform}/`으로 복사한다. macOS에서는 `install-macos.sh`도 `release-dist/v{version}/`에 함께 복사한다.
 
 Tauri는 기본적으로 현재 OS용 설치 파일을 만든다. macOS / Windows / Linux 파일을 모두 배포하려면 각 OS 환경에서 같은 태그/버전으로 `pnpm release:local`을 한 번씩 실행한 뒤 `release-dist/` 내용을 한곳에 모아 업로드한다.

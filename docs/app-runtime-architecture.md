@@ -1,11 +1,11 @@
 # Munix 앱 런타임 구조
 
-> 구현 기준: `munix/src`, `munix/src-tauri/src`, `munix/src-tauri/native`
-> 목적: Munix의 프론트, Rust 백엔드, native bridge, 플랫폼별 fallback 경계를 한 번에 파악하기 위한 문서.
+> 구현 기준: `munix/src`, `munix/src-tauri/src`
+> 목적: Munix의 프론트, Rust 백엔드, 터미널 런타임 경계를 한 번에 파악하기 위한 문서.
 
 ## 1. 구조 요약
 
-Munix는 Tauri 2 앱이다. UI와 workspace orchestration은 React가 맡고, 파일 시스템과 OS 자원 접근은 Rust command layer가 맡는다. 터미널은 플랫폼별 runtime을 선택한다.
+Munix는 Tauri 2 앱이다. UI와 workspace orchestration은 React가 맡고, 파일 시스템과 OS 자원 접근은 Rust command layer가 맡는다. 터미널은 Web UI 안의 xterm.js renderer와 Rust `portable-pty` backend로 통합한다.
 
 ```mermaid
 flowchart TB
@@ -16,9 +16,7 @@ flowchart TB
   Rust["Tauri command layer<br/>src-tauri/src/commands"]
   VaultManager["VaultManager<br/>multi-vault routing"]
   VaultFs["Vault FS<br/>path validation / atomic write / backup"]
-  TerminalRouter["Terminal runtime selection"]
-  MacNative["macOS native terminal<br/>Swift/AppKit + libghostty"]
-  WebFallback["Web terminal fallback<br/>ghostty-web + portable-pty"]
+  Terminal["Terminal<br/>xterm.js + portable-pty"]
   Disk["Local filesystem<br/>.md / assets / .munix"]
 
   User --> React
@@ -29,9 +27,8 @@ flowchart TB
   Rust --> VaultManager
   VaultManager --> VaultFs
   VaultFs --> Disk
-  Rust --> TerminalRouter
-  TerminalRouter --> MacNative
-  TerminalRouter --> WebFallback
+  React --> Terminal
+  Rust --> Terminal
 ```
 
 핵심 경계:
@@ -39,7 +36,8 @@ flowchart TB
 - React는 로컬 파일 시스템에 직접 접근하지 않는다.
 - vault 파일 작업은 항상 `ipc.ts` -> Tauri command -> Rust vault layer를 지난다.
 - workspace 상태는 vault별 Zustand store에 둔다.
-- terminal tab은 문서 탭과 같은 workspace/pane 시스템을 공유하되, runtime은 플랫폼별로 선택한다.
+- terminal tab은 문서 탭과 같은 workspace/pane 시스템을 공유한다.
+- terminal renderer는 Web compositor 안에 있으므로 context menu, palette, modal, DevTools와 같은 overlay 계층과 CSS z-index를 공유한다.
 
 ## 2. 프론트 계층
 
@@ -82,7 +80,7 @@ flowchart TB
   Vault["Vault<br/>root / path safety / read-write"]
   Watcher["Watcher<br/>self-write suppression"]
   Settings["settings.rs / vault_registry.rs"]
-  Terminal["terminal.rs / terminal_native.rs"]
+  Terminal["terminal.rs<br/>portable-pty sessions"]
   Fs["Local filesystem"]
 
   Commands --> AppState
@@ -101,8 +99,7 @@ Rust의 책임:
 - 저장은 원자적 쓰기와 백업 정책을 따른다.
 - global registry는 OS별 `app_config_dir()` 아래 `munix.json`에 저장한다.
 - workspace 상태는 vault별 `.munix/workspace.json`에 저장한다.
-- terminal fallback에서는 `portable-pty` session을 관리한다.
-- macOS native terminal에서는 Swift bridge attach/focus/resize/close만 호출한다.
+- terminal에서는 `portable-pty` session을 spawn/write/resize/kill 한다.
 
 ## 4. Vault와 Workspace
 
@@ -135,82 +132,56 @@ flowchart LR
 
 ```mermaid
 flowchart TB
-  TerminalView["TerminalView"]
-  Availability["terminal_native_is_available"]
-  Decision{"native available<br/>and not forced fallback?"}
-  NativeOpen["terminal_native_open"]
-  NativeBridge["Rust terminal_swift_bridge"]
-  Swift["Swift TerminalSurfaceView<br/>NSView + NSTextInputClient"]
-  Libghostty["libghostty<br/>PTY / state / Metal render"]
-  WebSpawn["terminal_spawn"]
-  WebRenderer["ghostty-web<br/>WASM renderer"]
-  PortablePty["portable-pty<br/>OS shell"]
+  TerminalView["TerminalView<br/>@xterm/xterm"]
+  Fit["FitAddon<br/>cols/rows"]
+  Links["WebLinksAddon"]
+  ScreenState["terminal-session-registry<br/>headless serialize cache"]
+  IPC["terminal_* IPC"]
+  Pty["portable-pty<br/>OS shell"]
+  Events["terminal:data / terminal:exit"]
 
-  TerminalView --> Availability
-  Availability --> Decision
-  Decision -->|yes: macOS native-libghostty| NativeOpen
-  NativeOpen --> NativeBridge
-  NativeBridge --> Swift
-  Swift --> Libghostty
-  Decision -->|no: Windows/Linux or forced fallback| WebSpawn
-  WebSpawn --> PortablePty
-  TerminalView --> WebRenderer
-  PortablePty --> WebRenderer
+  TerminalView --> Fit
+  TerminalView --> Links
+  TerminalView --> ScreenState
+  TerminalView --> IPC
+  IPC --> Pty
+  Pty --> Events
+  Events --> TerminalView
 ```
 
 현재 정책:
 
-- macOS: `native-libghostty` feature가 포함되고 native host view가 준비되면 Swift/AppKit + `libghostty` embedded runtime을 사용한다.
-- Windows/Linux: `ghostty-web` + Rust `portable-pty` fallback을 기본 제품 경로로 사용한다.
-- macOS에서도 `localStorage["munix:terminalLegacyWebviewFallback"] = "true"`이면 fallback을 강제한다.
-- `native-libghostty` feature가 없는 빌드는 native terminal을 available로 보고하지 않는다.
-
-macOS native terminal 경계:
-
-- React: terminal tab metadata, native bounds sync, close event 처리.
-- Rust: vault cwd 검증, Tauri `NSView` handle 획득, Swift bridge FFI 호출.
-- Swift/AppKit: `NSView` surface, focus, resize, key/mouse/scroll/IME/clipboard mapping.
-- `libghostty`: PTY lifecycle, terminal state, scrollback, font shaping, Metal rendering.
-
-fallback terminal 경계:
-
-- React: `ghostty-web` mount, fit/resize, key input, screen state cache.
-- Rust: `portable-pty` shell spawn, stdin/stdout/stderr, resize, kill.
-- Tauri event: `terminal:data`, `terminal:exit`.
+- macOS/Windows/Linux 모두 `@xterm/xterm + portable-pty`를 기본 제품 경로로 사용한다.
+- `ghostty-web`, native `libghostty`, macOS child `NSView` embed는 제거했다.
+- `terminal_spawn`, `terminal_write`, `terminal_resize`, `terminal_kill`만 terminal IPC로 유지한다.
+- xterm.js renderer가 DOM 내부에 있으므로 overlay와 DevTools resize 문제를 native view 격리 없이 해결한다.
 
 ## 6. Platform Matrix
 
-| Platform | Primary terminal runtime | Fallback | Notes |
-|---|---|---|---|
-| macOS | `libghostty` embedded through Swift/AppKit `NSView` | `ghostty-web + portable-pty` | build wrapper prepares latest Ghostty source and enables `native-libghostty` |
-| Windows | `ghostty-web + portable-pty` | same | `libghostty` embedded C ABI does not expose `HWND` surface yet |
-| Linux | `ghostty-web + portable-pty` | same | Ghostty GTK app exists, but current embedded C ABI does not expose GTK/X11/Wayland surface handles |
+| Platform | Primary terminal runtime | Notes |
+|---|---|---|
+| macOS | `@xterm/xterm + portable-pty` | Web overlay와 같은 compositor 사용 |
+| Windows | `@xterm/xterm + portable-pty` | 동일 구조 |
+| Linux | `@xterm/xterm + portable-pty` | 동일 구조 |
 
 ## 7. Build Flow
 
 ```mermaid
 flowchart TB
   Pnpm["pnpm tauri dev/build"]
-  Wrapper["scripts/tauri-wrapper.mjs"]
-  IsMac{"macOS?"}
-  Prepare["scripts/ensure-libghostty.mjs"]
-  Ghostty["src-tauri/.native/ghostty<br/>latest source + libghostty.a"]
-  TauriNative["Tauri CLI<br/>--features native-libghostty"]
-  TauriDefault["Tauri CLI<br/>default features"]
+  Tauri["Tauri CLI"]
+  Frontend["Vite + React"]
+  Rust["Cargo build"]
 
-  Pnpm --> Wrapper
-  Wrapper --> IsMac
-  IsMac -->|yes| Prepare
-  Prepare --> Ghostty
-  Ghostty --> TauriNative
-  IsMac -->|no| TauriDefault
+  Pnpm --> Tauri
+  Tauri --> Frontend
+  Tauri --> Rust
 ```
 
 빌드 원칙:
 
-- macOS 개발/운영 빌드는 wrapper가 Ghostty source와 static library를 준비한다.
-- `GHOSTTY_INCLUDE_DIR`, `GHOSTTY_LIB_DIR`, `--features native-libghostty`는 wrapper가 주입한다.
-- non-macOS는 기존 Tauri CLI 경로로 내려가고 terminal은 fallback runtime을 사용한다.
+- Ghostty source, Zig, Swift bridge, `native-libghostty` feature를 요구하지 않는다.
+- `pnpm tauri dev`와 `pnpm tauri build`는 기본 Tauri CLI 경로를 사용한다.
 
 ## 8. 관련 문서
 

@@ -187,16 +187,32 @@ export const createTabSlice: StateCreator<TabFullSlice, [], [], TabSlice> = (
   activeId: null,
 
   openTab: (path) => {
-    const existing = get().tabs.find(
+    const { workspaceTree, activePaneId, tabs } = get();
+    const existing = tabs.find(
       (t) => !isTerminalTab(t) && t.path === path,
     );
     if (existing) {
-      set({ activeId: existing.id });
+      const nextTree = workspaceTree
+        ? patchActivePaneTabs(workspaceTree, activePaneId, tabs, existing.id)
+        : null;
+      if (nextTree) {
+        set({ activeId: existing.id, workspaceTree: nextTree });
+      } else {
+        set({ activeId: existing.id });
+      }
       void openFileInEditor(existing.path);
       return;
     }
     const tab: Tab = { id: makeTabId(), path, title: basename(path) };
-    set((s) => ({ tabs: [...s.tabs, tab], activeId: tab.id }));
+    const nextTabs = [...tabs, tab];
+    const nextTree = workspaceTree
+      ? patchActivePaneTabs(workspaceTree, activePaneId, nextTabs, tab.id)
+      : null;
+    if (nextTree) {
+      set({ tabs: nextTabs, activeId: tab.id, workspaceTree: nextTree });
+    } else {
+      set({ tabs: nextTabs, activeId: tab.id });
+    }
     void openFileInEditor(path);
   },
 

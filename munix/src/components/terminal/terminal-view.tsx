@@ -1,6 +1,8 @@
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
-import { FitAddon, Ghostty, Terminal } from "ghostty-web";
-import ghosttyWasmUrl from "ghostty-web/ghostty-vt.wasm?url";
+import { FitAddon } from "@xterm/addon-fit";
+import { WebLinksAddon } from "@xterm/addon-web-links";
+import { Terminal, type IDisposable } from "@xterm/xterm";
+import "@xterm/xterm/css/xterm.css";
 import {
   useCallback,
   useEffect,
@@ -11,7 +13,7 @@ import {
 } from "react";
 import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/cn";
-import { ipc, type NativeTerminalAvailability } from "@/lib/ipc";
+import { ipc } from "@/lib/ipc";
 import {
   appendTerminalOutputToScreenState,
   ensureTerminalScreenState,
@@ -38,11 +40,6 @@ interface TerminalDataPayload extends TerminalEventPayload {
   data: string;
 }
 
-interface NativeTerminalEventPayload extends TerminalEventPayload {
-  kind: "closed" | "childExited" | "commandFinished" | string;
-  detail?: string | null;
-}
-
 const TERMINAL_FONT_SIZE_KEY = "munix:terminalFontSize";
 const DEFAULT_TERMINAL_FONT_SIZE = 13;
 const MIN_TERMINAL_FONT_SIZE = 10;
@@ -51,14 +48,6 @@ const TERMINAL_FONT_FAMILY =
   '"JetBrainsMono Nerd Font Mono", "JetBrainsMono Nerd Font", "JetBrains Mono", "SFMono-Regular", Consolas, "Liberation Mono", monospace';
 const TERMINAL_BUNDLED_FONT = "JetBrainsMono Nerd Font Mono";
 const TERMINAL_LAYOUT_SETTLE_FRAMES = 2;
-const LEGACY_TERMINAL_FALLBACK_KEY = "munix:terminalLegacyWebviewFallback";
-
-let ghosttyReady: Promise<Ghostty> | null = null;
-
-function loadGhostty(): Promise<Ghostty> {
-  ghosttyReady ??= Ghostty.load(ghosttyWasmUrl);
-  return ghosttyReady;
-}
 
 async function loadTerminalFont(fontSize: number): Promise<void> {
   if (!("fonts" in document)) return;
@@ -74,14 +63,6 @@ function readInitialFontSize(): number {
     MIN_TERMINAL_FONT_SIZE,
     Math.min(MAX_TERMINAL_FONT_SIZE, value),
   );
-}
-
-function shouldUseNativeTerminal(
-  availability: NativeTerminalAvailability,
-): boolean {
-  const forceWebFallback =
-    localStorage.getItem(LEGACY_TERMINAL_FALLBACK_KEY) === "true";
-  return availability.available && !forceWebFallback;
 }
 
 export function TerminalView({
@@ -140,8 +121,7 @@ export function TerminalView({
         }
 
         settleFrameRef.current = null;
-        const fit = fitRef.current;
-        if (fit) fit.fit();
+        fitRef.current?.fit();
         resolve();
       };
 
@@ -199,10 +179,10 @@ export function TerminalView({
     let cancelled = false;
     let unlistenData: UnlistenFn | null = null;
     let unlistenExit: UnlistenFn | null = null;
-    let unlistenNativeEvent: UnlistenFn | null = null;
     let terminalMount: HTMLDivElement | null = null;
-    let nativeTerminalId: string | null = null;
-    let nativeBoundsObserver: ResizeObserver | null = null;
+    let resizeObserver: ResizeObserver | null = null;
+    let dataDisposable: IDisposable | null = null;
+    let resizeDisposable: IDisposable | null = null;
     const existingSessionId = getTerminalSessionId(terminalTabId);
     if (!existingSessionId) {
       resetTerminalSessionState(terminalTabId);
@@ -214,7 +194,6 @@ export function TerminalView({
       mount.dataset.munixTerminalMount = "true";
       Object.assign(mount.style, {
         boxSizing: "border-box",
-        fontFamily: "monospace",
         height: `${Math.max(rect.height, 1)}px`,
         left: "-10000px",
         overflow: "hidden",
@@ -237,6 +216,7 @@ export function TerminalView({
         Object.assign(terminalMount.style, {
           height: "100%",
           left: "",
+          padding: "0",
           position: "relative",
           top: "",
           visibility: "visible",
@@ -247,9 +227,8 @@ export function TerminalView({
     };
 
     const clearSurface = () => {
-      const terminal = terminalRef.current;
       try {
-        terminal?.reset();
+        terminalRef.current?.reset();
       } catch {
         // Terminal may already be disposed while React is tearing down.
       }
@@ -258,84 +237,19 @@ export function TerminalView({
       host.replaceChildren();
     };
 
-    const handleNativeExited = (id: string) => {
-      if (nativeTerminalId !== id) return;
-      nativeTerminalId = null;
-      nativeBoundsObserver?.disconnect();
-      nativeBoundsObserver = null;
-      window.removeEventListener("resize", handleNativeWindowResize);
-      host.replaceChildren();
-      setReady(false);
-      requestAnimationFrame(() => onExitedRef.current?.());
-    };
-
-    const syncNativeBounds = (id: string) => {
-      const rect = host.getBoundingClientRect();
-      const x = rect.left;
-      const y = window.innerHeight - rect.bottom;
-      void ipc.terminalNativeSetBounds(
-        id,
-        x,
-        y,
-        Math.max(rect.width, 1),
-        Math.max(rect.height, 1),
-      );
-    };
-
     async function start() {
       try {
         setReady(false);
-        const nativeAvailability = await ipc.terminalNativeIsAvailable();
-        if (cancelled) return;
-
-        if (shouldUseNativeTerminal(nativeAvailability)) {
-          const nativeTerminal = await ipc.terminalNativeOpen();
-          if (cancelled) {
-            void ipc.terminalNativeClose(nativeTerminal.id).catch(() => {});
-            return;
-          }
-
-          nativeTerminalId = nativeTerminal.id;
-          unlistenNativeEvent = await listen<NativeTerminalEventPayload>(
-            "terminal:native-event",
-            (event) => {
-              if (event.payload.id !== nativeTerminal.id) return;
-              if (
-                event.payload.kind === "closed" ||
-                event.payload.kind === "childExited"
-              ) {
-                handleNativeExited(event.payload.id);
-              }
-            },
-          );
-          if (cancelled) {
-            unlistenNativeEvent?.();
-            void ipc.terminalNativeClose(nativeTerminal.id).catch(() => {});
-            return;
-          }
-          syncNativeBounds(nativeTerminal.id);
-          nativeBoundsObserver = new ResizeObserver(() => {
-            if (nativeTerminalId) syncNativeBounds(nativeTerminalId);
-          });
-          nativeBoundsObserver.observe(host);
-          window.addEventListener("resize", handleNativeWindowResize);
-          void ipc.terminalNativeFocus(nativeTerminal.id);
-          setReady(true);
-          return;
-        }
-
         await loadTerminalFont(initialFontSizeRef.current);
-        if (cancelled) return;
-        const ghostty = await loadGhostty();
         if (cancelled) return;
 
         const terminal = new Terminal({
+          allowProposedApi: true,
           cursorBlink: true,
           fontFamily: TERMINAL_FONT_FAMILY,
           fontSize: initialFontSizeRef.current,
           scrollback: 10000,
           smoothScrollDuration: 80,
-          ghostty,
           theme: {
             background: "#111416",
             foreground: "#e5e7eb",
@@ -363,14 +277,16 @@ export function TerminalView({
         const fit = new FitAddon();
 
         terminal.loadAddon(fit);
+        terminal.loadAddon(new WebLinksAddon());
         terminalMount = createTerminalMount();
         terminal.open(terminalMount);
         terminal.reset();
         fit.fit();
-        fit.observeResize();
 
         terminalRef.current = terminal;
         fitRef.current = fit;
+        resizeObserver = new ResizeObserver(() => resizeToFit());
+        resizeObserver.observe(host);
 
         await waitForSettledFit();
         if (cancelled) return;
@@ -400,20 +316,21 @@ export function TerminalView({
           setReady(true);
           return;
         }
+
         const screenState = getTerminalScreenState(terminalTabId, session.id);
         if (screenState) {
           terminal.clear();
           terminal.write(screenState, () => revealTerminal(terminal));
-        } else if (existingSessionId) {
+        } else {
           revealTerminal(terminal);
         }
 
         if (existingSessionId) void ipc.terminalResize(session.id, cols, rows);
-        terminal.onData((data) => {
+        dataDisposable = terminal.onData((data) => {
           const id = sessionIdRef.current;
           if (id) void ipc.terminalWrite(id, data);
         });
-        terminal.onResize(({ cols, rows }) => {
+        resizeDisposable = terminal.onResize(({ cols, rows }) => {
           const id = sessionIdRef.current;
           if (!id) return;
           resizeTerminalScreenState(terminalTabId, id, cols, rows);
@@ -457,15 +374,10 @@ export function TerminalView({
       cancelled = true;
       unlistenData?.();
       unlistenExit?.();
-      unlistenNativeEvent?.();
-      nativeBoundsObserver?.disconnect();
-      nativeBoundsObserver = null;
-      window.removeEventListener("resize", handleNativeWindowResize);
-      if (nativeTerminalId) {
-        void ipc.terminalNativeClose(nativeTerminalId).catch(() => {});
-        nativeTerminalId = null;
-      }
-
+      dataDisposable?.dispose();
+      resizeDisposable?.dispose();
+      resizeObserver?.disconnect();
+      resizeObserver = null;
       sessionIdRef.current = null;
 
       if (settleFrameRef.current !== null) {
@@ -482,10 +394,7 @@ export function TerminalView({
       terminalMount = null;
       host.replaceChildren();
     };
-    function handleNativeWindowResize() {
-      if (nativeTerminalId) syncNativeBounds(nativeTerminalId);
-    }
-  }, [t, terminalTabId, waitForSettledFit]);
+  }, [resizeToFit, t, terminalTabId, waitForSettledFit]);
 
   return (
     <div

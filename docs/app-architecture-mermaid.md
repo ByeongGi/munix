@@ -230,36 +230,31 @@ sequenceDiagram
   participant Header as WorkspaceHeader
   participant Tabs as TabSlice
   participant Terminal as TerminalView
-  participant NativeIPC as terminal_native_* IPC
+  participant Xterm as xterm.js
   participant WebIPC as terminal_* IPC
-  participant Native as macOS Swift/AppKit + libghostty
-  participant PTY as portable-pty fallback
+  participant PTY as portable-pty
 
   Header->>Tabs: openTerminalTab()
   Tabs->>Tabs: kind="terminal" 탭 생성
   Tabs->>Terminal: active tab body로 렌더
 
-  Terminal->>NativeIPC: terminal_native_is_available()
-  alt macOS native-libghostty available
-    Terminal->>NativeIPC: terminal_native_open(vaultId)
-    NativeIPC->>Native: attach NSView surface
-    Terminal->>NativeIPC: terminal_native_set_bounds()
-    Native-->>Terminal: terminal:native-event closed/childExited
-  else Windows/Linux or forced fallback
-    Terminal->>WebIPC: terminalSpawn(cols, rows, vaultId)
-    WebIPC->>PTY: cwd = active vault root로 shell spawn
-    PTY-->>Terminal: terminal:data event
-    Terminal->>Terminal: ghostty-web render
-    Terminal->>WebIPC: terminalWrite(input)
-    WebIPC->>PTY: stdin write
-    PTY-->>Terminal: terminal:exit event
-  end
+  Terminal->>Xterm: mount renderer
+  Terminal->>Xterm: fit cols/rows
+  Terminal->>WebIPC: terminalSpawn(cols, rows, vaultId)
+  WebIPC->>PTY: cwd = active vault root로 shell spawn
+  PTY-->>Terminal: terminal:data event
+  Terminal->>Xterm: write output
+  Xterm-->>Terminal: input / resize
+  Terminal->>WebIPC: terminalWrite(input)
+  Terminal->>WebIPC: terminalResize(cols, rows)
+  WebIPC->>PTY: stdin write / resize
+  PTY-->>Terminal: terminal:exit event
 
   Terminal->>Tabs: onExited() -> closeTab()
-  Tabs->>NativeIPC: terminal_native_close or terminalKill
+  Tabs->>WebIPC: terminalKill
 ```
 
-터미널은 플랫폼별 runtime을 선택한다. macOS native build는 Swift/AppKit bridge와 `libghostty`가 PTY, terminal state, Metal rendering을 담당한다. Windows/Linux와 forced fallback은 `ghostty-web` renderer와 Rust `portable-pty` session을 사용한다. 터미널 session은 workspace persistence에 저장하지 않는다.
+터미널은 Web UI 내부의 `@xterm/xterm` renderer와 Rust `portable-pty` session을 사용한다. 터미널 session은 workspace persistence에 저장하지 않는다.
 
 ## 9. 이미지 파일 열기
 

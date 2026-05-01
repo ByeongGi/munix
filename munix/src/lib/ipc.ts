@@ -137,33 +137,7 @@ export const ipc = {
   terminalResize: (id: string, cols: number, rows: number) =>
     invoke<void>("terminal_resize", { id, cols, rows }),
   terminalKill: (id: string) => invoke<void>("terminal_kill", { id }),
-
-  terminalNativeIsAvailable: () =>
-    invoke<NativeTerminalAvailability>("terminal_native_is_available"),
-  terminalNativeOpen: (vaultId?: string) =>
-    invoke<{ id: string }>("terminal_native_open", {
-      vaultId: vaultId ?? null,
-    }),
-  terminalNativeFocus: (id: string) =>
-    invoke<void>("terminal_native_focus", { id }),
-  terminalNativeClose: (id: string) =>
-    invoke<void>("terminal_native_close", { id }),
-  terminalNativeSetBounds: (
-    id: string,
-    x: number,
-    y: number,
-    width: number,
-    height: number,
-  ) =>
-    invoke<void>("terminal_native_set_bounds", { id, x, y, width, height }),
 };
-
-export interface NativeTerminalAvailability {
-  available: boolean;
-  hostViewReady: boolean;
-  platform: string;
-  reason: string | null;
-}
 
 export interface VaultRegistryEntry {
   path: string;

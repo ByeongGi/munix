@@ -320,7 +320,6 @@ flowchart TB
 - Settings: `loadSettings`, `saveSettings`, `vaultSettingsLoad`, `vaultSettingsSave`
 - Asset/Image: `saveAsset`, `absPath`, `getThumbnail`
 - Terminal: `terminalSpawn`, `terminalWrite`, `terminalResize`, `terminalKill`
-- Native Terminal: `terminalNativeIsAvailable`, `terminalNativeOpen`, `terminalNativeFocus`, `terminalNativeClose`, `terminalNativeSetBounds`
 
 ## 11. 작업 시 기준
 

@@ -53,10 +53,7 @@
     "toggle": "터미널 열기/닫기",
     "title": "Vault 터미널",
     "error": "터미널을 열 수 없습니다.",
-    "exited": "[프로세스 종료]",
-    "nativePending": "Native 터미널 런타임을 준비 중입니다.",
-    "nativeHostReady": "Tauri native host view는 준비되었습니다. 다음 단계에서 libghostty surface를 연결합니다.",
-    "nativeHostUnavailable": "Tauri native host view를 아직 찾을 수 없습니다. 앱 window 초기화 후 다시 시도합니다."
+    "exited": "[프로세스 종료]"
   },
   "emptyPane": {
     "newFile": "새 파일 생성하기 (Mod+T)",
