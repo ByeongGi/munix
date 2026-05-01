@@ -1,9 +1,11 @@
-mod commands;
 mod clipboard;
+mod commands;
 mod error;
 mod markdown;
 mod settings;
 mod state;
+#[cfg(all(target_os = "macos", feature = "native-libghostty"))]
+mod terminal_swift_bridge;
 mod thumbnail;
 mod trust;
 mod vault;
@@ -72,6 +74,11 @@ pub fn run() {
             commands::terminal::terminal_write,
             commands::terminal::terminal_resize,
             commands::terminal::terminal_kill,
+            commands::terminal_native::terminal_native_is_available,
+            commands::terminal_native::terminal_native_open,
+            commands::terminal_native::terminal_native_focus,
+            commands::terminal_native::terminal_native_close,
+            commands::terminal_native::terminal_native_set_bounds,
             vault_registry::vault_registry_load,
             vault_registry::vault_registry_save,
             vault_registry::vault_registry_remove,

@@ -1,48 +1,135 @@
+import { SerializeAddon } from "@xterm/addon-serialize";
+import { Terminal as HeadlessTerminal } from "@xterm/headless";
 import { ipc } from "@/lib/ipc";
 
-const TERMINAL_OUTPUT_BUFFER_LIMIT = 200_000;
-
 const terminalSessionsByTabId = new Map<string, string>();
-const terminalOutputByTabId = new Map<string, string>();
 const exitedTerminalTabIds = new Set<string>();
+
+interface TerminalScreenState {
+  sessionId: string;
+  terminal: HeadlessTerminal;
+  serializeAddon: SerializeAddon;
+}
+
+const terminalScreenStatesByTabId = new Map<string, TerminalScreenState>();
+
+function createTerminalScreenState(
+  sessionId: string,
+  cols: number,
+  rows: number,
+): TerminalScreenState {
+  const terminal = new HeadlessTerminal({
+    allowProposedApi: true,
+    cols,
+    rows,
+    scrollback: 10000,
+  });
+  const serializeAddon = new SerializeAddon();
+  terminal.loadAddon(serializeAddon);
+  return { sessionId, terminal, serializeAddon };
+}
+
+function disposeTerminalScreenState(tabId: string): void {
+  const state = terminalScreenStatesByTabId.get(tabId);
+  if (!state) return;
+  state.serializeAddon.dispose();
+  state.terminal.dispose();
+  terminalScreenStatesByTabId.delete(tabId);
+}
 
 export function getTerminalSessionId(tabId: string): string | null {
   return terminalSessionsByTabId.get(tabId) ?? null;
 }
 
-export function setTerminalSessionId(tabId: string, sessionId: string): void {
+export function setTerminalSessionId(
+  tabId: string,
+  sessionId: string,
+  cols: number,
+  rows: number,
+): void {
   exitedTerminalTabIds.delete(tabId);
+  disposeTerminalScreenState(tabId);
   terminalSessionsByTabId.set(tabId, sessionId);
+  terminalScreenStatesByTabId.set(
+    tabId,
+    createTerminalScreenState(sessionId, cols, rows),
+  );
 }
 
 export function hasTerminalExited(tabId: string): boolean {
   return exitedTerminalTabIds.has(tabId);
 }
 
-export function markTerminalSessionExited(tabId: string): void {
-  const sessionId = terminalSessionsByTabId.get(tabId);
+export function markTerminalSessionExited(
+  tabId: string,
+  sessionId: string,
+): void {
+  if (terminalSessionsByTabId.get(tabId) !== sessionId) return;
   terminalSessionsByTabId.delete(tabId);
+  disposeTerminalScreenState(tabId);
   exitedTerminalTabIds.add(tabId);
-  if (sessionId) void ipc.terminalKill(sessionId).catch(() => {});
+  void ipc.terminalKill(sessionId).catch(() => {});
 }
 
-export function appendTerminalOutput(tabId: string, data: string): void {
-  const next = `${terminalOutputByTabId.get(tabId) ?? ""}${data}`;
-  terminalOutputByTabId.set(
+export function clearTerminalScreenState(tabId: string): void {
+  disposeTerminalScreenState(tabId);
+}
+
+export function resetTerminalSessionState(tabId: string): void {
+  terminalSessionsByTabId.delete(tabId);
+  disposeTerminalScreenState(tabId);
+  exitedTerminalTabIds.delete(tabId);
+}
+
+export function ensureTerminalScreenState(
+  tabId: string,
+  sessionId: string,
+  cols: number,
+  rows: number,
+): void {
+  if (exitedTerminalTabIds.has(tabId)) return;
+  if (terminalSessionsByTabId.get(tabId) !== sessionId) return;
+  const existing = terminalScreenStatesByTabId.get(tabId);
+  if (existing?.sessionId === sessionId) return;
+  disposeTerminalScreenState(tabId);
+  terminalScreenStatesByTabId.set(
     tabId,
-    next.length > TERMINAL_OUTPUT_BUFFER_LIMIT
-      ? next.slice(next.length - TERMINAL_OUTPUT_BUFFER_LIMIT)
-      : next,
+    createTerminalScreenState(sessionId, cols, rows),
   );
 }
 
-export function getTerminalOutput(tabId: string): string {
-  return terminalOutputByTabId.get(tabId) ?? "";
+export function appendTerminalOutputToScreenState(
+  tabId: string,
+  sessionId: string,
+  data: string,
+): void {
+  if (exitedTerminalTabIds.has(tabId)) return;
+  if (terminalSessionsByTabId.get(tabId) !== sessionId) return;
+  const state = terminalScreenStatesByTabId.get(tabId);
+  if (state?.sessionId !== sessionId) return;
+  state.terminal.write(data);
+}
+
+export function resizeTerminalScreenState(
+  tabId: string,
+  sessionId: string,
+  cols: number,
+  rows: number,
+): void {
+  const state = terminalScreenStatesByTabId.get(tabId);
+  if (state?.sessionId !== sessionId) return;
+  state.terminal.resize(cols, rows);
+}
+
+export function getTerminalScreenState(tabId: string, sessionId: string): string {
+  const state = terminalScreenStatesByTabId.get(tabId);
+  if (state?.sessionId !== sessionId) return "";
+  return state.serializeAddon.serialize();
 }
 
 export function closeTerminalSessionForTab(tabId: string): void {
   const sessionId = terminalSessionsByTabId.get(tabId);
-  terminalOutputByTabId.delete(tabId);
+  disposeTerminalScreenState(tabId);
   exitedTerminalTabIds.delete(tabId);
   if (!sessionId) return;
   terminalSessionsByTabId.delete(tabId);

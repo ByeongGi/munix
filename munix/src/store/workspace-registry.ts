@@ -18,14 +18,23 @@
 import { create, type StoreApi, type UseBoundStore } from "zustand";
 
 import { ipc } from "@/lib/ipc";
+import { closeTerminalSessionsForTabs } from "@/lib/terminal-session-registry";
 import {
+  collectPanes,
   createEmptyWorkspace,
+  isPaneNode,
+  patchPaneInTree,
   type WorkspaceNode,
   type WorkspaceState,
 } from "./workspace-types";
 import type { VaultId } from "./vault-types";
 import { createEditorSlice, type EditorSlice } from "./slices/editor-slice";
-import { createTabSlice, type TabSlice } from "./slices/tab-slice";
+import {
+  createTabSlice,
+  isTerminalTab,
+  type Tab,
+  type TabSlice,
+} from "./slices/tab-slice";
 import { createSearchSlice, type SearchSlice } from "./slices/search-slice";
 import { createTagsSlice, type TagsSlice } from "./slices/tags-slice";
 import {
@@ -41,6 +50,7 @@ import {
   createWorkspaceTreeSlice,
   type WorkspaceTreeSlice,
 } from "./slices/workspace-tree-slice";
+import { pruneEmptyPanes } from "./slices/workspace-tree-helpers";
 
 interface WorkspaceMetaActions {
   setFileTreeExpanded: (paths: string[]) => void;
@@ -117,6 +127,8 @@ export function getWorkspaceStore(vaultId: VaultId): WorkspaceStoreHook {
 
 /** vault 가 닫혔을 때 메모리 회수. */
 export function disposeWorkspaceStore(vaultId: VaultId): void {
+  const store = registry.get(vaultId);
+  if (store) closeWorkspaceTerminalSessions(store.getState());
   detachWorkspacePersist(vaultId);
   registry.delete(vaultId);
 }
@@ -158,13 +170,101 @@ interface SerializedWorkspaceV2 {
 
 type SerializedWorkspace = SerializedWorkspaceV1 | SerializedWorkspaceV2;
 
+function removeTerminalTabs(tabs: Tab[], activeId: string | null) {
+  const nextTabs = tabs.filter((tab) => !isTerminalTab(tab));
+  const nextActiveId =
+    nextTabs.find((tab) => tab.id === activeId)?.id ?? nextTabs[0]?.id ?? null;
+
+  return { tabs: nextTabs, activeId: nextActiveId };
+}
+
+interface SanitizedWorkspaceTabs {
+  tabs: Tab[];
+  activeId: string | null;
+  workspaceTree: WorkspaceNode | null;
+  activePaneId: string | null;
+}
+
+function sanitizeWorkspaceTabs(
+  tabs: Tab[],
+  activeId: string | null,
+  tree: WorkspaceNode | null,
+  activePaneId: string | null,
+): SanitizedWorkspaceTabs {
+  if (!tree) {
+    const root = removeTerminalTabs(tabs, activeId);
+    return {
+      tabs: root.tabs,
+      activeId: root.activeId,
+      workspaceTree: null,
+      activePaneId: null,
+    };
+  }
+
+  let nextTree: WorkspaceNode | null = tree;
+  for (const pane of collectPanes(tree)) {
+    const next = removeTerminalTabs(pane.tabs, pane.activeTabId);
+    if (
+      nextTree &&
+      (next.tabs.length !== pane.tabs.length ||
+        next.activeId !== pane.activeTabId)
+    ) {
+      nextTree = patchPaneInTree(nextTree, pane.id, {
+        tabs: next.tabs,
+        activeTabId: next.activeId,
+      });
+    }
+  }
+
+  nextTree = pruneEmptyPanes(nextTree);
+  if (!nextTree) {
+    return { tabs: [], activeId: null, workspaceTree: null, activePaneId: null };
+  }
+  if (isPaneNode(nextTree)) {
+    return {
+      tabs: nextTree.tabs,
+      activeId: nextTree.activeTabId,
+      workspaceTree: null,
+      activePaneId: null,
+    };
+  }
+
+  const panes = collectPanes(nextTree);
+  const nextActivePaneId =
+    panes.find((pane) => pane.id === activePaneId)?.id ?? panes[0]?.id ?? null;
+  const activePane =
+    panes.find((pane) => pane.id === nextActivePaneId) ?? panes[0] ?? null;
+
+  return {
+    tabs: activePane?.tabs ?? [],
+    activeId: activePane?.activeTabId ?? null,
+    workspaceTree: nextTree,
+    activePaneId: nextActivePaneId,
+  };
+}
+
+function closeWorkspaceTerminalSessions(state: WorkspaceStore): void {
+  closeTerminalSessionsForTabs(state.tabs);
+  if (state.workspaceTree) {
+    closeTerminalSessionsForTabs(
+      collectPanes(state.workspaceTree).flatMap((pane) => pane.tabs),
+    );
+  }
+}
+
 function serializeWorkspace(s: WorkspaceStore): string {
+  const sanitized = sanitizeWorkspaceTabs(
+    s.tabs,
+    s.activeId,
+    s.workspaceTree,
+    s.activePaneId,
+  );
   const payload: SerializedWorkspaceV2 = {
     version: WORKSPACE_VERSION,
-    workspaceTree: s.workspaceTree,
-    activePaneId: s.activePaneId,
-    tabs: s.tabs,
-    activeId: s.activeId,
+    workspaceTree: sanitized.workspaceTree,
+    activePaneId: sanitized.activePaneId,
+    tabs: sanitized.tabs,
+    activeId: sanitized.activeId,
     fileTreeExpanded: s.fileTreeExpanded ?? [],
   };
   return JSON.stringify(payload);
@@ -178,24 +278,36 @@ export function hydrateWorkspaceStore(
   try {
     const parsed = JSON.parse(raw) as Partial<SerializedWorkspace>;
     if (parsed.version === 1) {
+      const sanitized = sanitizeWorkspaceTabs(
+        parsed.tabs ?? [],
+        parsed.activeId ?? null,
+        null,
+        null,
+      );
       // v1 → 단일 pane 모드로 hydrate. 다음 저장에서 자동으로 v2 형식이 됨.
       store.setState({
-        tabs: parsed.tabs ?? [],
-        activeId: parsed.activeId ?? null,
+        tabs: sanitized.tabs,
+        activeId: sanitized.activeId,
         fileTreeExpanded: parsed.fileTreeExpanded ?? [],
-        workspaceTree: null,
-        activePaneId: null,
+        workspaceTree: sanitized.workspaceTree,
+        activePaneId: sanitized.activePaneId,
       });
       return;
     }
     if (parsed.version === 2) {
       const v2 = parsed as Partial<SerializedWorkspaceV2>;
+      const sanitized = sanitizeWorkspaceTabs(
+        v2.tabs ?? [],
+        v2.activeId ?? null,
+        v2.workspaceTree ?? null,
+        v2.activePaneId ?? null,
+      );
       store.setState({
-        tabs: v2.tabs ?? [],
-        activeId: v2.activeId ?? null,
+        tabs: sanitized.tabs,
+        activeId: sanitized.activeId,
         fileTreeExpanded: v2.fileTreeExpanded ?? [],
-        workspaceTree: v2.workspaceTree ?? null,
-        activePaneId: v2.activePaneId ?? null,
+        workspaceTree: sanitized.workspaceTree,
+        activePaneId: sanitized.activePaneId,
       });
       return;
     }

@@ -2,6 +2,7 @@
 
 > Mermaid 다이어그램으로 정리한 현재 Munix의 런타임 구조 문서.
 > 구현 기준은 `munix/src`와 `munix/src-tauri/src`의 현재 구조다.
+> 최신 플랫폼별 runtime 경계는 [app-runtime-architecture.md](./app-runtime-architecture.md)를 기준으로 한다.
 
 ## 1. 전체 계층
 
@@ -229,30 +230,36 @@ sequenceDiagram
   participant Header as WorkspaceHeader
   participant Tabs as TabSlice
   participant Terminal as TerminalView
-  participant IPC as terminal_* IPC
-  participant Rust as TerminalManager
-  participant PTY as portable-pty shell
+  participant NativeIPC as terminal_native_* IPC
+  participant WebIPC as terminal_* IPC
+  participant Native as macOS Swift/AppKit + libghostty
+  participant PTY as portable-pty fallback
 
   Header->>Tabs: openTerminalTab()
   Tabs->>Tabs: kind="terminal" 탭 생성
   Tabs->>Terminal: active tab body로 렌더
-  Terminal->>IPC: terminalSpawn(cols, rows, vaultId)
-  IPC->>Rust: terminal_spawn
-  Rust->>PTY: cwd = active vault root로 shell spawn
-  PTY-->>Rust: stdout/stderr bytes
-  Rust-->>Terminal: terminal:data event
-  Terminal->>Terminal: ghostty-web render
 
-  Terminal->>IPC: terminalWrite(input)
-  IPC->>PTY: stdin write
+  Terminal->>NativeIPC: terminal_native_is_available()
+  alt macOS native-libghostty available
+    Terminal->>NativeIPC: terminal_native_open(vaultId)
+    NativeIPC->>Native: attach NSView surface
+    Terminal->>NativeIPC: terminal_native_set_bounds()
+    Native-->>Terminal: terminal:native-event closed/childExited
+  else Windows/Linux or forced fallback
+    Terminal->>WebIPC: terminalSpawn(cols, rows, vaultId)
+    WebIPC->>PTY: cwd = active vault root로 shell spawn
+    PTY-->>Terminal: terminal:data event
+    Terminal->>Terminal: ghostty-web render
+    Terminal->>WebIPC: terminalWrite(input)
+    WebIPC->>PTY: stdin write
+    PTY-->>Terminal: terminal:exit event
+  end
 
-  PTY-->>Rust: process exit
-  Rust-->>Terminal: terminal:exit event
   Terminal->>Tabs: onExited() -> closeTab()
-  Tabs->>Rust: terminalKill / session cleanup
+  Tabs->>NativeIPC: terminal_native_close or terminalKill
 ```
 
-터미널의 생명주기는 탭 생명주기와 묶여 있다. 탭을 닫거나 프로세스가 exit되면 Rust session도 정리된다.
+터미널은 플랫폼별 runtime을 선택한다. macOS native build는 Swift/AppKit bridge와 `libghostty`가 PTY, terminal state, Metal rendering을 담당한다. Windows/Linux와 forced fallback은 `ghostty-web` renderer와 Rust `portable-pty` session을 사용한다. 터미널 session은 workspace persistence에 저장하지 않는다.
 
 ## 9. 이미지 파일 열기
 

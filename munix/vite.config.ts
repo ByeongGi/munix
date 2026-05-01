@@ -14,6 +14,10 @@ export default defineConfig(async () => ({
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
+      "@xterm/headless": path.resolve(
+        __dirname,
+        "./node_modules/@xterm/headless/lib-headless/xterm-headless.mjs",
+      ),
     },
   },
 

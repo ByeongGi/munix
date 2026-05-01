@@ -98,6 +98,12 @@ importers:
       '@types/js-yaml':
         specifier: ^4.0.9
         version: 4.0.9
+      '@xterm/addon-serialize':
+        specifier: ^0.14.0
+        version: 0.14.0
+      '@xterm/headless':
+        specifier: ^6.0.0
+        version: 6.0.0
       clsx:
         specifier: ^2.1.1
         version: 2.1.1
@@ -108,8 +114,8 @@ importers:
         specifier: ^7.3.0
         version: 7.3.0
       ghostty-web:
-        specifier: ^0.4.0
-        version: 0.4.0
+        specifier: github:coder/ghostty-web#8c02b065cd8a9e4cf7ea711f5a2cb3ed61a15ca5
+        version: https://codeload.github.com/coder/ghostty-web/tar.gz/8c02b065cd8a9e4cf7ea711f5a2cb3ed61a15ca5
       i18next:
         specifier: ^26.0.8
         version: 26.0.8(typescript@5.8.3)
@@ -1884,6 +1890,12 @@ packages:
   '@vitest/utils@4.1.5':
     resolution: {integrity: sha512-76wdkrmfXfqGjueGgnb45ITPyUi1ycZ4IHgC2bhPDUfWHklY/q3MdLOAB+TF1e6xfl8NxNY0ZYaPCFNWSsw3Ug==}
 
+  '@xterm/addon-serialize@0.14.0':
+    resolution: {integrity: sha512-uteyTU1EkrQa2Ux6P/uFl2fzmXI46jy5uoQMKEOM0fKTyiW7cSn0WrFenHm5vO5uEXX/GpwW/FgILvv3r0WbkA==}
+
+  '@xterm/headless@6.0.0':
+    resolution: {integrity: sha512-5Yj1QINYCyzrZtf8OFIHi47iQtI+0qYFPHmouEfG8dHNxbZ9Tb9YGSuLcsEwj9Z+OL75GJqPyJbyoFer80a2Hw==}
+
   acorn-jsx@5.3.2:
     resolution: {integrity: sha512-rq9s+JNhf0IChjtDXxllJ7g41oZk5SlXtp0LHwyA5cejwn7vKmKp4pPri6YEePv2PU65sAsegbXtIinmDFDXgQ==}
     peerDependencies:
@@ -2371,8 +2383,9 @@ packages:
     resolution: {integrity: sha512-FJhYRoDaiatfEkUK8HKlicmu/3SGFD51q3itKDGoSTysQJBnfOcxU5GxnhE1E6soB76MbT0MBtnKJuXyAx+96Q==}
     engines: {node: '>=6'}
 
-  ghostty-web@0.4.0:
-    resolution: {integrity: sha512-0puDBik2qapbD/QQBW9o5ZHfXnZBqZWx/ctBiVtKZ6ZLds4NYb+wZuw1cRLXZk9zYovIQ908z3rvFhexAvc5Hg==}
+  ghostty-web@https://codeload.github.com/coder/ghostty-web/tar.gz/8c02b065cd8a9e4cf7ea711f5a2cb3ed61a15ca5:
+    resolution: {tarball: https://codeload.github.com/coder/ghostty-web/tar.gz/8c02b065cd8a9e4cf7ea711f5a2cb3ed61a15ca5}
+    version: 0.3.0
 
   glob-parent@6.0.2:
     resolution: {integrity: sha512-XxwI8EOhVQgWp6iDL+3b0r86f4d6AX6zSU55HfB4ydCEuXLXc5FcYeOu+nnGftS4TEju/11rt4KJPTMgbfmv4A==}
@@ -4896,6 +4909,10 @@ snapshots:
       convert-source-map: 2.0.0
       tinyrainbow: 3.1.0
 
+  '@xterm/addon-serialize@0.14.0': {}
+
+  '@xterm/headless@6.0.0': {}
+
   acorn-jsx@5.3.2(acorn@8.16.0):
     dependencies:
       acorn: 8.16.0
@@ -5413,7 +5430,7 @@ snapshots:
 
   get-nonce@1.0.1: {}
 
-  ghostty-web@0.4.0: {}
+  ghostty-web@https://codeload.github.com/coder/ghostty-web/tar.gz/8c02b065cd8a9e4cf7ea711f5a2cb3ed61a15ca5: {}
 
   glob-parent@6.0.2:
     dependencies:

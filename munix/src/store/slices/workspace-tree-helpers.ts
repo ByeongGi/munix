@@ -166,7 +166,11 @@ export function splitMoveFromSinglePaneWorkspace(
   const sourcePatch = removeTabFromPane(rootSourcePane, tabId);
   if (!sourcePatch) return null;
 
-  const rootPane = makeRootPane(sourcePatch.tabs, sourcePatch.activeTabId);
+  const sourceWithFallback = ensurePaneTabsPatchHasPlaceholder(sourcePatch);
+  const rootPane = makeRootPane(
+    sourceWithFallback.tabs,
+    sourceWithFallback.activeTabId,
+  );
   const fresh = makeFreshPane(tab);
   return {
     tree: buildSplit(zone, rootPane, fresh),
@@ -190,10 +194,11 @@ export function splitMoveInWorkspace(
 
   const sourcePatch = removeTabFromPane(source, tabId);
   if (!sourcePatch) return null;
+  const sourceWithFallback = ensurePaneTabsPatchHasPlaceholder(sourcePatch);
 
   const treeAfterRemove = patchPaneInTree(tree, sourcePaneId, {
-    tabs: sourcePatch.tabs,
-    activeTabId: sourcePatch.activeTabId,
+    tabs: sourceWithFallback.tabs,
+    activeTabId: sourceWithFallback.activeTabId,
   });
   const refreshedTarget = collectPanes(treeAfterRemove).find(
     (pane) => pane.id === targetPaneId,
@@ -277,6 +282,15 @@ export function removeTabFromPane(
   return { tabs, activeTabId };
 }
 
+function ensurePaneTabsPatchHasPlaceholder(patch: PaneTabsPatch): PaneTabsPatch {
+  if (patch.tabs.length > 0) return patch;
+  const tab = makeWorkspaceTab("");
+  return {
+    tabs: [tab],
+    activeTabId: tab.id,
+  };
+}
+
 export function reorderTabsInPane(
   pane: PaneNode,
   tabId: string,
@@ -319,7 +333,7 @@ export function moveTabBetweenPanes(
   destinationTabs.splice(insertAt, 0, movedTab);
 
   return {
-    sourcePatch,
+    sourcePatch: ensurePaneTabsPatchHasPlaceholder(sourcePatch),
     destinationPatch: {
       tabs: destinationTabs,
       activeTabId: movedTab.id,

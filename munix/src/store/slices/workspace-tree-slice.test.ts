@@ -70,6 +70,10 @@ function tab(id: string, path: string): Tab {
   return { id, path, title: path.replace(/\.md$/, "") };
 }
 
+function terminalTab(id: string): Tab {
+  return { id, kind: "terminal", path: "", title: "Terminal" };
+}
+
 // ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
@@ -307,8 +311,8 @@ describe("workspace-tree-slice", () => {
       expect(state.activeId).toBe("t1");
     });
 
-    it("splitPaneMove 는 단일 pane 의 마지막 탭 이동 후 source empty pane 을 유지한다", () => {
-      const t1 = tab("t1", "a.md");
+    it("splitPaneMove 는 단일 pane 의 마지막 탭 이동 후 source 에 placeholder 탭을 남긴다", () => {
+      const t1 = terminalTab("t1");
       const { getState } = makeStore([t1], "t1");
 
       getState().splitPaneMove(null, "t1", null, "bottom");
@@ -317,7 +321,15 @@ describe("workspace-tree-slice", () => {
       expect(state.workspaceTree).not.toBeNull();
       const panes = collectPanes(state.workspaceTree!);
       expect(panes).toHaveLength(2);
-      expect(panes.some((pane) => pane.tabs.length === 0)).toBe(true);
+      expect(panes.every((pane) => pane.tabs.length >= 1)).toBe(true);
+      expect(
+        panes.some(
+          (pane) =>
+            pane.tabs.length === 1 &&
+            pane.tabs[0]?.path === "" &&
+            pane.tabs[0]?.kind !== "terminal",
+        ),
+      ).toBe(true);
       expect(state.tabs.map((tt) => tt.id)).toEqual(["t1"]);
       expect(state.activeId).toBe("t1");
     });

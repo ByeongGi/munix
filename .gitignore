@@ -26,6 +26,7 @@ tests2/
 # Rust / Tauri
 target/
 **/target/
+munix/src-tauri/.native/
 
 # Tauri build artifacts
 src-tauri/gen/schemas/

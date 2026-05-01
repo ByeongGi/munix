@@ -53,7 +53,10 @@
     "toggle": "Open or close terminal",
     "title": "Vault terminal",
     "error": "Could not open terminal.",
-    "exited": "[process exited]"
+    "exited": "[process exited]",
+    "nativePending": "Preparing the native terminal runtime.",
+    "nativeHostReady": "The Tauri native host view is ready. The libghostty surface will be attached next.",
+    "nativeHostUnavailable": "The Tauri native host view is not available yet. Try again after the app window finishes initializing."
   },
   "emptyPane": {
     "newFile": "Create new file (Mod+T)",
