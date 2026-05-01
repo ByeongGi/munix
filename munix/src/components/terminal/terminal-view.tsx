@@ -14,6 +14,11 @@ import {
 import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/cn";
 import { ipc } from "@/lib/ipc";
+import {
+  normalizeTerminalInputData,
+  TERMINAL_DELETE,
+  updateTerminalInputLine,
+} from "@/lib/terminal-input";
 import { useSettingsStore } from "@/store/settings-store";
 import { useVaultStore } from "@/store/vault-store";
 import type { TerminalCompletionSuggestion } from "@/types/terminal-completion";
@@ -67,22 +72,6 @@ async function loadTerminalFont(fontSize: number): Promise<void> {
   if (!("fonts" in document)) return;
   await document.fonts.load(`${fontSize}px "${TERMINAL_BUNDLED_FONT}"`);
   await document.fonts.ready;
-}
-
-function isPrintableInput(data: string): boolean {
-  return /^[\x20-\x7e]+$/.test(data);
-}
-
-function updateInputLine(current: string, data: string): string {
-  if (data === "\r") return "";
-  if (data === "\u0003") return "";
-  if (data === "\u0015") return "";
-  if (data === "\u007f") return current.slice(0, -1);
-  if (data === "\u0017") return current.replace(/\s*\S+$/, "");
-  if (data === "\u0001" || data === "\u0005") return current;
-  if (data.startsWith("\u001b")) return current;
-  if (isPrintableInput(data)) return `${current}${data}`;
-  return current;
 }
 
 function clamp(value: number, min: number, max: number): number {
@@ -567,6 +556,46 @@ export function TerminalView({
         fitRef.current = fit;
         resizeObserver = new ResizeObserver(() => resizeToFit());
         resizeObserver.observe(host);
+        const handleTerminalInput = (rawData: string) => {
+          const data = normalizeTerminalInputData(rawData);
+          const id = sessionIdRef.current;
+          if (id) void ipc.terminalWrite(id, data);
+          const previous = inputLineRef.current;
+          if (data === "\r") {
+            const command = previous.trim();
+            if (command) {
+              setCommandHistory((history) =>
+                [command, ...history.filter((item) => item !== command)].slice(
+                  0,
+                  TERMINAL_HISTORY_LIMIT,
+                ),
+              );
+            }
+          }
+          const next = updateTerminalInputLine(previous, data);
+          if (next !== previous || data === "\r") {
+            inputLineRef.current = next;
+            setInputLine(next);
+            setCompletionOpen(data !== "\r");
+            requestAnimationFrame(updateCompletionAnchor);
+          }
+        };
+        terminal.attachCustomKeyEventHandler((event) => {
+          if (
+            event.type !== "keydown" ||
+            event.key !== "Backspace" ||
+            event.ctrlKey ||
+            event.metaKey ||
+            event.altKey
+          ) {
+            return true;
+          }
+
+          event.preventDefault();
+          event.stopPropagation();
+          handleTerminalInput(TERMINAL_DELETE);
+          return false;
+        });
 
         await waitForSettledFit();
         if (cancelled) return;
@@ -606,29 +635,7 @@ export function TerminalView({
         }
 
         if (existingSessionId) void ipc.terminalResize(session.id, cols, rows);
-        dataDisposable = terminal.onData((data) => {
-          const id = sessionIdRef.current;
-          if (id) void ipc.terminalWrite(id, data);
-          const previous = inputLineRef.current;
-          if (data === "\r") {
-            const command = previous.trim();
-            if (command) {
-              setCommandHistory((history) =>
-                [command, ...history.filter((item) => item !== command)].slice(
-                  0,
-                  TERMINAL_HISTORY_LIMIT,
-                ),
-              );
-            }
-          }
-          const next = updateInputLine(previous, data);
-          if (next !== previous || data === "\r") {
-            inputLineRef.current = next;
-            setInputLine(next);
-            setCompletionOpen(data !== "\r");
-            requestAnimationFrame(updateCompletionAnchor);
-          }
-        });
+        dataDisposable = terminal.onData(handleTerminalInput);
         resizeDisposable = terminal.onResize(({ cols, rows }) => {
           const id = sessionIdRef.current;
           if (!id) return;

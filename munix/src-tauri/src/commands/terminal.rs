@@ -148,7 +148,7 @@ fn update_session_input(session: &mut TerminalSession, data: &str) {
         session.input_buffer.clear();
         return;
     }
-    if data == "\u{7f}" {
+    if data == "\u{7f}" || data == "\u{8}" {
         session.input_buffer.pop();
         return;
     }
@@ -223,6 +223,8 @@ pub async fn terminal_spawn(
 
     let mut command = CommandBuilder::new(default_shell());
     command.cwd(&cwd);
+    command.env("TERM", "xterm-256color");
+    command.env("COLORTERM", "truecolor");
 
     let child = pair
         .slave
