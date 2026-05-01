@@ -1,10 +1,23 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { preprocessMarkdown } from "@/lib/editor-preprocess";
+import { useActiveWorkspaceStore } from "@/lib/active-vault";
 import { ipc } from "@/lib/ipc";
 import { parseDocument } from "@/lib/markdown";
+import type { SaveStatus } from "@/store/editor-store";
 import type { InactiveEditorStatus } from "./inactive-pane-editor-types";
 
-export function useInactivePaneDocumentLoader(path: string) {
+function inactiveStatusFromSaveStatus(
+  status: SaveStatus,
+): InactiveEditorStatus {
+  if (status.kind === "dirty") return "dirty";
+  if (status.kind === "saving") return "saving";
+  if (status.kind === "conflict") return "conflict";
+  if (status.kind === "error") return "saveError";
+  return "ready";
+}
+
+export function useInactivePaneDocumentLoader(path: string, tabId: string) {
+  const ws = useActiveWorkspaceStore();
   const [body, setBody] = useState("");
   const [frontmatter, setFrontmatter] = useState<Record<
     string,
@@ -31,6 +44,19 @@ export function useInactivePaneDocumentLoader(path: string) {
 
   useEffect(() => {
     let cancelled = false;
+    const runtime = ws.getState().getDocumentRuntime(tabId);
+    if (runtime && runtime.path === path && !runtime.externalModified) {
+      frontmatterRef.current = runtime.frontmatter;
+      baseModifiedRef.current = runtime.baseModified;
+      setBody(runtime.body);
+      setFrontmatter(runtime.frontmatter);
+      setBaseModified(runtime.baseModified);
+      setStatus(inactiveStatusFromSaveStatus(runtime.status));
+      return () => {
+        cancelled = true;
+      };
+    }
+
     setStatus("loading");
     setBaseModified(null);
     void ipc
@@ -44,6 +70,16 @@ export function useInactivePaneDocumentLoader(path: string) {
         setFrontmatter(parsed.frontmatter);
         setBaseModified(file.modified);
         setStatus("ready");
+        ws.getState().upsertDocumentRuntime({
+          tabId,
+          path,
+          body: parsed.body,
+          frontmatter: parsed.frontmatter,
+          baseModified: file.modified,
+          status: { kind: "idle" },
+          dirty: false,
+          lastAccessedAt: Date.now(),
+        });
       })
       .catch((e) => {
         if (cancelled) return;
@@ -58,7 +94,7 @@ export function useInactivePaneDocumentLoader(path: string) {
     return () => {
       cancelled = true;
     };
-  }, [path]);
+  }, [path, tabId, ws]);
 
   return {
     body,

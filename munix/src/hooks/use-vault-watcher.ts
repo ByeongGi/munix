@@ -71,6 +71,9 @@ export function useVaultWatcher(): void {
         getWorkspaceStore(vaultId).getState().backlinks.removePath(path);
         getWorkspaceStore(vaultId).getState().tags.removePath(path);
       } else if (kind === "modified" || kind === "created") {
+        getWorkspaceStore(vaultId)
+          .getState()
+          .invalidateDocumentRuntimesForPath(path);
         // BacklinksSlice / TagsSlice 가 closure 로 vaultId 캡처 → 인덱스가 그
         // vault 의 파일을 읽음. 비-active vault 도 정확히 갱신.
         if (/\.md$/i.test(path)) {

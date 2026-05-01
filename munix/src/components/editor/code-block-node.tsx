@@ -2,7 +2,13 @@
  * NodeView 컴포넌트(CodeBlockView)와 Tiptap extension(CodeBlockWithLang)을 같이
  * export. image-node.tsx와 동일 패턴 — extension은 fast-refresh 대상 아님.
  */
-import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+} from "react";
 import {
   NodeViewContent,
   NodeViewWrapper,
@@ -11,7 +17,7 @@ import {
 } from "@tiptap/react";
 import type { Editor } from "@tiptap/core";
 import { CodeBlockLowlight } from "@tiptap/extension-code-block-lowlight";
-import { Copy, Check, Pencil, Eye, AlertTriangle, Loader2 } from "lucide-react";
+import { Copy, Check, Pencil, Eye, AlertTriangle } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/cn";
 import { ipc } from "@/lib/ipc";
@@ -21,10 +27,14 @@ const MERMAID_RENDER_ROOT_MARGIN = "800px 0px";
 const MERMAID_RENDER_DEBOUNCE_MS = 80;
 const MERMAID_RENDER_IDLE_TIMEOUT_MS = 1200;
 const MERMAID_RENDER_CACHE_LIMIT = 80;
+const MERMAID_PREVIEW_CHROME_HEIGHT = 64;
 
 interface MermaidRenderResult {
   svg: string;
   error: string | null;
+  height?: number;
+  width?: number;
+  viewBox?: string;
 }
 
 type MermaidRenderState = "idle" | "pending" | "rendering" | "done" | "error";
@@ -53,6 +63,65 @@ function getMermaidTheme(): "default" | "dark" {
   return document.documentElement.getAttribute("data-theme") === "light"
     ? "default"
     : "dark";
+}
+
+function parseSvgLength(value: string | null): number | undefined {
+  if (!value) return undefined;
+  const match = /^(\d+(?:\.\d+)?)/.exec(value.trim());
+  if (!match) return undefined;
+  const parsed = Number(match[1]);
+  return Number.isFinite(parsed) ? parsed : undefined;
+}
+
+function parseViewBox(viewBox: string | undefined): {
+  width?: number;
+  height?: number;
+} {
+  if (!viewBox) return {};
+  const parts = viewBox
+    .trim()
+    .split(/\s+/)
+    .map((part) => Number(part));
+  const width = parts[2];
+  const height = parts[3];
+  return {
+    width: Number.isFinite(width) ? width : undefined,
+    height: Number.isFinite(height) ? height : undefined,
+  };
+}
+
+function readSvgMetrics(
+  svg: string,
+): Pick<MermaidRenderResult, "height" | "width" | "viewBox"> {
+  const doc = new DOMParser().parseFromString(svg, "image/svg+xml");
+  const root = doc.documentElement;
+  const viewBox = root.getAttribute("viewBox") ?? undefined;
+  const viewBoxSize = parseViewBox(viewBox);
+  return {
+    viewBox,
+    width: parseSvgLength(root.getAttribute("width")) ?? viewBoxSize.width,
+    height: parseSvgLength(root.getAttribute("height")) ?? viewBoxSize.height,
+  };
+}
+
+function estimateMermaidFallbackHeight(source: string): number {
+  const lineCount = source.split(/\r?\n/).length;
+  return Math.max(220, Math.min(640, 180 + lineCount * 10));
+}
+
+function reserveHeightForResult(
+  result: MermaidRenderResult,
+): number | undefined {
+  if (!result.height) return undefined;
+  return Math.ceil(result.height + MERMAID_PREVIEW_CHROME_HEIGHT);
+}
+
+function getMermaidCacheKey(
+  source: string,
+  theme: string,
+  containerWidth: number,
+): string {
+  return [theme, Math.round(containerWidth), source].join("\n");
 }
 
 function enqueueMermaidRender(
@@ -263,10 +332,17 @@ function MermaidPreview({ source }: { source: string }) {
   const [error, setError] = useState<string | null>(null);
   const [isVisible, setIsVisible] = useState(false);
   const [renderState, setRenderState] = useState<MermaidRenderState>("idle");
-  const isLoading =
+  const isRendering =
     renderState === "idle" ||
     renderState === "pending" ||
     renderState === "rendering";
+  const [reservedHeight, setReservedHeight] = useState(() =>
+    estimateMermaidFallbackHeight(source),
+  );
+
+  useEffect(() => {
+    setReservedHeight(estimateMermaidFallbackHeight(source));
+  }, [source]);
 
   useEffect(() => {
     const wrapper = wrapperRef.current;
@@ -299,12 +375,19 @@ function MermaidPreview({ source }: { source: string }) {
     let cancelled = false;
     const target = container;
     const theme = getMermaidTheme();
-    const cacheKey = `${theme}\n${source}`;
+    const cacheKey = getMermaidCacheKey(
+      source,
+      theme,
+      target.getBoundingClientRect().width,
+    );
     const cached = readMermaidCache(cacheKey);
 
     if (cached) {
       target.innerHTML = cached.svg;
       setError(cached.error);
+      setReservedHeight(
+        reserveHeightForResult(cached) ?? estimateMermaidFallbackHeight(source),
+      );
       setRenderState(cached.error ? "error" : "done");
       return;
     }
@@ -324,12 +407,20 @@ function MermaidPreview({ source }: { source: string }) {
             `munix-mermaid-${crypto.randomUUID()}`,
             source || "\n",
           );
-          return { svg: renderResult.svg, error: null };
+          return {
+            svg: renderResult.svg,
+            error: null,
+            ...readSvgMetrics(renderResult.svg),
+          };
         });
         if (cancelled) return;
         writeMermaidCache(cacheKey, result);
         target.innerHTML = result.svg;
         setError(result.error);
+        setReservedHeight(
+          reserveHeightForResult(result) ??
+            estimateMermaidFallbackHeight(source),
+        );
         setRenderState("done");
       } catch (err) {
         if (cancelled) return;
@@ -340,12 +431,14 @@ function MermaidPreview({ source }: { source: string }) {
         writeMermaidCache(cacheKey, result);
         target.innerHTML = "";
         setError(result.error);
+        setReservedHeight(estimateMermaidFallbackHeight(source));
         setRenderState("error");
       }
     }
 
     target.innerHTML = "";
     setError(null);
+    setReservedHeight(estimateMermaidFallbackHeight(source));
     setRenderState("pending");
     const cancelScheduledRender = scheduleMermaidRender(
       () => void renderMermaid(),
@@ -356,25 +449,23 @@ function MermaidPreview({ source }: { source: string }) {
     };
   }, [isVisible, source]);
 
+  const previewStyle = useMemo(
+    () =>
+      ({
+        "--munix-mermaid-reserved-height": `${reservedHeight}px`,
+      }) as CSSProperties,
+    [reservedHeight],
+  );
+
   return (
     <div
       ref={wrapperRef}
       contentEditable={false}
       className="munix-mermaid-preview"
-      aria-busy={isLoading}
+      aria-busy={isRendering}
+      style={previewStyle}
     >
       <div ref={containerRef} className="munix-mermaid-canvas" />
-      {isLoading ? (
-        <div className="munix-mermaid-placeholder" role="status">
-          <Loader2 className="h-4 w-4 animate-spin text-[var(--color-accent)]" />
-          <span>{t("editor:mermaid.rendering")}</span>
-          <div className="munix-mermaid-placeholder-lines" aria-hidden="true">
-            <i />
-            <i />
-            <i />
-          </div>
-        </div>
-      ) : null}
       {error ? (
         <div className="munix-mermaid-error" role="status">
           <AlertTriangle className="h-4 w-4 shrink-0" />

@@ -9,6 +9,7 @@ import {
 import { createEditorExtensions } from "@/components/editor/extensions";
 import { useAutoSave } from "@/hooks/use-auto-save";
 import { useEditorStore } from "@/store/editor-store";
+import { useActiveWorkspaceStore } from "@/lib/active-vault";
 import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/cn";
 import { SearchBar } from "@/components/editor/search-bar";
@@ -19,15 +20,21 @@ import { EditorTitleInput } from "@/components/editor/editor-title-input";
 import { ErrorBoundary } from "@/components/error-boundary";
 import { BlockMenu } from "@/components/editor/block-menu";
 import { DragHandle } from "@tiptap/extension-drag-handle-react";
-import { GripVertical, Loader2 } from "lucide-react";
+import { GripVertical } from "lucide-react";
 import { useKeymapMatcher } from "@/hooks/use-keymap";
 import { preprocessMarkdown } from "@/lib/editor-preprocess";
 import {
   focusEditorEndOnEmptySurface,
   focusEditorStartOnNextFrame,
 } from "@/components/editor/editor-focus";
+import type {
+  DocumentRuntime,
+  ScrollRuntimeState,
+} from "@/store/slices/document-runtime-slice";
 
 const DEFER_DOCUMENT_HYDRATION_MIN_LENGTH = 80_000;
+const SCROLL_RESTORE_MAX_ATTEMPTS = 3;
+const SCROLL_RESTORE_OBSERVER_MS = 1200;
 
 interface EditorViewProps {
   className?: string;
@@ -44,8 +51,120 @@ function normalizeSourceLine(line: string): string {
     .trim();
 }
 
+function captureScrollAnchor(
+  editor: NonNullable<ReturnType<typeof useEditor>>,
+  scrollEl: HTMLDivElement | null,
+): ScrollRuntimeState | undefined {
+  if (!scrollEl || editor.isDestroyed) return undefined;
+  const containerTop = scrollEl.getBoundingClientRect().top;
+  let anchorPos: number | undefined;
+  let anchorOffsetTop: number | undefined;
+  let bestDistance = Number.POSITIVE_INFINITY;
+
+  editor.state.doc.descendants((node, pos) => {
+    if (!node.isBlock) return;
+    const dom = editor.view.nodeDOM(pos);
+    if (!(dom instanceof Element)) return;
+    const rect = dom.getBoundingClientRect();
+    const offsetTop = rect.top - containerTop;
+    const distance = Math.abs(offsetTop);
+    if (distance < bestDistance) {
+      anchorPos = pos;
+      anchorOffsetTop = offsetTop;
+      bestDistance = distance;
+    }
+  });
+
+  return {
+    top: scrollEl.scrollTop,
+    anchorPos,
+    anchorOffsetTop,
+  };
+}
+
+function clampSelection(
+  selection: DocumentRuntime["selection"] | undefined,
+  docSize: number,
+) {
+  if (!selection) return null;
+  const max = Math.max(1, docSize - 1);
+  const from = Math.max(1, Math.min(selection.from, max));
+  const to = Math.max(from, Math.min(selection.to, max));
+  return { from, to };
+}
+
+function restoreScrollAnchor(
+  editor: NonNullable<ReturnType<typeof useEditor>>,
+  scrollEl: HTMLDivElement | null,
+  scroll: ScrollRuntimeState | undefined,
+): boolean {
+  if (!scrollEl || !scroll || editor.isDestroyed) return false;
+  if (scroll.anchorPos == null || scroll.anchorOffsetTop == null) {
+    scrollEl.scrollTop = scroll.top;
+    return true;
+  }
+
+  const dom = editor.view.nodeDOM(scroll.anchorPos);
+  if (!(dom instanceof Element)) {
+    scrollEl.scrollTop = scroll.top;
+    return true;
+  }
+
+  const containerTop = scrollEl.getBoundingClientRect().top;
+  const currentOffsetTop = dom.getBoundingClientRect().top - containerTop;
+  scrollEl.scrollTop += currentOffsetTop - scroll.anchorOffsetTop;
+  return true;
+}
+
+function scheduleScrollAnchorRestore(
+  editor: NonNullable<ReturnType<typeof useEditor>>,
+  scrollEl: HTMLDivElement | null,
+  scroll: ScrollRuntimeState | undefined,
+): () => void {
+  if (!scrollEl || !scroll || editor.isDestroyed) return () => {};
+
+  let cancelled = false;
+  let attempts = 0;
+  let frameId = 0;
+  let timerId = 0;
+  let observer: ResizeObserver | null = null;
+
+  const run = () => {
+    if (cancelled || editor.isDestroyed) return;
+    attempts += 1;
+    restoreScrollAnchor(editor, scrollEl, scroll);
+  };
+
+  const requestRun = () => {
+    if (cancelled || attempts >= SCROLL_RESTORE_MAX_ATTEMPTS) return;
+    if (frameId) window.cancelAnimationFrame(frameId);
+    frameId = window.requestAnimationFrame(run);
+  };
+
+  requestRun();
+
+  if ("ResizeObserver" in window) {
+    observer = new ResizeObserver(requestRun);
+    observer.observe(editor.view.dom);
+  }
+
+  timerId = window.setTimeout(() => {
+    observer?.disconnect();
+    observer = null;
+  }, SCROLL_RESTORE_OBSERVER_MS);
+
+  return () => {
+    cancelled = true;
+    if (frameId) window.cancelAnimationFrame(frameId);
+    if (timerId) window.clearTimeout(timerId);
+    observer?.disconnect();
+  };
+}
+
 export function EditorView({ className }: EditorViewProps) {
   const { t } = useTranslation(["editor", "common"]);
+  const ws = useActiveWorkspaceStore();
+  const currentTabId = useEditorStore((s) => s.currentTabId);
   const currentPath = useEditorStore((s) => s.currentPath);
   const body = useEditorStore((s) => s.body);
   const sourceVersion = useEditorStore((s) => s.sourceVersion);
@@ -63,10 +182,19 @@ export function EditorView({ className }: EditorViewProps) {
     anchor: { x: number; y: number };
   } | null>(null);
   const scrollRef = useRef<HTMLDivElement | null>(null);
+  const restoreCleanupRef = useRef<(() => void) | null>(null);
+  const latestRuntimeContextRef = useRef({
+    currentTabId,
+    currentPath,
+    body,
+  });
   const scrolledPathRef = useRef<string | null>(null);
   const appliedSourceVersionRef = useRef<number | null>(null);
   const [isHydrating, setIsHydrating] = useState(false);
-  const isDocumentLoading = isOpening || isHydrating;
+
+  useEffect(() => {
+    latestRuntimeContextRef.current = { currentTabId, currentPath, body };
+  }, [body, currentPath, currentTabId]);
 
   const handleNodeChange = useCallback(({ pos }: { pos: number | null }) => {
     blockPosRef.current = pos;
@@ -134,6 +262,45 @@ export function EditorView({ className }: EditorViewProps) {
     focusEditorStartOnNextFrame(editor);
   }, [editor]);
 
+  useEffect(() => {
+    if (!editor) return;
+
+    const capture = (): DocumentRuntime | null => {
+      const { currentTabId, currentPath, body } =
+        latestRuntimeContextRef.current;
+      if (!currentTabId || !currentPath || editor.isDestroyed) return null;
+      const storage = editor.storage as unknown as {
+        markdown: { getMarkdown: () => string };
+      };
+      const store = ws.getState();
+      const selection = {
+        from: editor.state.selection.from,
+        to: editor.state.selection.to,
+      };
+      const status = store.status;
+      const nextBody = storage.markdown.getMarkdown() || body;
+
+      return {
+        tabId: currentTabId,
+        path: currentPath,
+        body: nextBody,
+        frontmatter: store.frontmatter,
+        baseModified: store.baseModified,
+        status,
+        selection,
+        scroll: captureScrollAnchor(editor, scrollRef.current),
+        dirty: status.kind === "dirty" || status.kind === "conflict",
+        lastAccessedAt: Date.now(),
+      };
+    };
+
+    ws.getState().setActiveEditorRuntimeCapture(capture);
+    return () => {
+      ws.getState().captureActiveDocumentRuntime();
+      ws.getState().setActiveEditorRuntimeCapture(null);
+    };
+  }, [editor, ws]);
+
   const jumpToSourceLine = useCallback(
     (lineNum: number): boolean => {
       if (!editor || lineNum < 1) return false;
@@ -181,6 +348,10 @@ export function EditorView({ className }: EditorViewProps) {
     if (!editor) return;
     if (editor.isDestroyed) return;
     if (isOpening) {
+      if (appliedSourceVersionRef.current !== sourceVersion) {
+        appliedSourceVersionRef.current = sourceVersion;
+        editor.commands.setContent("", { emitUpdate: false });
+      }
       setIsHydrating(false);
       return;
     }
@@ -207,6 +378,25 @@ export function EditorView({ className }: EditorViewProps) {
       return true;
     };
 
+    const restoreRuntimeViewState = () => {
+      const runtime = ws.getState().getDocumentRuntime(currentTabId);
+      if (!runtime) return false;
+      const selection = clampSelection(
+        runtime.selection,
+        editor.state.doc.content.size,
+      );
+      if (selection) {
+        editor.commands.setTextSelection(selection);
+      }
+      restoreCleanupRef.current?.();
+      restoreCleanupRef.current = scheduleScrollAnchorRestore(
+        editor,
+        scrollRef.current,
+        runtime.scroll,
+      );
+      return runtime.selection !== undefined || runtime.scroll !== undefined;
+    };
+
     if (appliedSourceVersionRef.current !== sourceVersion) {
       appliedSourceVersionRef.current = sourceVersion;
       const applySource = () => {
@@ -217,7 +407,8 @@ export function EditorView({ className }: EditorViewProps) {
         setIsHydrating(false);
         const handledSearch = runPendingSearch();
         if (!handledSearch && !hasPendingSearch && currentPath) {
-          focusEditorStartOnNextFrame(editor);
+          const restored = restoreRuntimeViewState();
+          if (!restored) focusEditorStartOnNextFrame(editor);
         }
       };
 
@@ -237,7 +428,8 @@ export function EditorView({ className }: EditorViewProps) {
       // 평범하게 파일을 새로 연 경우에만 스크롤 상단으로 고정한다.
       // 입력으로 body store가 갱신될 때마다 실행하면 커서가 맨 위로 튄다.
       if (!handledSearch && pathChanged && scrollRef.current) {
-        scrollRef.current.scrollTop = 0;
+        const restored = restoreRuntimeViewState();
+        if (!restored) scrollRef.current.scrollTop = 0;
       }
     }
 
@@ -250,10 +442,12 @@ export function EditorView({ className }: EditorViewProps) {
     editor,
     body,
     currentPath,
+    currentTabId,
     hasPendingSearch,
     isOpening,
     jumpToSourceLine,
     sourceVersion,
+    ws,
   ]);
 
   useEffect(() => {
@@ -289,6 +483,13 @@ export function EditorView({ className }: EditorViewProps) {
       }
     });
   }, [editor, isHydrating, pendingJumpHeading]);
+
+  useEffect(() => {
+    return () => {
+      restoreCleanupRef.current?.();
+      restoreCleanupRef.current = null;
+    };
+  }, []);
 
   useEffect(() => {
     if (!editor || pendingJumpLine === null || isHydrating) return;
@@ -386,45 +587,9 @@ export function EditorView({ className }: EditorViewProps) {
             onClose={handleBlockMenuClose}
           />
         )}
-        <div
-          className={cn(
-            "munix-editor-content-surface",
-            isDocumentLoading && "munix-editor-content-surface-loading",
-          )}
-        >
-          {isDocumentLoading ? <DocumentLoadingState /> : null}
-          <EditorContent
-            editor={editor}
-            className={cn(isDocumentLoading && "munix-editor-content-hidden")}
-            aria-hidden={isDocumentLoading}
-          />
+        <div className="munix-editor-content-surface">
+          <EditorContent editor={editor} />
         </div>
-      </div>
-    </div>
-  );
-}
-
-function DocumentLoadingState() {
-  const { t } = useTranslation(["editor"]);
-
-  return (
-    <div className="munix-document-loader" role="status" aria-live="polite">
-      <div className="munix-document-loader-header">
-        <Loader2 className="h-4 w-4 animate-spin text-[var(--color-accent)]" />
-        <div>
-          <div className="munix-document-loader-title">
-            {t("editor:documentLoading.title")}
-          </div>
-          <div className="munix-document-loader-description">
-            {t("editor:documentLoading.description")}
-          </div>
-        </div>
-      </div>
-      <div className="munix-document-loader-lines" aria-hidden="true">
-        <span />
-        <span />
-        <span />
-        <span />
       </div>
     </div>
   );

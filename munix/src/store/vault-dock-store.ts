@@ -52,7 +52,7 @@ async function restoreActiveWorkspaceFile(
     return;
   }
   try {
-    await state.openFile(activeTab.path);
+    await state.openFile(activeTab.path, activeTab.id);
   } catch (e) {
     if (import.meta.env.DEV) {
       console.warn("[workspace] restore active file failed", e);

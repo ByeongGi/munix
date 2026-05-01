@@ -1,9 +1,14 @@
-import { useCallback, useEffect } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { EditorContent, useEditor } from "@tiptap/react";
 import { useTranslation } from "react-i18next";
 
 import { createEditorExtensions } from "@/components/editor/extensions";
+import { useActiveWorkspaceStore } from "@/lib/active-vault";
 import { cn } from "@/lib/cn";
+import type {
+  DocumentRuntime,
+  ScrollRuntimeState,
+} from "@/store/slices/document-runtime-slice";
 import { InactivePanePropertiesPanel } from "./inactive-pane-properties-panel";
 import { InactivePaneEditorStatusBanner } from "./inactive-pane-editor-status-banner";
 import { InactivePaneTitleInput } from "./inactive-pane-title-input";
@@ -16,15 +21,26 @@ import {
 } from "@/components/editor/editor-focus";
 
 interface InactivePaneEditorProps {
+  tabId: string;
   path: string;
   titleDraft?: string;
 }
 
+function captureInactiveScroll(
+  scrollEl: HTMLDivElement | null,
+): ScrollRuntimeState | undefined {
+  if (!scrollEl) return undefined;
+  return { top: scrollEl.scrollTop };
+}
+
 export function InactivePaneEditor({
+  tabId,
   path,
   titleDraft,
 }: InactivePaneEditorProps) {
   const { t } = useTranslation(["editor", "app", "properties"]);
+  const ws = useActiveWorkspaceStore();
+  const scrollRef = useRef<HTMLDivElement | null>(null);
   const {
     setBody,
     content,
@@ -36,7 +52,7 @@ export function InactivePaneEditor({
     statusRef,
     frontmatterRef,
     baseModifiedRef,
-  } = useInactivePaneDocumentLoader(path);
+  } = useInactivePaneDocumentLoader(path, tabId);
   const editor = useEditor(
     {
       extensions: createEditorExtensions(t("editor:placeholder.document"), {
@@ -67,6 +83,7 @@ export function InactivePaneEditor({
   );
   const { requestSave, waitForIdleSave } = useInactivePaneAutosave({
     path,
+    tabId,
     editor,
     statusRef,
     frontmatterRef,
@@ -79,7 +96,57 @@ export function InactivePaneEditor({
   useEffect(() => {
     if (!editor || editor.isDestroyed) return;
     editor.commands.setContent(content, { emitUpdate: false });
-  }, [editor, content]);
+    const runtime = ws.getState().getDocumentRuntime(tabId);
+    if (runtime?.selection) {
+      const max = Math.max(1, editor.state.doc.content.size - 1);
+      const from = Math.max(1, Math.min(runtime.selection.from, max));
+      const to = Math.max(from, Math.min(runtime.selection.to, max));
+      editor.commands.setTextSelection({ from, to });
+    }
+    if (runtime?.scroll && scrollRef.current) {
+      scrollRef.current.scrollTop = runtime.scroll.top;
+    }
+  }, [content, editor, tabId, ws]);
+
+  const captureRuntime = useCallback((): DocumentRuntime | null => {
+    if (!editor || editor.isDestroyed) return null;
+    const storage = editor.storage as unknown as {
+      markdown: { getMarkdown: () => string };
+    };
+    const nextBody = storage.markdown.getMarkdown();
+    const saveStatus =
+      statusRef.current === "dirty"
+        ? ({ kind: "dirty", since: Date.now() } as const)
+        : statusRef.current === "saving"
+          ? ({ kind: "saving", attempt: 1 } as const)
+          : statusRef.current === "conflict"
+            ? ({ kind: "conflict" } as const)
+            : statusRef.current === "saveError"
+              ? ({ kind: "error", error: "inactive pane save failed" } as const)
+              : ({ kind: "idle" } as const);
+    return {
+      tabId,
+      path,
+      body: nextBody,
+      frontmatter: frontmatterRef.current,
+      baseModified: baseModifiedRef.current,
+      status: saveStatus,
+      selection: {
+        from: editor.state.selection.from,
+        to: editor.state.selection.to,
+      },
+      scroll: captureInactiveScroll(scrollRef.current),
+      dirty: saveStatus.kind === "dirty" || saveStatus.kind === "conflict",
+      lastAccessedAt: Date.now(),
+    };
+  }, [baseModifiedRef, editor, frontmatterRef, path, statusRef, tabId]);
+
+  useEffect(() => {
+    return () => {
+      const runtime = captureRuntime();
+      if (runtime) ws.getState().upsertDocumentRuntime(runtime);
+    };
+  }, [captureRuntime, ws]);
 
   const handleFrontmatterChange = useCallback(
     (next: Record<string, unknown> | null, flush: boolean) => {
@@ -119,6 +186,7 @@ export function InactivePaneEditor({
 
   return (
     <div
+      ref={scrollRef}
       className="relative min-h-0 min-w-0 flex-1 overflow-y-auto bg-[var(--color-editor-bg)]"
       onMouseDown={handleEditorEmptyAreaMouseDown}
     >

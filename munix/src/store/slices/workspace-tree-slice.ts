@@ -37,6 +37,7 @@ import {
   type WorkspaceNode,
 } from "../workspace-types";
 import type { EditorSlice } from "./editor-slice";
+import type { DocumentRuntimeSlice } from "./document-runtime-slice";
 import { isTerminalTab, type Tab, type TabSlice } from "./tab-slice";
 import {
   captureGlobalIntoActivePane,
@@ -134,7 +135,10 @@ export interface WorkspaceTreeSlice extends WorkspaceTreeState {
   updatePathInAllPanes: (oldPath: string, newPath: string) => void;
 }
 
-type FullSlice = WorkspaceTreeSlice & TabSlice & EditorSlice;
+type FullSlice = WorkspaceTreeSlice &
+  TabSlice &
+  EditorSlice &
+  Partial<DocumentRuntimeSlice>;
 
 // ---------------------------------------------------------------------------
 // Slice
@@ -146,6 +150,24 @@ export const createWorkspaceTreeSlice: StateCreator<
   [],
   WorkspaceTreeSlice
 > = (set, get) => {
+  function syncEditorToTab(tab: Tab | null | undefined): void {
+    const state = get();
+    state.captureActiveDocumentRuntime?.();
+    const flushSave = state.flushSave;
+
+    if (!tab || isTerminalTab(tab) || !tab.path) {
+      void flushSave?.();
+      state.closeFile();
+      return;
+    }
+
+    void (async () => {
+      await flushSave?.();
+      const latest = get();
+      await latest.openFile(tab.path, tab.id);
+    })();
+  }
+
   /** mirror swap — 새 active pane 으로 글로벌 tabs/activeId 를 맞춘다. */
   function applyActivePaneSwap(
     nextTree: WorkspaceNode,
@@ -168,19 +190,12 @@ export const createWorkspaceTreeSlice: StateCreator<
     });
 
     // editor 도 새 active tab path 로
-    const state = get();
+    let nextActiveTab: Tab | null = null;
     if (nextActiveTabId) {
       const tab = nextTabs.find((t) => t.id === nextActiveTabId);
-      if (tab) {
-        if (isTerminalTab(tab) || !tab.path) {
-          state.closeFile();
-          return;
-        }
-        void state.openFile(tab.path);
-        return;
-      }
+      if (tab) nextActiveTab = tab;
     }
-    state.closeFile();
+    syncEditorToTab(nextActiveTab);
   }
 
   function collapseToSinglePane(pane: PaneNode): void {
@@ -193,11 +208,7 @@ export const createWorkspaceTreeSlice: StateCreator<
     const activeTab = pane.activeTabId
       ? pane.tabs.find((t) => t.id === pane.activeTabId)
       : null;
-    if (activeTab && !isTerminalTab(activeTab) && activeTab.path) {
-      void get().openFile(activeTab.path);
-    } else {
-      get().closeFile();
-    }
+    syncEditorToTab(activeTab);
   }
 
   function commitPaneTabsMutation(
@@ -323,6 +334,7 @@ export const createWorkspaceTreeSlice: StateCreator<
 
       if (transition.tree === null) {
         set({ workspaceTree: null, activePaneId: null });
+        syncEditorToTab(null);
         return;
       }
 
@@ -464,6 +476,7 @@ export const createWorkspaceTreeSlice: StateCreator<
         tabs: patch.tabs,
         activeTabId: patch.activeTabId,
       });
+      get().removeDocumentRuntime?.(tabId);
     },
 
     closeOtherPaneTabs: (paneId, tabId) => {
@@ -479,17 +492,16 @@ export const createWorkspaceTreeSlice: StateCreator<
       if (!pane) return;
       const patch = closeOtherTabsInPane(pane, tabId);
       if (!patch) return;
-      closeTerminalSessionsForTabs(
-        pane.tabs.filter(
-          (tab) =>
-            !patch.tabs.some((remainingTab) => remainingTab.id === tab.id),
-        ),
+      const removedTabs = pane.tabs.filter(
+        (tab) => !patch.tabs.some((remainingTab) => remainingTab.id === tab.id),
       );
+      closeTerminalSessionsForTabs(removedTabs);
 
       patchPaneTabsAndCommit(captured, paneId, {
         tabs: patch.tabs,
         activeTabId: patch.activeTabId,
       });
+      for (const tab of removedTabs) get().removeDocumentRuntime?.(tab.id);
     },
 
     closePaneTabsAfter: (paneId, tabId) => {
@@ -505,17 +517,16 @@ export const createWorkspaceTreeSlice: StateCreator<
       if (!pane) return;
       const patch = closeTabsAfterInPane(pane, tabId);
       if (!patch) return;
-      closeTerminalSessionsForTabs(
-        pane.tabs.filter(
-          (tab) =>
-            !patch.tabs.some((remainingTab) => remainingTab.id === tab.id),
-        ),
+      const removedTabs = pane.tabs.filter(
+        (tab) => !patch.tabs.some((remainingTab) => remainingTab.id === tab.id),
       );
+      closeTerminalSessionsForTabs(removedTabs);
 
       patchPaneTabsAndCommit(captured, paneId, {
         tabs: patch.tabs,
         activeTabId: patch.activeTabId,
       });
+      for (const tab of removedTabs) get().removeDocumentRuntime?.(tab.id);
     },
 
     closeAllPaneTabs: (paneId) => {
@@ -531,17 +542,16 @@ export const createWorkspaceTreeSlice: StateCreator<
       if (!pane) return;
       const patch = closeUnpinnedTabsInPane(pane);
       if (!patch) return;
-      closeTerminalSessionsForTabs(
-        pane.tabs.filter(
-          (tab) =>
-            !patch.tabs.some((remainingTab) => remainingTab.id === tab.id),
-        ),
+      const removedTabs = pane.tabs.filter(
+        (tab) => !patch.tabs.some((remainingTab) => remainingTab.id === tab.id),
       );
+      closeTerminalSessionsForTabs(removedTabs);
 
       patchPaneTabsAndCommit(captured, paneId, {
         tabs: patch.tabs,
         activeTabId: patch.activeTabId,
       });
+      for (const tab of removedTabs) get().removeDocumentRuntime?.(tab.id);
     },
 
     togglePaneTabPinned: (paneId, tabId) => {
@@ -639,15 +649,18 @@ export const createWorkspaceTreeSlice: StateCreator<
           tabs: [],
           activeId: null,
         });
-        get().closeFile();
+        get().removeDocumentRuntimesForPath?.(path);
+        syncEditorToTab(null);
         return;
       }
 
       if (isPaneNode(nextTree)) {
+        get().removeDocumentRuntimesForPath?.(path);
         collapseToSinglePane(nextTree);
         return;
       }
 
+      get().removeDocumentRuntimesForPath?.(path);
       mirrorActivePaneTabsWithoutEditorOpen(nextTree);
     },
 
@@ -655,6 +668,7 @@ export const createWorkspaceTreeSlice: StateCreator<
       const state = get();
       const tree = state.workspaceTree;
       if (!tree) return;
+      state.renameDocumentRuntimePath?.(oldPath, newPath);
 
       const captured = captureGlobalIntoActivePane(
         tree,

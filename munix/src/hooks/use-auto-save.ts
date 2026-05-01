@@ -5,6 +5,7 @@ import { ipc } from "@/lib/ipc";
 import { useEditorStore } from "@/store/editor-store";
 import type { FlushOptions } from "@/store/editor-store";
 import { useSettingsStore } from "@/store/settings-store";
+import { useActiveWorkspaceStore } from "@/lib/active-vault";
 import { useTagStore } from "@/store/tag-store";
 import { useBacklinkStore } from "@/store/backlink-store";
 import { useSearchStore } from "@/store/search-store";
@@ -22,13 +23,14 @@ export function useAutoSave(editor: Editor | null): {
   const setBody = useEditorStore((s) => s.setBody);
   const setFlushSave = useEditorStore((s) => s.setFlushSave);
   const setRequestSave = useEditorStore((s) => s.setRequestSave);
+  const ws = useActiveWorkspaceStore();
   const inFlightRef = useRef(false);
   const pendingRef = useRef(false);
 
   const doSave = useCallback(
     async (opts?: FlushOptions) => {
       if (!editor || editor.isDestroyed) return;
-      const { currentPath, baseModified, frontmatter } =
+      const { currentPath, currentTabId, baseModified, frontmatter } =
         useEditorStore.getState();
       if (!currentPath) return;
 
@@ -59,6 +61,18 @@ export function useAutoSave(editor: Editor | null): {
         setBaseModified(result.modified);
         setBody(body);
         setStatus({ kind: "saved", at: Date.now() });
+        if (currentTabId) {
+          ws.getState().upsertDocumentRuntime({
+            tabId: currentTabId,
+            path: currentPath,
+            body,
+            frontmatter,
+            baseModified: result.modified,
+            status: { kind: "saved", at: Date.now() },
+            dirty: false,
+            lastAccessedAt: Date.now(),
+          });
+        }
         // 자기 쓰기는 Rust watcher가 1500ms suppress 하므로 vault watcher 경유로는
         // 인덱스 업데이트가 영영 안 들어옴. 저장 직후 직접 갱신.
         void useTagStore.getState().updatePath(currentPath);
@@ -85,7 +99,7 @@ export function useAutoSave(editor: Editor | null): {
         }
       }
     },
-    [editor, setStatus, setBaseModified, setBody],
+    [editor, setStatus, setBaseModified, setBody, ws],
   );
 
   const debounceMs = useSettingsStore((s) => s.autoSaveDebounceMs);

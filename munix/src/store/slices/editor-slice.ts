@@ -10,6 +10,7 @@ import type { StateCreator } from "zustand";
 
 import { ipc } from "@/lib/ipc";
 import { isImagePath } from "@/lib/file-kind";
+import type { DocumentRuntimeSlice } from "./document-runtime-slice";
 
 export type SaveStatus =
   | { kind: "idle" }
@@ -26,6 +27,7 @@ export interface FlushOptions {
 export type FlushFn = (opts?: FlushOptions) => Promise<void>;
 
 export interface EditorSlice {
+  currentTabId: string | null;
   currentPath: string | null;
   frontmatter: Record<string, unknown> | null;
   body: string;
@@ -40,7 +42,7 @@ export interface EditorSlice {
   pendingJumpLine: number | null;
   pendingPropertyFocus: boolean;
 
-  openFile: (relPath: string) => Promise<void>;
+  openFile: (relPath: string, tabId?: string | null) => Promise<void>;
   closeFile: () => void;
   reloadFromDisk: () => Promise<void>;
   setStatus: (status: SaveStatus) => void;
@@ -60,6 +62,7 @@ export interface EditorSlice {
 
 export function defaultEditorSlice(): EditorSlice {
   return {
+    currentTabId: null,
     currentPath: null,
     frontmatter: null,
     body: "",
@@ -92,11 +95,12 @@ export function defaultEditorSlice(): EditorSlice {
 
 /** zustand slice creator — workspace store 의 한 슬롯으로 끼운다. */
 export const createEditorSlice: StateCreator<
-  EditorSlice,
+  EditorSlice & Partial<DocumentRuntimeSlice>,
   [],
   [],
   EditorSlice
 > = (set, get) => ({
+  currentTabId: null,
   currentPath: null,
   frontmatter: null,
   body: "",
@@ -111,9 +115,10 @@ export const createEditorSlice: StateCreator<
   pendingJumpLine: null,
   pendingPropertyFocus: false,
 
-  openFile: async (relPath) => {
+  openFile: async (relPath, tabId = null) => {
     if (isImagePath(relPath)) {
       set({
+        currentTabId: tabId,
         currentPath: relPath,
         frontmatter: null,
         body: "",
@@ -125,10 +130,27 @@ export const createEditorSlice: StateCreator<
       return;
     }
 
+    const runtime = get().getDocumentRuntime?.(tabId);
+    if (runtime && runtime.path === relPath && !runtime.externalModified) {
+      set({
+        currentTabId: tabId,
+        currentPath: relPath,
+        frontmatter: runtime.frontmatter,
+        body: runtime.body,
+        sourceVersion: get().sourceVersion + 1,
+        isOpening: false,
+        baseModified: runtime.baseModified,
+        status: runtime.status,
+      });
+      return;
+    }
+
     set({
+      currentTabId: tabId,
       currentPath: relPath,
       frontmatter: null,
       body: "",
+      sourceVersion: get().sourceVersion + 1,
       isOpening: true,
       baseModified: null,
       status: { kind: "idle" },
@@ -136,7 +158,7 @@ export const createEditorSlice: StateCreator<
 
     try {
       const content = await ipc.readMarkdownFile(relPath);
-      if (get().currentPath !== relPath) return;
+      if (get().currentPath !== relPath || get().currentTabId !== tabId) return;
       set({
         frontmatter: content.frontmatter,
         body: content.body,
@@ -145,8 +167,20 @@ export const createEditorSlice: StateCreator<
         baseModified: content.modified,
         status: { kind: "idle" },
       });
+      if (tabId) {
+        get().upsertDocumentRuntime?.({
+          tabId,
+          path: relPath,
+          body: content.body,
+          frontmatter: content.frontmatter,
+          baseModified: content.modified,
+          status: { kind: "idle" },
+          dirty: false,
+          lastAccessedAt: Date.now(),
+        });
+      }
     } catch (error) {
-      if (get().currentPath !== relPath) return;
+      if (get().currentPath !== relPath || get().currentTabId !== tabId) return;
       set({
         isOpening: false,
         status: {
@@ -159,6 +193,7 @@ export const createEditorSlice: StateCreator<
 
   closeFile: () =>
     set({
+      currentTabId: null,
       currentPath: null,
       frontmatter: null,
       body: "",
@@ -175,6 +210,7 @@ export const createEditorSlice: StateCreator<
     try {
       const content = await ipc.readMarkdownFile(currentPath);
       if (get().currentPath !== currentPath) return;
+      const currentTabId = get().currentTabId;
       set({
         frontmatter: content.frontmatter,
         body: content.body,
@@ -183,6 +219,18 @@ export const createEditorSlice: StateCreator<
         baseModified: content.modified,
         status: { kind: "idle" },
       });
+      if (currentTabId) {
+        get().upsertDocumentRuntime?.({
+          tabId: currentTabId,
+          path: currentPath,
+          body: content.body,
+          frontmatter: content.frontmatter,
+          baseModified: content.modified,
+          status: { kind: "idle" },
+          dirty: false,
+          lastAccessedAt: Date.now(),
+        });
+      }
     } catch (error) {
       if (get().currentPath !== currentPath) return;
       set({

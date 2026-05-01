@@ -50,6 +50,10 @@ import {
   createWorkspaceTreeSlice,
   type WorkspaceTreeSlice,
 } from "./slices/workspace-tree-slice";
+import {
+  createDocumentRuntimeSlice,
+  type DocumentRuntimeSlice,
+} from "./slices/document-runtime-slice";
 import { pruneEmptyPanes } from "./slices/workspace-tree-helpers";
 
 interface WorkspaceMetaActions {
@@ -68,7 +72,8 @@ export type WorkspaceStore = WorkspaceState &
   TagsSlice &
   BacklinksSlice &
   RecentSlice &
-  PropertyTypesSlice;
+  PropertyTypesSlice &
+  DocumentRuntimeSlice;
 
 export type WorkspaceStoreHook = UseBoundStore<StoreApi<WorkspaceStore>>;
 
@@ -85,6 +90,7 @@ function createWorkspaceStore(vaultId: VaultId): WorkspaceStoreHook {
     ...createBacklinksSlice(vaultId)(set, get, api),
     ...createRecentSlice(set, get, api),
     ...createPropertyTypesSlice(set, get, api),
+    ...createDocumentRuntimeSlice(set, get, api),
 
     setFileTreeExpanded: (paths) =>
       set({ fileTreeExpanded: [...paths], lastActiveAt: Date.now() }),
@@ -110,6 +116,7 @@ function createWorkspaceStore(vaultId: VaultId): WorkspaceStoreHook {
         ...createBacklinksSlice(vaultId)(set, get, api),
         ...createRecentSlice(set, get, api),
         ...createPropertyTypesSlice(set, get, api),
+        ...createDocumentRuntimeSlice(set, get, api),
       });
     },
   }));

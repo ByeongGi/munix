@@ -49,6 +49,7 @@ export function InactivePaneBody({
 
   return (
     <InactivePaneEditor
+      tabId={activeTab.id}
       path={activeTab.path}
       titleDraft={activeTab.titleDraft}
     />

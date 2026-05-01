@@ -43,7 +43,7 @@ export function useInactivePaneRename({
         const state = ws.getState();
         state.updatePathInAllPanes(path, newPath);
         if (state.currentPath === path) {
-          await state.openFile(newPath);
+          await state.openFile(newPath, state.currentTabId);
         }
 
         const { useVaultStore } = await import("@/store/vault-store");

@@ -6,24 +6,25 @@
 
 ## 📚 문서 구성
 
-| # | 문서 | 내용 | Phase | 상태 |
-|---|------|------|-------|------|
-| 1 | [editor-spec.md](./editor-spec.md) | Tiptap 에디터, 슬래시 메뉴, 버블 메뉴, MD 변환 | 1 | 구현 |
-| 2 | [vault-spec.md](./vault-spec.md) | Rust 백엔드, FS 안전성, IPC 커맨드 | 1 | 구현 |
-| 3 | [auto-save-spec.md](./auto-save-spec.md) | 자동 저장, 충돌 감지, 재시도 | 1 | 구현 |
-| 4 | [file-tree-spec.md](./file-tree-spec.md) | 사이드바 트리, 파일 조작, 드래그 | 2 | 구현 |
-| 5 | [keymap-spec.md](./keymap-spec.md) | 전체 단축키 맵, 컨텍스트 격리 | 2 | 구현 |
-| 6 | [search-spec.md](./search-spec.md) | Quick Open, 전문 검색, 팔레트 | 5 | 구현 |
-| 7 | [settings-spec.md](./settings-spec.md) | 설정 스키마, 저장, UI | 6 | 구현 |
-| 8 | [theme-spec.md](./theme-spec.md) | 컬러 토큰, 다크모드, 타이포 | 6 | 구현 |
-| 9 | [plugin-spec.md](./plugin-spec.md) 🆕 | Extism WASM 플러그인 시스템 (capability 기반) | 7+ | **proposed** |
-| 10 | [terminal-spec.md](./terminal-spec.md) 🆕 | 터미널 (workspace tab, xterm.js + portable-pty) | 7+ | **구현** |
-| 11 | [cli-spec.md](./cli-spec.md) 🆕 | CLI + URI scheme (`munix://`) — 3계층 출시 | 6/7+ | **proposed** |
-| 12 | [i18n-spec.md](./i18n-spec.md) | 다국어 지원 (i18next 26 + react-i18next 17, 영/한 + 점진적) | 6/7+ | **구현 (Phase A)** |
-| 13 | [workspace-split-spec.md](./workspace-split-spec.md) 🆕 | Obsidian-style 분할 패널, pane별 탭, 탭 DnD split | 7+ | **proposed** |
-| 14 | [vault-trust-spec.md](./vault-trust-spec.md) 🆕 | Vault 단위 신뢰 모델, 시스템 연동 권한 요청 | 6/7+ | **partial** |
-| 15 | [multi-vault-spec.md](./multi-vault-spec.md) 🆕 | 멀티 vault 워크스페이스 (cmux 스타일 좌측 세로 탭, 탭 → 새 창 승격) | 5/6 | **proposed** |
-| 16 | [mermaid-spec.md](./mermaid-spec.md) 🆕 | Mermaid fenced code block 렌더링과 구분값 정책 | 4/7+ | **proposed** |
+| #   | 문서                                                        | 내용                                                                         | Phase | 상태               |
+| --- | ----------------------------------------------------------- | ---------------------------------------------------------------------------- | ----- | ------------------ |
+| 1   | [editor-spec.md](./editor-spec.md)                          | Tiptap 에디터, 슬래시 메뉴, 버블 메뉴, MD 변환                               | 1     | 구현               |
+| 2   | [vault-spec.md](./vault-spec.md)                            | Rust 백엔드, FS 안전성, IPC 커맨드                                           | 1     | 구현               |
+| 3   | [auto-save-spec.md](./auto-save-spec.md)                    | 자동 저장, 충돌 감지, 재시도                                                 | 1     | 구현               |
+| 4   | [file-tree-spec.md](./file-tree-spec.md)                    | 사이드바 트리, 파일 조작, 드래그                                             | 2     | 구현               |
+| 5   | [keymap-spec.md](./keymap-spec.md)                          | 전체 단축키 맵, 컨텍스트 격리                                                | 2     | 구현               |
+| 6   | [search-spec.md](./search-spec.md)                          | Quick Open, 전문 검색, 팔레트                                                | 5     | 구현               |
+| 7   | [settings-spec.md](./settings-spec.md)                      | 설정 스키마, 저장, UI                                                        | 6     | 구현               |
+| 8   | [theme-spec.md](./theme-spec.md)                            | 컬러 토큰, 다크모드, 타이포                                                  | 6     | 구현               |
+| 9   | [plugin-spec.md](./plugin-spec.md) 🆕                       | Extism WASM 플러그인 시스템 (capability 기반)                                | 7+    | **proposed**       |
+| 10  | [terminal-spec.md](./terminal-spec.md) 🆕                   | 터미널 (workspace tab, xterm.js + portable-pty)                              | 7+    | **구현**           |
+| 11  | [cli-spec.md](./cli-spec.md) 🆕                             | CLI + URI scheme (`munix://`) — 3계층 출시                                   | 6/7+  | **proposed**       |
+| 12  | [i18n-spec.md](./i18n-spec.md)                              | 다국어 지원 (i18next 26 + react-i18next 17, 영/한 + 점진적)                  | 6/7+  | **구현 (Phase A)** |
+| 13  | [workspace-split-spec.md](./workspace-split-spec.md) 🆕     | Obsidian-style 분할 패널, pane별 탭, 탭 DnD split                            | 7+    | **proposed**       |
+| 14  | [vault-trust-spec.md](./vault-trust-spec.md) 🆕             | Vault 단위 신뢰 모델, 시스템 연동 권한 요청                                  | 6/7+  | **partial**        |
+| 15  | [multi-vault-spec.md](./multi-vault-spec.md) 🆕             | 멀티 vault 워크스페이스 (cmux 스타일 좌측 세로 탭, 탭 → 새 창 승격)          | 5/6   | **proposed**       |
+| 16  | [mermaid-spec.md](./mermaid-spec.md) 🆕                     | Mermaid fenced code block 렌더링과 구분값 정책                               | 4/7+  | **proposed**       |
+| 17  | [tab-runtime-cache-spec.md](./tab-runtime-cache-spec.md) 🆕 | 탭 전환 비용 절감을 위한 document runtime cache와 scroll/selection 복원 정책 | 5/7+  | **partial**        |
 
 ---
 
@@ -81,6 +82,11 @@ workspace-split-spec ──┬──> editor-spec
 
 mermaid-spec ────────> editor-spec, theme-spec
 
+tab-runtime-cache-spec ──┬──> editor-spec
+                         ├──> auto-save-spec
+                         ├──> workspace-split-spec
+                         └──> mermaid-spec (async layout / scroll restore)
+
 vault-trust-spec ──┬──> vault-spec
                    ├──> file-tree-spec (reveal in system)
                    ├──> plugin-spec
@@ -108,6 +114,7 @@ multi-vault-spec ──┬──> vault-spec (VaultManager 도입)
 - **최근 추가 (2026-04-26):** multi-vault-spec (proposed — [ADR-031](../decisions.md#adr-031-멀티-vault-워크스페이스-cmux-스타일-좌측-세로-탭) cmux 스타일 좌측 세로 vault 탭 + 탭 → 새 창 승격, [ADR-004](../decisions.md#adr-004-단일-vault-방식) supersede)
 - **최근 업데이트 (2026-04-29):** terminal-spec v0.2 (partial — workspace tab 기반 터미널, vault cwd, key event, Nerd Font, font-size shortcuts P0 정의)
 - **최근 추가 (2026-04-29):** mermaid-spec v0.1 (proposed — fenced code block `mermaid` 구분값과 렌더링 정책 정의)
+- **최근 추가 (2026-05-02):** tab-runtime-cache-spec v0.1 (partial — 탭 전환 runtime snapshot cache, selection/scroll anchor 복원, Mermaid async layout 보정 1차 구현)
 
 ---
 

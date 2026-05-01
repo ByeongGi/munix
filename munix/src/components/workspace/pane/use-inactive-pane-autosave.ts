@@ -7,6 +7,7 @@ import {
 } from "react";
 import type { Editor } from "@tiptap/react";
 import { useDebouncedCallback } from "use-debounce";
+import { useActiveWorkspaceStore } from "@/lib/active-vault";
 import { ipc } from "@/lib/ipc";
 import { serializeDocument } from "@/lib/markdown";
 import { useSettingsStore } from "@/store/settings-store";
@@ -21,6 +22,7 @@ import {
 
 interface UseInactivePaneAutosaveOptions {
   path: string;
+  tabId: string;
   editor: Editor | null;
   statusRef: RefObject<InactiveEditorStatus>;
   frontmatterRef: RefObject<Record<string, unknown> | null>;
@@ -32,6 +34,7 @@ interface UseInactivePaneAutosaveOptions {
 
 export function useInactivePaneAutosave({
   path,
+  tabId,
   editor,
   statusRef,
   frontmatterRef,
@@ -40,6 +43,7 @@ export function useInactivePaneAutosave({
   setBaseModified,
   setStatus,
 }: UseInactivePaneAutosaveOptions) {
+  const ws = useActiveWorkspaceStore();
   const inFlightRef = useRef(false);
   const pendingRef = useRef(false);
 
@@ -73,6 +77,16 @@ export function useInactivePaneAutosave({
       setBaseModified(result.modified);
       setBody(nextBody);
       setStatus("ready");
+      ws.getState().upsertDocumentRuntime({
+        tabId,
+        path,
+        body: nextBody,
+        frontmatter: frontmatterRef.current,
+        baseModified: result.modified,
+        status: { kind: "saved", at: Date.now() },
+        dirty: false,
+        lastAccessedAt: Date.now(),
+      });
       updateIndexesAfterInactiveSave(path, nextBody);
     } catch (e) {
       console.error("inactive pane editor save failed", e);
@@ -93,6 +107,8 @@ export function useInactivePaneAutosave({
     setBody,
     setStatus,
     statusRef,
+    tabId,
+    ws,
   ]);
 
   const debounceMs = useSettingsStore((s) => s.autoSaveDebounceMs);
