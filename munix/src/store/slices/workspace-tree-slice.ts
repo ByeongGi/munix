@@ -238,7 +238,9 @@ export const createWorkspaceTreeSlice: StateCreator<
     commitPaneTabsMutation(patchPaneInTree(tree, paneId, patch), paneId);
   }
 
-  function mirrorActivePaneTabsWithoutEditorOpen(nextTree: WorkspaceNode): void {
+  function mirrorActivePaneTabsWithoutEditorOpen(
+    nextTree: WorkspaceNode,
+  ): void {
     const state = get();
     const activePane = state.activePaneId
       ? findPane(nextTree, state.activePaneId)

@@ -305,8 +305,9 @@ describe("workspace-tree-slice", () => {
       expect(state.workspaceTree).not.toBeNull();
       const panes = collectPanes(state.workspaceTree!);
       expect(panes).toHaveLength(2);
-      expect(panes.some((pane) => pane.tabs.map((tt) => tt.id).join() === "t2"))
-        .toBe(true);
+      expect(
+        panes.some((pane) => pane.tabs.map((tt) => tt.id).join() === "t2"),
+      ).toBe(true);
       expect(state.tabs.map((tt) => tt.id)).toEqual(["t1"]);
       expect(state.activeId).toBe("t1");
     });

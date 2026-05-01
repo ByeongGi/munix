@@ -121,7 +121,10 @@ export function resizeTerminalScreenState(
   state.terminal.resize(cols, rows);
 }
 
-export function getTerminalScreenState(tabId: string, sessionId: string): string {
+export function getTerminalScreenState(
+  tabId: string,
+  sessionId: string,
+): string {
   const state = terminalScreenStatesByTabId.get(tabId);
   if (state?.sessionId !== sessionId) return "";
   return state.serializeAddon.serialize();

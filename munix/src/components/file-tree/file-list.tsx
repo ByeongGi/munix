@@ -6,7 +6,11 @@ import { ContextMenu } from "./context-menu";
 import { FileTreeEmptyPlaceholder } from "./file-list-empty-placeholder";
 import { FlatTreeRow } from "./file-tree-inner";
 import { flatten } from "./flatten";
-import { type Action, type ContextMenuState, type FileListProps } from "./types";
+import {
+  type Action,
+  type ContextMenuState,
+  type FileListProps,
+} from "./types";
 import { useFileListExpansion } from "./use-file-list-expansion";
 import { useFileListKeyboard } from "./use-file-list-keyboard";
 import { useFileListRootDnd } from "./use-file-list-root-dnd";

@@ -67,18 +67,14 @@ export function Pane({
   const splitPaneMove = useStore(ws, (s) => s.splitPaneMove);
   const vaultId = useVaultDockStore((s) => s.activeVaultId);
   const reorderPaneTab = useStore(ws, (s) => s.reorderPaneTab);
-  const {
-    dropZone,
-    dropTargetHandlers,
-    overlayLabel,
-    overlayStyle,
-  } = usePaneDropTarget({
-    movePaneTab,
-    paneId: pane.id,
-    splitPaneMove,
-    t,
-    vaultId: vaultId ?? null,
-  });
+  const { dropZone, dropTargetHandlers, overlayLabel, overlayStyle } =
+    usePaneDropTarget({
+      movePaneTab,
+      paneId: pane.id,
+      splitPaneMove,
+      t,
+      vaultId: vaultId ?? null,
+    });
   const { menus, openPaneMenu, openTabMenu } = usePaneMenus({
     closeAllPaneTabs,
     closeOtherPaneTabs,
@@ -104,10 +100,7 @@ export function Pane({
       >
         {activeContent}
         {dropZone !== null ? (
-          <DropZoneOverlay
-            style={overlayStyle}
-            label={overlayLabel}
-          />
+          <DropZoneOverlay style={overlayStyle} label={overlayLabel} />
         ) : null}
       </div>
     );
@@ -164,10 +157,7 @@ export function Pane({
         onClose={() => closePane(pane.id)}
       />
       {dropZone !== null ? (
-        <DropZoneOverlay
-          style={overlayStyle}
-          label={overlayLabel}
-        />
+        <DropZoneOverlay style={overlayStyle} label={overlayLabel} />
       ) : null}
     </div>
   );

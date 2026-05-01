@@ -16,7 +16,6 @@ export interface SearchHit {
   matchedLine: number;
 }
 
-
 function flattenFiles(nodes: FileNode[], out: string[] = []): string[] {
   for (const n of nodes) {
     if (n.kind === "file") out.push(n.path);
@@ -189,13 +188,11 @@ export class VaultSearchIndex {
     const newDoc: IndexedDoc = {
       ...doc,
       id: newPath,
-      title:
-        newPath.split("/").pop()?.replace(/\.md$/i, "") ?? newPath,
+      title: newPath.split("/").pop()?.replace(/\.md$/i, "") ?? newPath,
     };
     this.docs.set(newPath, newDoc);
     this.mini.add(newDoc);
   }
-
 }
 
 function makeSnippet(

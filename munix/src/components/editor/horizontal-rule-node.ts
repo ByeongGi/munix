@@ -186,7 +186,9 @@ export const HorizontalRuleNode = Node.create({
 
       insertPos += 1;
       view.dispatch(
-        tr.setSelection(TextSelection.create(tr.doc, insertPos)).scrollIntoView(),
+        tr
+          .setSelection(TextSelection.create(tr.doc, insertPos))
+          .scrollIntoView(),
       );
       return true;
     };
@@ -266,7 +268,9 @@ export const HorizontalRuleNode = Node.create({
             if (!direct || node.type.name !== this.name) return false;
             event.preventDefault();
             view.dispatch(
-              view.state.tr.setSelection(NodeSelection.create(view.state.doc, pos)),
+              view.state.tr.setSelection(
+                NodeSelection.create(view.state.doc, pos),
+              ),
             );
             return true;
           },

@@ -79,7 +79,10 @@ export function makeFreshPane(initialTab?: Tab): PaneNode {
   };
 }
 
-export function makeRootPane(tabs: Tab[], activeTabId: string | null): PaneNode {
+export function makeRootPane(
+  tabs: Tab[],
+  activeTabId: string | null,
+): PaneNode {
   return {
     type: "pane",
     id: makePaneId(),
@@ -282,7 +285,9 @@ export function removeTabFromPane(
   return { tabs, activeTabId };
 }
 
-function ensurePaneTabsPatchHasPlaceholder(patch: PaneTabsPatch): PaneTabsPatch {
+function ensurePaneTabsPatchHasPlaceholder(
+  patch: PaneTabsPatch,
+): PaneTabsPatch {
   if (patch.tabs.length > 0) return patch;
   const tab = makeWorkspaceTab("");
   return {

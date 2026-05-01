@@ -64,7 +64,7 @@ export function InlineMathView({
           contentEditable={false}
           className={cn(
             "absolute left-0 top-full z-10 mt-1 flex items-center gap-1 rounded",
-            "bg-[var(--color-bg-secondary)]/95 backdrop-blur px-2 py-1",
+            "bg-[var(--color-bg-secondary-solid)] px-2 py-1",
             "border border-[var(--color-border-secondary)] shadow-sm",
             "min-w-[200px]",
           )}

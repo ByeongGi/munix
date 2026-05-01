@@ -29,7 +29,11 @@ interface SaveStatusViewProps {
 function SaveStatusView({ status }: SaveStatusViewProps) {
   const { t } = useTranslation(["panels"]);
   const map = {
-    idle: { Icon: Check, label: t("panels:statusBar.save.idle"), tone: "muted" },
+    idle: {
+      Icon: Check,
+      label: t("panels:statusBar.save.idle"),
+      tone: "muted",
+    },
     dirty: {
       Icon: CircleDot,
       label: t("panels:statusBar.save.dirty"),
@@ -41,7 +45,11 @@ function SaveStatusView({ status }: SaveStatusViewProps) {
       tone: "muted",
       spin: true,
     },
-    saved: { Icon: Check, label: t("panels:statusBar.save.saved"), tone: "muted" },
+    saved: {
+      Icon: Check,
+      label: t("panels:statusBar.save.saved"),
+      tone: "muted",
+    },
     error: {
       Icon: CircleAlert,
       label: t("panels:statusBar.save.error"),
@@ -63,7 +71,9 @@ function SaveStatusView({ status }: SaveStatusViewProps) {
         e.tone === "warning" && "text-[var(--color-warning,_#FB923C)]",
       )}
     >
-      <Icon className={cn("h-3 w-3", "spin" in e && e.spin && "animate-spin")} />
+      <Icon
+        className={cn("h-3 w-3", "spin" in e && e.spin && "animate-spin")}
+      />
       <span>{e.label}</span>
     </span>
   );
@@ -106,7 +116,9 @@ export function StatusBar() {
       </span>
       {currentPath && (
         <>
-          <span aria-hidden className="opacity-40">·</span>
+          <span aria-hidden className="opacity-40">
+            ·
+          </span>
           <span className="flex-1 truncate font-mono" title={currentPath}>
             {currentPath}
           </span>

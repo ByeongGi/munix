@@ -2,7 +2,7 @@ import { create } from "zustand";
 import { ipc } from "@/lib/ipc";
 import { useVaultDockStore } from "@/store/vault-dock-store";
 
-export type FontSize = "sm" | "base" | "lg" | "xl";
+export type FontSize = "sm" | "base" | "lg" | "xl" | "xxl" | "xxxl";
 export type EditorWidth = "narrow" | "default" | "wide" | "full";
 export type AutoSaveDebounceMs = 500 | 750 | 1500 | 3000;
 
@@ -14,11 +14,12 @@ export type AutoSaveDebounceMs = 500 | 750 | 1500 | 3000;
  *
  * vault override 값은 글로벌을 덮어쓴다 — `effectiveSetting = vault ?? global`.
  */
-export type VaultOverrideKey = "fontSize" | "editorWidth" | "autoSaveDebounceMs";
+export type VaultOverrideKey =
+  | "fontSize"
+  | "editorWidth"
+  | "autoSaveDebounceMs";
 
-export type VaultSettingsOverride = Partial<
-  Pick<Settings, VaultOverrideKey>
->;
+export type VaultSettingsOverride = Partial<Pick<Settings, VaultOverrideKey>>;
 
 export const VAULT_OVERRIDE_KEYS: VaultOverrideKey[] = [
   "fontSize",
@@ -41,6 +42,20 @@ export interface Settings {
   fontSize: FontSize;
   editorWidth: EditorWidth;
   autoSaveDebounceMs: AutoSaveDebounceMs;
+  /** 앱 표면 배경 불투명도. 20-100 percent. */
+  backgroundOpacity: number;
+  /** 에디터 문서 영역 배경 불투명도. 20-100 percent. */
+  editorBackgroundOpacity: number;
+  /** 터미널 배경 불투명도. 0-100 percent. */
+  terminalBackgroundOpacity: number;
+  /** 터미널 폰트 크기(px). */
+  terminalFontSize: number;
+  /** 터미널 줄 간격(percent). xterm lineHeight 로는 /100 값 사용. */
+  terminalLineHeight: number;
+  /** 터미널 커서 깜빡임 여부. */
+  terminalCursorBlink: boolean;
+  /** 터미널 스크롤백 라인 수. */
+  terminalScrollback: number;
   /** 사용자 커스텀 CSS — head에 <style id="munix-user-css">로 주입. */
   customCss: string;
   /**
@@ -62,6 +77,22 @@ const KEY = "munix:settings";
 const USER_CSS_STYLE_ID = "munix-user-css";
 const MAX_CUSTOM_CSS_LENGTH = 50_000;
 const MAX_KEYMAP_OVERRIDES = 200;
+const DEFAULT_BACKGROUND_OPACITY = 86;
+const DEFAULT_EDITOR_BACKGROUND_OPACITY = 100;
+const DEFAULT_TERMINAL_BACKGROUND_OPACITY = 86;
+const DEFAULT_TERMINAL_FONT_SIZE = 13;
+const DEFAULT_TERMINAL_LINE_HEIGHT = 124;
+const DEFAULT_TERMINAL_CURSOR_BLINK = true;
+const DEFAULT_TERMINAL_SCROLLBACK = 10_000;
+const MIN_BACKGROUND_OPACITY = 20;
+const MIN_TERMINAL_BACKGROUND_OPACITY = 0;
+const MAX_BACKGROUND_OPACITY = 100;
+const MIN_TERMINAL_FONT_SIZE = 10;
+const MAX_TERMINAL_FONT_SIZE = 24;
+const MIN_TERMINAL_LINE_HEIGHT = 100;
+const MAX_TERMINAL_LINE_HEIGHT = 160;
+const MIN_TERMINAL_SCROLLBACK = 1_000;
+const MAX_TERMINAL_SCROLLBACK = 50_000;
 
 const VALID_DEBOUNCE: AutoSaveDebounceMs[] = [500, 750, 1500, 3000];
 
@@ -69,6 +100,13 @@ const DEFAULTS: Settings = {
   fontSize: "base",
   editorWidth: "default",
   autoSaveDebounceMs: 750,
+  backgroundOpacity: DEFAULT_BACKGROUND_OPACITY,
+  editorBackgroundOpacity: DEFAULT_EDITOR_BACKGROUND_OPACITY,
+  terminalBackgroundOpacity: DEFAULT_TERMINAL_BACKGROUND_OPACITY,
+  terminalFontSize: DEFAULT_TERMINAL_FONT_SIZE,
+  terminalLineHeight: DEFAULT_TERMINAL_LINE_HEIGHT,
+  terminalCursorBlink: DEFAULT_TERMINAL_CURSOR_BLINK,
+  terminalScrollback: DEFAULT_TERMINAL_SCROLLBACK,
   customCss: "",
   keymapOverrides: {},
   language: "auto",
@@ -79,6 +117,8 @@ const FONT_SIZE_PX: Record<FontSize, string> = {
   base: "16px",
   lg: "18px",
   xl: "20px",
+  xxl: "24px",
+  xxxl: "28px",
 };
 
 const EDITOR_WIDTH_PX: Record<EditorWidth, string> = {
@@ -87,6 +127,16 @@ const EDITOR_WIDTH_PX: Record<EditorWidth, string> = {
   wide: "960px",
   full: "100%",
 };
+
+function clampRounded(
+  value: unknown,
+  min: number,
+  max: number,
+  fallback: number,
+) {
+  if (typeof value !== "number" || !Number.isFinite(value)) return fallback;
+  return Math.round(Math.max(min, Math.min(max, value)));
+}
 
 function normalizeOverrides(raw: unknown): Record<string, string> {
   if (!raw || typeof raw !== "object") return {};
@@ -114,6 +164,46 @@ function normalize(parsed: unknown): Settings {
   } else if (merged.customCss.length > MAX_CUSTOM_CSS_LENGTH) {
     merged.customCss = merged.customCss.slice(0, MAX_CUSTOM_CSS_LENGTH);
   }
+  merged.backgroundOpacity = clampRounded(
+    merged.backgroundOpacity,
+    MIN_BACKGROUND_OPACITY,
+    MAX_BACKGROUND_OPACITY,
+    DEFAULTS.backgroundOpacity,
+  );
+  merged.editorBackgroundOpacity = clampRounded(
+    merged.editorBackgroundOpacity,
+    MIN_BACKGROUND_OPACITY,
+    MAX_BACKGROUND_OPACITY,
+    DEFAULTS.editorBackgroundOpacity,
+  );
+  merged.terminalBackgroundOpacity = clampRounded(
+    merged.terminalBackgroundOpacity,
+    MIN_TERMINAL_BACKGROUND_OPACITY,
+    MAX_BACKGROUND_OPACITY,
+    DEFAULTS.terminalBackgroundOpacity,
+  );
+  merged.terminalFontSize = clampRounded(
+    merged.terminalFontSize,
+    MIN_TERMINAL_FONT_SIZE,
+    MAX_TERMINAL_FONT_SIZE,
+    DEFAULTS.terminalFontSize,
+  );
+  merged.terminalLineHeight = clampRounded(
+    merged.terminalLineHeight,
+    MIN_TERMINAL_LINE_HEIGHT,
+    MAX_TERMINAL_LINE_HEIGHT,
+    DEFAULTS.terminalLineHeight,
+  );
+  merged.terminalCursorBlink =
+    typeof merged.terminalCursorBlink === "boolean"
+      ? merged.terminalCursorBlink
+      : DEFAULTS.terminalCursorBlink;
+  merged.terminalScrollback = clampRounded(
+    merged.terminalScrollback,
+    MIN_TERMINAL_SCROLLBACK,
+    MAX_TERMINAL_SCROLLBACK,
+    DEFAULTS.terminalScrollback,
+  );
   merged.keymapOverrides = normalizeOverrides(merged.keymapOverrides);
   if (!VALID_LANGUAGES.includes(merged.language)) {
     merged.language = DEFAULTS.language;
@@ -170,8 +260,42 @@ function applyUserCss(css: string): void {
 
 function apply(s: Settings): void {
   const root = document.documentElement;
+  const opacity = s.backgroundOpacity / 100;
+  const editorOpacity = s.editorBackgroundOpacity / 100;
+  const terminalOpacity = s.terminalBackgroundOpacity / 100;
   root.style.setProperty("--editor-font-size", FONT_SIZE_PX[s.fontSize]);
   root.style.setProperty("--editor-max-width", EDITOR_WIDTH_PX[s.editorWidth]);
+  root.style.setProperty("--editor-bg-alpha", editorOpacity.toFixed(2));
+  root.style.setProperty("--terminal-bg-alpha", terminalOpacity.toFixed(2));
+  root.style.setProperty("--app-bg-primary-alpha", opacity.toFixed(2));
+  root.style.setProperty(
+    "--app-bg-secondary-alpha",
+    Math.max(0.16, opacity - 0.04).toFixed(2),
+  );
+  root.style.setProperty(
+    "--app-bg-workspace-alpha",
+    Math.max(0.12, opacity - 0.08).toFixed(2),
+  );
+  root.style.setProperty(
+    "--app-bg-tertiary-alpha",
+    Math.max(0.16, opacity - 0.08).toFixed(2),
+  );
+  root.style.setProperty(
+    "--app-bg-hover-alpha",
+    Math.max(0.2, opacity - 0.04).toFixed(2),
+  );
+  root.style.setProperty(
+    "--app-bg-active-alpha",
+    Math.max(0.24, opacity).toFixed(2),
+  );
+  root.style.setProperty(
+    "--app-bg-sidebar-alpha",
+    Math.max(0.12, opacity - 0.28).toFixed(2),
+  );
+  root.style.setProperty(
+    "--app-surface-elevated-alpha",
+    Math.max(0.22, opacity + 0.02).toFixed(2),
+  );
   applyUserCss(s.customCss);
 }
 
@@ -189,7 +313,10 @@ interface SettingsStore extends Settings {
   clearVaultOverride: (key: VaultOverrideKey) => void;
 }
 
-function effective(global: Settings, override: VaultSettingsOverride): Settings {
+function effective(
+  global: Settings,
+  override: VaultSettingsOverride,
+): Settings {
   return { ...global, ...override };
 }
 
@@ -301,6 +428,13 @@ function bootstrapFromRust(): void {
           fontSize: current.fontSize,
           editorWidth: current.editorWidth,
           autoSaveDebounceMs: current.autoSaveDebounceMs,
+          backgroundOpacity: current.backgroundOpacity,
+          editorBackgroundOpacity: current.editorBackgroundOpacity,
+          terminalBackgroundOpacity: current.terminalBackgroundOpacity,
+          terminalFontSize: current.terminalFontSize,
+          terminalLineHeight: current.terminalLineHeight,
+          terminalCursorBlink: current.terminalCursorBlink,
+          terminalScrollback: current.terminalScrollback,
           customCss: current.customCss,
           keymapOverrides: current.keymapOverrides,
           language: current.language,
@@ -337,7 +471,9 @@ function normalizeVaultOverride(raw: unknown): VaultSettingsOverride {
     obj.fontSize === "sm" ||
     obj.fontSize === "base" ||
     obj.fontSize === "lg" ||
-    obj.fontSize === "xl"
+    obj.fontSize === "xl" ||
+    obj.fontSize === "xxl" ||
+    obj.fontSize === "xxxl"
   ) {
     out.fontSize = obj.fontSize;
   }

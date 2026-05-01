@@ -1,6 +1,9 @@
 import { Extension } from "@tiptap/core";
 import { Plugin, PluginKey } from "@tiptap/pm/state";
-import { openPathInActivePane, openPathInSplit } from "@/lib/workspace-commands";
+import {
+  openPathInActivePane,
+  openPathInSplit,
+} from "@/lib/workspace-commands";
 
 function normalizeMarkdownHref(href: string): string | null {
   if (/^[a-z][a-z0-9+.-]*:/i.test(href)) return null;

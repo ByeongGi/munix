@@ -3,10 +3,20 @@ import { useTranslation } from "react-i18next";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { useSettingsStore } from "@/store/settings-store";
 import { useThemeStore, type ThemeMode } from "@/store/theme-store";
-import { LanguageSelector, SettingsSection } from "./settings-controls";
+import {
+  LanguageSelector,
+  RangeControl,
+  SettingsSection,
+} from "./settings-controls";
 
 export function GeneralSettingsPanel() {
   const language = useSettingsStore((state) => state.language);
+  const backgroundOpacity = useSettingsStore(
+    (state) => state.backgroundOpacity,
+  );
+  const editorBackgroundOpacity = useSettingsStore(
+    (state) => state.editorBackgroundOpacity,
+  );
   const set = useSettingsStore((state) => state.set);
   const theme = useThemeStore((state) => state.mode);
   const setTheme = useThemeStore((state) => state.set);
@@ -34,6 +44,28 @@ export function GeneralSettingsPanel() {
           { value: "ko", label: t("settings:language.ko") },
           { value: "en", label: t("settings:language.en") },
         ]}
+      />
+      <RangeControl
+        label={t("settings:backgroundOpacity.label")}
+        description={t("settings:backgroundOpacity.description")}
+        value={backgroundOpacity}
+        min={20}
+        max={100}
+        valueLabel={t("settings:backgroundOpacity.value", {
+          value: backgroundOpacity,
+        })}
+        onChange={(value) => set({ backgroundOpacity: value })}
+      />
+      <RangeControl
+        label={t("settings:editorBackgroundOpacity.label")}
+        description={t("settings:editorBackgroundOpacity.description")}
+        value={editorBackgroundOpacity}
+        min={20}
+        max={100}
+        valueLabel={t("settings:editorBackgroundOpacity.value", {
+          value: editorBackgroundOpacity,
+        })}
+        onChange={(value) => set({ editorBackgroundOpacity: value })}
       />
     </SettingsSection>
   );

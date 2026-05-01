@@ -71,8 +71,8 @@ pub fn load(app: &AppHandle) -> Result<VaultRegistry, String> {
     if !path.exists() {
         return Ok(VaultRegistry::default());
     }
-    let raw = fs::read_to_string(&path)
-        .map_err(|e| format!("failed to read {}: {e}", path.display()))?;
+    let raw =
+        fs::read_to_string(&path).map_err(|e| format!("failed to read {}: {e}", path.display()))?;
     match serde_json::from_str::<VaultRegistry>(&raw) {
         Ok(r) => Ok(r),
         Err(e) => {
@@ -122,10 +122,7 @@ pub async fn vault_registry_load(app: AppHandle) -> Result<VaultRegistry, String
 }
 
 #[tauri::command]
-pub async fn vault_registry_save(
-    registry: VaultRegistry,
-    app: AppHandle,
-) -> Result<(), String> {
+pub async fn vault_registry_save(registry: VaultRegistry, app: AppHandle) -> Result<(), String> {
     save(&app, &registry)
 }
 

@@ -339,7 +339,12 @@ export function EditorView({ className }: EditorViewProps) {
   }
 
   return (
-    <div className={cn("relative min-h-0 min-w-0 overflow-hidden", className)}>
+    <div
+      className={cn(
+        "relative min-h-0 min-w-0 overflow-hidden bg-[var(--color-editor-bg)]",
+        className,
+      )}
+    >
       <SearchBar
         editor={editor}
         open={searchOpen}
@@ -347,7 +352,7 @@ export function EditorView({ className }: EditorViewProps) {
       />
       <div
         ref={scrollRef}
-        className="h-full min-w-0 overflow-y-auto"
+        className="h-full min-w-0 overflow-y-auto bg-[var(--color-editor-bg)]"
         onMouseDown={handleEditorEmptyAreaMouseDown}
       >
         <EditorTitleInput onSubmitTitle={focusEditorStart} />
@@ -387,9 +392,7 @@ export function EditorView({ className }: EditorViewProps) {
             isDocumentLoading && "munix-editor-content-surface-loading",
           )}
         >
-          {isDocumentLoading ? (
-            <DocumentLoadingState />
-          ) : null}
+          {isDocumentLoading ? <DocumentLoadingState /> : null}
           <EditorContent
             editor={editor}
             className={cn(isDocumentLoading && "munix-editor-content-hidden")}

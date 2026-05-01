@@ -132,8 +132,8 @@ export function EditorTitleInput({
       value={value}
       placeholder={t("editor:placeholder.title", { defaultValue: "Untitled" })}
       className={cn(
-        "w-full bg-transparent outline-none",
-        "text-3xl font-semibold text-[var(--color-text-primary)]",
+        "munix-editor-title-input w-full min-w-0 bg-transparent outline-none",
+        "font-semibold text-[var(--color-text-primary)]",
         "px-12 pt-8 pb-2",
         "placeholder:text-[var(--color-text-tertiary)]",
         className,

@@ -8,6 +8,7 @@ import {
   SlidersHorizontal,
   Info,
   Folder,
+  Terminal,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useSettingsStore } from "@/store/settings-store";
@@ -20,6 +21,7 @@ import {
   EditorSettingsPanel,
   GeneralSettingsPanel,
   ShortcutSettingsPanel,
+  TerminalSettingsPanel,
   VaultSettingsPanel,
 } from "@/components/settings/settings-panels";
 import {
@@ -46,6 +48,7 @@ export function SettingsDialog({ open, onClose }: SettingsDialogProps) {
   const globalNav: SettingsNavItem[] = [
     { id: "general", label: t("settings:section.general"), icon: Settings },
     { id: "editor", label: t("settings:section.editor"), icon: PenLine },
+    { id: "terminal", label: t("settings:section.terminal"), icon: Terminal },
     { id: "shortcuts", label: t("settings:section.shortcuts"), icon: Keyboard },
     {
       id: "advanced",
@@ -70,7 +73,7 @@ export function SettingsDialog({ open, onClose }: SettingsDialogProps) {
       onClose={onClose}
       panelClassName="flex h-[min(760px,88vh)] w-[min(1080px,94vw)] overflow-hidden"
     >
-      <aside className="flex w-64 shrink-0 flex-col border-r border-[var(--color-border-primary)] bg-[var(--color-bg-tertiary)]">
+      <aside className="flex w-64 shrink-0 flex-col border-r border-[var(--color-border-primary)] bg-[var(--color-bg-tertiary-solid)]">
         <div className="px-5 pb-3 pt-5">
           <h2 className="text-base font-semibold">{t("settings:title")}</h2>
         </div>
@@ -131,6 +134,7 @@ export function SettingsDialog({ open, onClose }: SettingsDialogProps) {
         <div className="flex-1 overflow-y-auto px-8 py-6">
           {activeSection === "general" ? <GeneralSettingsPanel /> : null}
           {activeSection === "editor" ? <EditorSettingsPanel /> : null}
+          {activeSection === "terminal" ? <TerminalSettingsPanel /> : null}
           {activeSection === "shortcuts" ? <ShortcutSettingsPanel /> : null}
           {activeSection === "advanced" ? <AdvancedSettingsPanel /> : null}
           {activeSection === "about" ? <AboutSettingsPanel /> : null}

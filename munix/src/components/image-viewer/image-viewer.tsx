@@ -111,7 +111,9 @@ export function ImageViewer({ path, className }: ImageViewerProps) {
             <Minus className="h-3.5 w-3.5" />
           </button>
           <span className="w-12 text-center font-mono text-[11px] text-[var(--color-text-tertiary)]">
-            {mode === "fit" ? t("editor:imageViewer.fitShort") : `${zoomPercent}%`}
+            {mode === "fit"
+              ? t("editor:imageViewer.fitShort")
+              : `${zoomPercent}%`}
           </span>
           <button
             type="button"

@@ -82,7 +82,11 @@ export function useVaultWatcher(): void {
       // 현재 파일 reload — active vault 일 때만 (ipc.readFile 이 active 기준)
       if (isActive) {
         const editor = workspace;
-        if (editor.currentPath && kind === "modified" && path === editor.currentPath) {
+        if (
+          editor.currentPath &&
+          kind === "modified" &&
+          path === editor.currentPath
+        ) {
           const s = editor.status.kind;
           if (s === "idle" || s === "saved") {
             void editor.reloadFromDisk();

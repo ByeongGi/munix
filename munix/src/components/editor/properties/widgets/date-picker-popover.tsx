@@ -69,7 +69,7 @@ export function DatePickerPopover({
     <div
       className={cn(
         "absolute left-0 top-7 z-50 w-72 rounded-md border p-2 shadow-lg",
-        "border-[var(--color-border-primary)] bg-[var(--color-bg-secondary)]",
+        "border-[var(--color-border-primary)] bg-[var(--color-bg-secondary-solid)]",
       )}
       onMouseDown={(event) => event.preventDefault()}
       onClick={(event) => event.stopPropagation()}

@@ -4,10 +4,7 @@ import type { TFunction } from "i18next";
 import { ipc } from "@/lib/ipc";
 import { makeTabId } from "@/store/slices/tab-slice";
 import type { PaneNode } from "@/store/workspace-types";
-import {
-  PaneActionsMenu,
-  TabActionsMenu,
-} from "./pane-context-menu";
+import { PaneActionsMenu, TabActionsMenu } from "./pane-context-menu";
 
 type SplitPane = (
   targetPaneId: string | null,

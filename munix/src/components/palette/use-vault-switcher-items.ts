@@ -38,7 +38,9 @@ export function useVaultSwitcherItems({
     const openPaths = new Set(vaults.map((vault) => vault.root));
     const recentItems: VaultSwitcherItem[] = recent
       .filter(({ entry }) => !openPaths.has(entry.path))
-      .filter(({ entry }) => matches(getVaultNameFromPath(entry.path), entry.path))
+      .filter(({ entry }) =>
+        matches(getVaultNameFromPath(entry.path), entry.path),
+      )
       .map(({ id, entry }) => ({ kind: "recent" as const, id, entry }));
 
     return [...openItems, ...recentItems, { kind: "new" }];

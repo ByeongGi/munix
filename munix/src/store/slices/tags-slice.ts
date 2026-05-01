@@ -46,46 +46,46 @@ export function defaultTagsSlice(): TagsSlice {
   return { tags: defaultTagsState() };
 }
 
-export const createTagsSlice = (
-  vaultId: VaultId,
-): StateCreator<TagsSlice, [], [], TagsSlice> => (set, get) => {
-  const update = (patch: Partial<TagsState>) =>
-    set((s) => ({ tags: { ...s.tags, ...patch } }));
+export const createTagsSlice =
+  (vaultId: VaultId): StateCreator<TagsSlice, [], [], TagsSlice> =>
+  (set, get) => {
+    const update = (patch: Partial<TagsState>) =>
+      set((s) => ({ tags: { ...s.tags, ...patch } }));
 
-  return {
-    tags: {
-      index: new TagIndex(),
-      status: "idle",
-      builtFor: null,
-      selectedTag: null,
+    return {
+      tags: {
+        index: new TagIndex(),
+        status: "idle",
+        builtFor: null,
+        selectedTag: null,
 
-      build: async (root, files) => {
-        update({ status: "building" });
-        try {
-          const idx = new TagIndex();
-          await idx.build(files, vaultId);
-          update({ index: idx, status: "ready", builtFor: root });
-        } catch {
-          update({ status: "error" });
-        }
+        build: async (root, files) => {
+          update({ status: "building" });
+          try {
+            const idx = new TagIndex();
+            await idx.build(files, vaultId);
+            update({ index: idx, status: "ready", builtFor: root });
+          } catch {
+            update({ status: "error" });
+          }
+        },
+
+        updatePath: async (path) => {
+          await get().tags.index.updateDoc(path, vaultId);
+          update({});
+        },
+
+        removePath: (path) => {
+          get().tags.index.removeDoc(path);
+          update({});
+        },
+
+        renamePath: (oldPath, newPath) => {
+          get().tags.index.renamePath(oldPath, newPath);
+          update({});
+        },
+
+        selectTag: (tag) => update({ selectedTag: tag }),
       },
-
-      updatePath: async (path) => {
-        await get().tags.index.updateDoc(path, vaultId);
-        update({});
-      },
-
-      removePath: (path) => {
-        get().tags.index.removeDoc(path);
-        update({});
-      },
-
-      renamePath: (oldPath, newPath) => {
-        get().tags.index.renamePath(oldPath, newPath);
-        update({});
-      },
-
-      selectTag: (tag) => update({ selectedTag: tag }),
-    },
+    };
   };
-};

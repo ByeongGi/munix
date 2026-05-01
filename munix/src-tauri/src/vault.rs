@@ -234,11 +234,7 @@ impl Vault {
         })
     }
 
-    pub fn create_file(
-        &self,
-        rel_path: &str,
-        content: Option<&str>,
-    ) -> VaultResult<FileNode> {
+    pub fn create_file(&self, rel_path: &str, content: Option<&str>) -> VaultResult<FileNode> {
         validate_md_extension(rel_path)?;
         validate_basename(rel_path)?;
         let path = self.resolve(rel_path)?;
@@ -356,15 +352,17 @@ impl Vault {
             kind,
             size,
             modified: Some(mtime_secs(&meta)),
-            children: if meta.is_dir() { Some(Vec::new()) } else { None },
+            children: if meta.is_dir() {
+                Some(Vec::new())
+            } else {
+                None
+            },
         })
     }
 
     pub fn save_asset(&self, bytes: &[u8], ext: &str) -> VaultResult<String> {
         let clean_ext = ext.trim_start_matches('.').to_lowercase();
-        const ALLOWED: &[&str] = &[
-            "png", "jpg", "jpeg", "gif", "webp", "svg", "bmp", "avif",
-        ];
+        const ALLOWED: &[&str] = &["png", "jpg", "jpeg", "gif", "webp", "svg", "bmp", "avif"];
         if !ALLOWED.contains(&clean_ext.as_str()) {
             return Err(VaultError::InvalidName(format!("ext: {ext}")));
         }
@@ -444,8 +442,8 @@ impl Vault {
             std::fs::create_dir_all(parent)?;
         }
         let wrapped = serde_json::json!({ "types": types });
-        let mut json = serde_json::to_string_pretty(&wrapped)
-            .map_err(|e| VaultError::Io(e.to_string()))?;
+        let mut json =
+            serde_json::to_string_pretty(&wrapped).map_err(|e| VaultError::Io(e.to_string()))?;
         json.push('\n');
         write_atomic(&path, &json)?;
         Ok(path)
@@ -470,10 +468,7 @@ pub fn read_file_at_root(root: &Path, rel_path: &str) -> VaultResult<FileContent
     })
 }
 
-pub fn read_markdown_file_at_root(
-    root: &Path,
-    rel_path: &str,
-) -> VaultResult<MarkdownFileContent> {
+pub fn read_markdown_file_at_root(root: &Path, rel_path: &str) -> VaultResult<MarkdownFileContent> {
     validate_md_extension(rel_path)?;
     let path = resolve_path(root, rel_path)?;
     let content = std::fs::read_to_string(&path)?;
@@ -488,10 +483,7 @@ pub fn read_markdown_file_at_root(
     })
 }
 
-pub fn read_markdown_batch_at_root(
-    root: &Path,
-    rel_paths: Vec<String>,
-) -> Vec<MarkdownBatchItem> {
+pub fn read_markdown_batch_at_root(root: &Path, rel_paths: Vec<String>) -> Vec<MarkdownBatchItem> {
     rel_paths
         .into_iter()
         .filter_map(|path| {
@@ -587,9 +579,8 @@ pub fn validate_name(name: &str) -> VaultResult<()> {
     // Windows 예약어 (확장자 제거 후 비교)
     let stem_upper = name.split('.').next().unwrap_or(name).to_uppercase();
     const RESERVED: &[&str] = &[
-        "CON", "PRN", "AUX", "NUL", "COM1", "COM2", "COM3", "COM4", "COM5",
-        "COM6", "COM7", "COM8", "COM9", "LPT1", "LPT2", "LPT3", "LPT4", "LPT5",
-        "LPT6", "LPT7", "LPT8", "LPT9",
+        "CON", "PRN", "AUX", "NUL", "COM1", "COM2", "COM3", "COM4", "COM5", "COM6", "COM7", "COM8",
+        "COM9", "LPT1", "LPT2", "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8", "LPT9",
     ];
     if RESERVED.contains(&stem_upper.as_str()) {
         return Err(VaultError::InvalidName(format!("reserved name: {name}")));
@@ -651,15 +642,8 @@ fn count_files(nodes: &[FileNode]) -> usize {
     total
 }
 
-fn walk(
-    base: &Path,
-    current: &Path,
-    out: &mut Vec<FileNode>,
-    lazy: bool,
-) -> VaultResult<()> {
-    let mut entries: Vec<_> = std::fs::read_dir(current)?
-        .filter_map(Result::ok)
-        .collect();
+fn walk(base: &Path, current: &Path, out: &mut Vec<FileNode>, lazy: bool) -> VaultResult<()> {
+    let mut entries: Vec<_> = std::fs::read_dir(current)?.filter_map(Result::ok).collect();
 
     entries.retain(|e| {
         let name = e.file_name().to_string_lossy().to_string();

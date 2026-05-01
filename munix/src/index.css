@@ -90,18 +90,40 @@
   --color-brand-foreground: #042f2e;
 
   /* Semantic surfaces (dark default) */
-  --color-bg-primary: #111416;
-  --color-bg-secondary: #171c1f;
-  --color-bg-sidebar: rgb(28 48 61 / 0.42);
+  --app-bg-primary-alpha: 0.86;
+  --app-bg-secondary-alpha: 0.82;
+  --app-bg-workspace-alpha: 0.78;
+  --app-bg-tertiary-alpha: 0.78;
+  --app-bg-hover-alpha: 0.82;
+  --app-bg-active-alpha: 0.86;
+  --app-bg-sidebar-alpha: 0.5;
+  --app-surface-elevated-alpha: 0.88;
+  --editor-bg-alpha: 1;
+  --terminal-bg-alpha: 0.86;
+  --app-chrome-backdrop:
+    radial-gradient(circle at 18% 12%, rgb(45 212 191 / 0.1), transparent 32%),
+    linear-gradient(135deg, rgb(10 14 16 / 0.18), rgb(10 14 16 / 0.04));
+
+  --color-bg-primary: rgb(17 20 22 / var(--app-bg-primary-alpha));
+  --color-bg-secondary: rgb(23 28 31 / var(--app-bg-secondary-alpha));
+  --color-bg-secondary-solid: #171c1f;
+  --color-bg-sidebar: rgb(28 48 61 / var(--app-bg-sidebar-alpha));
   --color-sidebar-item: rgb(255 255 255 / 0.08);
   --color-sidebar-item-hover: rgb(255 255 255 / 0.12);
   --color-sidebar-item-active: rgb(255 255 255 / 0.18);
-  --color-bg-workspace: #101315;
-  --color-bg-tertiary: #20272b;
-  --color-bg-hover: #252d31;
-  --color-bg-active: #30393e;
+  --color-bg-workspace: rgb(16 19 21 / var(--app-bg-workspace-alpha));
+  --color-bg-tertiary: rgb(32 39 43 / var(--app-bg-tertiary-alpha));
+  --color-bg-tertiary-solid: #20272b;
+  --color-bg-hover: rgb(37 45 49 / var(--app-bg-hover-alpha));
+  --color-bg-active: rgb(48 57 62 / var(--app-bg-active-alpha));
+  --color-editor-bg: rgb(17 20 22 / var(--editor-bg-alpha));
+  --color-terminal-bg: rgb(12 16 18 / var(--terminal-bg-alpha));
+  --color-terminal-border: rgb(255 255 255 / 0.08);
+  --color-terminal-text: #d7dee2;
+  --color-terminal-muted: #74838a;
   --color-bg-selected: var(--color-brand-muted);
-  --color-surface-elevated: #1b2124;
+  --color-surface-elevated: rgb(27 33 36 / var(--app-surface-elevated-alpha));
+  --color-surface-elevated-solid: #1b2124;
   --color-bg-overlay: rgb(0 0 0 / 0.5);
   --color-window-border: rgb(255 255 255 / 0.1);
 
@@ -252,6 +274,12 @@
   pointer-events: none;
 }
 
+.munix-editor-title-input {
+  font-size: clamp(2rem, 3vw, 3rem);
+  line-height: 1.05;
+  letter-spacing: 0;
+}
+
 .tiptap.prose {
   box-sizing: border-box;
   width: 100%;
@@ -352,18 +380,40 @@
 /* Light 모드: system 선호를 따를 때 OR 사용자가 data-theme="light" 강제했을 때 */
 @media (prefers-color-scheme: light) {
   :root:not([data-theme="dark"]) {
-    --color-bg-primary: #ffffff;
-    --color-bg-secondary: #fafafa;
-    --color-bg-sidebar: rgb(243 246 248 / 0.48);
-    --color-sidebar-item: rgb(15 23 42 / 0.05);
-    --color-sidebar-item-hover: rgb(15 23 42 / 0.08);
-    --color-sidebar-item-active: rgb(15 118 110 / 0.14);
-    --color-bg-workspace: #ffffff;
-    --color-bg-tertiary: #f5f5f5;
-    --color-bg-hover: #eeeeee;
-    --color-bg-active: #e5e5e5;
-    --color-bg-selected: rgba(15, 118, 110, 0.1);
-    --color-surface-elevated: #ffffff;
+    --app-chrome-backdrop:
+      radial-gradient(
+        circle at 12% 8%,
+        rgb(15 118 110 / 0.06),
+        transparent 34%
+      ),
+      radial-gradient(
+        circle at 88% 18%,
+        rgb(37 99 235 / 0.04),
+        transparent 30%
+      ),
+      linear-gradient(135deg, rgb(71 85 105 / 0.08), rgb(248 250 252 / 0.1));
+    --color-bg-primary: rgb(244 248 250 / var(--app-bg-primary-alpha));
+    --color-bg-secondary: rgb(238 244 247 / var(--app-bg-secondary-alpha));
+    --color-bg-secondary-solid: #fbfdfe;
+    --color-bg-sidebar: rgb(224 236 240 / var(--app-bg-sidebar-alpha));
+    --color-sidebar-item: rgb(15 23 42 / 0.06);
+    --color-sidebar-item-hover: rgb(15 23 42 / 0.1);
+    --color-sidebar-item-active: rgb(15 118 110 / 0.16);
+    --color-bg-workspace: rgb(242 247 249 / var(--app-bg-workspace-alpha));
+    --color-bg-tertiary: rgb(229 239 243 / var(--app-bg-tertiary-alpha));
+    --color-bg-tertiary-solid: #f2f7f9;
+    --color-bg-hover: rgb(215 229 235 / var(--app-bg-hover-alpha));
+    --color-bg-active: rgb(198 218 227 / var(--app-bg-active-alpha));
+    --color-editor-bg: rgb(255 255 255 / var(--editor-bg-alpha));
+    --color-terminal-bg: rgb(12 16 18 / var(--terminal-bg-alpha));
+    --color-terminal-border: rgb(0 0 0 / 0.24);
+    --color-terminal-text: #d7dee2;
+    --color-terminal-muted: #74838a;
+    --color-bg-selected: rgba(15, 118, 110, 0.16);
+    --color-surface-elevated: rgb(
+      255 255 255 / var(--app-surface-elevated-alpha)
+    );
+    --color-surface-elevated-solid: #ffffff;
     --color-bg-overlay: rgba(0, 0, 0, 0.38);
     --color-window-border: rgba(0, 0, 0, 0.12);
 
@@ -381,21 +431,21 @@
     --color-accent-selection: rgba(15, 118, 110, 0.14);
     --color-text-on-accent: #ffffff;
 
-    --color-text-primary: #0a0a0a;
-    --color-text-secondary: #525252;
-    --color-text-tertiary: #737373;
-    --color-text-sidebar: rgb(10 10 10 / 0.88);
-    --color-text-sidebar-muted: rgb(10 10 10 / 0.58);
-    --color-text-sidebar-subtle: rgb(10 10 10 / 0.42);
-    --color-sidebar-tree-text: rgb(10 10 10 / 0.78);
-    --color-sidebar-tree-icon: rgb(10 10 10 / 0.62);
-    --color-text-disabled: #a3a3a3;
+    --color-text-primary: #0f172a;
+    --color-text-secondary: #334155;
+    --color-text-tertiary: #64748b;
+    --color-text-sidebar: rgb(15 23 42 / 0.9);
+    --color-text-sidebar-muted: rgb(15 23 42 / 0.66);
+    --color-text-sidebar-subtle: rgb(15 23 42 / 0.5);
+    --color-sidebar-tree-text: rgb(15 23 42 / 0.82);
+    --color-sidebar-tree-icon: rgb(15 23 42 / 0.66);
+    --color-text-disabled: #94a3b8;
     --color-text-link: #0f766e;
 
-    --color-border-subtle: #f5f5f5;
-    --color-border-primary: #e5e5e5;
-    --color-border-secondary: #f5f5f5;
-    --color-border-strong: #d4d4d4;
+    --color-border-subtle: rgb(228 228 231 / 0.72);
+    --color-border-primary: rgb(161 161 170 / 0.72);
+    --color-border-secondary: rgb(212 212 216 / 0.74);
+    --color-border-strong: rgb(113 113 122 / 0.62);
     --color-border-focus: #0f766e;
 
     --color-success: #047857;
@@ -433,18 +483,32 @@
 }
 
 :root[data-theme="light"] {
-  --color-bg-primary: #ffffff;
-  --color-bg-secondary: #fafafa;
-  --color-bg-sidebar: rgb(243 246 248 / 0.48);
-  --color-sidebar-item: rgb(15 23 42 / 0.05);
-  --color-sidebar-item-hover: rgb(15 23 42 / 0.08);
-  --color-sidebar-item-active: rgb(15 118 110 / 0.14);
-  --color-bg-workspace: #ffffff;
-  --color-bg-tertiary: #f5f5f5;
-  --color-bg-hover: #eeeeee;
-  --color-bg-active: #e5e5e5;
-  --color-bg-selected: rgba(15, 118, 110, 0.1);
-  --color-surface-elevated: #ffffff;
+  --app-chrome-backdrop:
+    radial-gradient(circle at 12% 8%, rgb(15 118 110 / 0.06), transparent 34%),
+    radial-gradient(circle at 88% 18%, rgb(37 99 235 / 0.04), transparent 30%),
+    linear-gradient(135deg, rgb(71 85 105 / 0.08), rgb(248 250 252 / 0.1));
+  --color-bg-primary: rgb(244 248 250 / var(--app-bg-primary-alpha));
+  --color-bg-secondary: rgb(238 244 247 / var(--app-bg-secondary-alpha));
+  --color-bg-secondary-solid: #fbfdfe;
+  --color-bg-sidebar: rgb(224 236 240 / var(--app-bg-sidebar-alpha));
+  --color-sidebar-item: rgb(15 23 42 / 0.06);
+  --color-sidebar-item-hover: rgb(15 23 42 / 0.1);
+  --color-sidebar-item-active: rgb(15 118 110 / 0.16);
+  --color-bg-workspace: rgb(242 247 249 / var(--app-bg-workspace-alpha));
+  --color-bg-tertiary: rgb(229 239 243 / var(--app-bg-tertiary-alpha));
+  --color-bg-tertiary-solid: #f2f7f9;
+  --color-bg-hover: rgb(215 229 235 / var(--app-bg-hover-alpha));
+  --color-bg-active: rgb(198 218 227 / var(--app-bg-active-alpha));
+  --color-editor-bg: rgb(255 255 255 / var(--editor-bg-alpha));
+  --color-terminal-bg: rgb(12 16 18 / var(--terminal-bg-alpha));
+  --color-terminal-border: rgb(0 0 0 / 0.24);
+  --color-terminal-text: #d7dee2;
+  --color-terminal-muted: #74838a;
+  --color-bg-selected: rgba(15, 118, 110, 0.16);
+  --color-surface-elevated: rgb(
+    255 255 255 / var(--app-surface-elevated-alpha)
+  );
+  --color-surface-elevated-solid: #ffffff;
   --color-bg-overlay: rgba(0, 0, 0, 0.38);
   --color-window-border: rgba(0, 0, 0, 0.12);
 
@@ -462,21 +526,21 @@
   --color-accent-selection: rgba(15, 118, 110, 0.14);
   --color-text-on-accent: #ffffff;
 
-  --color-text-primary: #0a0a0a;
-  --color-text-secondary: #525252;
-  --color-text-tertiary: #737373;
-  --color-text-sidebar: rgb(10 10 10 / 0.88);
-  --color-text-sidebar-muted: rgb(10 10 10 / 0.58);
-  --color-text-sidebar-subtle: rgb(10 10 10 / 0.42);
-  --color-sidebar-tree-text: rgb(10 10 10 / 0.78);
-  --color-sidebar-tree-icon: rgb(10 10 10 / 0.62);
-  --color-text-disabled: #a3a3a3;
+  --color-text-primary: #0f172a;
+  --color-text-secondary: #334155;
+  --color-text-tertiary: #64748b;
+  --color-text-sidebar: rgb(15 23 42 / 0.9);
+  --color-text-sidebar-muted: rgb(15 23 42 / 0.66);
+  --color-text-sidebar-subtle: rgb(15 23 42 / 0.5);
+  --color-sidebar-tree-text: rgb(15 23 42 / 0.82);
+  --color-sidebar-tree-icon: rgb(15 23 42 / 0.66);
+  --color-text-disabled: #94a3b8;
   --color-text-link: #0f766e;
 
-  --color-border-subtle: #f5f5f5;
-  --color-border-primary: #e5e5e5;
-  --color-border-secondary: #f5f5f5;
-  --color-border-strong: #d4d4d4;
+  --color-border-subtle: rgb(228 228 231 / 0.72);
+  --color-border-primary: rgb(161 161 170 / 0.72);
+  --color-border-secondary: rgb(212 212 216 / 0.74);
+  --color-border-strong: rgb(113 113 122 / 0.62);
   --color-border-focus: #0f766e;
 
   --color-success: #047857;
@@ -544,7 +608,7 @@ html[data-theme="light"] {
 
 body {
   font-family: var(--font-sans);
-  background-color: transparent;
+  background: transparent;
   color: var(--color-text-primary);
   font-synthesis: none;
   text-rendering: optimizeLegibility;
@@ -557,7 +621,8 @@ body {
   height: 100%;
   overflow: hidden;
   border-radius: var(--radius-window);
-  background-color: transparent;
+  background: var(--app-chrome-backdrop);
+  background-clip: padding-box;
   isolation: isolate;
 }
 
@@ -588,6 +653,45 @@ select {
   font: inherit;
 }
 
+.munix-slider {
+  height: 18px;
+  appearance: none;
+  background: transparent;
+}
+
+.munix-slider::-webkit-slider-runnable-track {
+  height: 3px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--color-border-primary) 72%, transparent);
+}
+
+.munix-slider::-webkit-slider-thumb {
+  width: 12px;
+  height: 12px;
+  margin-top: -4.5px;
+  appearance: none;
+  border: 1px solid rgb(255 255 255 / 0.42);
+  border-radius: 999px;
+  background: var(--color-accent);
+  box-shadow: 0 1px 4px rgb(0 0 0 / 0.2);
+}
+
+.munix-slider::-moz-range-track {
+  height: 3px;
+  border: 0;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--color-border-primary) 72%, transparent);
+}
+
+.munix-slider::-moz-range-thumb {
+  width: 12px;
+  height: 12px;
+  border: 1px solid rgb(255 255 255 / 0.42);
+  border-radius: 999px;
+  background: var(--color-accent);
+  box-shadow: 0 1px 4px rgb(0 0 0 / 0.2);
+}
+
 :focus-visible {
   outline: 2px solid var(--color-border-focus);
   outline-offset: 2px;
@@ -598,6 +702,14 @@ select {
   outline: none !important;
 }
 
+.munix-terminal-panel {
+  background:
+    linear-gradient(rgb(255 255 255 / 0.035), transparent 44px),
+    var(--color-terminal-bg);
+  border-top: 1px solid var(--color-terminal-border);
+  color: var(--color-terminal-text);
+}
+
 [data-munix-terminal-viewport="true"]:focus,
 [data-munix-terminal-viewport="true"]:focus-visible {
   outline: none !important;
@@ -605,6 +717,71 @@ select {
 
 [data-munix-terminal-viewport="true"] > br {
   display: none !important;
+}
+
+[data-munix-terminal-viewport="true"] .xterm,
+[data-munix-terminal-viewport="true"] .xterm-viewport,
+[data-munix-terminal-viewport="true"] .xterm-screen,
+[data-munix-terminal-viewport="true"] .xterm-screen canvas {
+  background: transparent !important;
+  background-color: transparent !important;
+}
+
+[data-munix-terminal-viewport="true"] .xterm {
+  height: 100%;
+  width: 100%;
+}
+
+[data-munix-terminal-viewport="true"] .xterm-viewport {
+  scrollbar-color: rgb(116 131 138 / 0.26) transparent;
+  scrollbar-width: thin;
+}
+
+[data-munix-terminal-viewport="true"] .xterm-viewport::-webkit-scrollbar {
+  width: 4px;
+}
+
+[data-munix-terminal-viewport="true"] .xterm-viewport::-webkit-scrollbar-thumb {
+  background-color: rgb(116 131 138 / 0.22);
+  border: 0;
+  border-radius: 999px;
+}
+
+[data-munix-terminal-viewport="true"]
+  .xterm-viewport::-webkit-scrollbar-thumb:hover {
+  background-color: rgb(116 131 138 / 0.34);
+}
+
+[data-munix-terminal-viewport="true"]
+  .xterm-scrollable-element
+  > .scrollbar.vertical {
+  right: 3px !important;
+  width: 6px !important;
+}
+
+[data-munix-terminal-viewport="true"]
+  .xterm-scrollable-element
+  > .scrollbar.vertical
+  > .slider {
+  left: 0 !important;
+  width: 6px !important;
+  border-radius: 999px !important;
+  background: rgb(116 131 138 / 0.28) !important;
+}
+
+[data-munix-terminal-viewport="true"]
+  .xterm-scrollable-element
+  > .scrollbar.vertical
+  > .slider:hover,
+[data-munix-terminal-viewport="true"]
+  .xterm-scrollable-element
+  > .scrollbar.vertical
+  > .slider.active {
+  background: rgb(116 131 138 / 0.42) !important;
+}
+
+[data-munix-terminal-viewport="true"] .composition-view {
+  background: var(--color-terminal-bg) !important;
 }
 
 [data-munix-terminal-viewport="true"] textarea {
@@ -1219,7 +1396,7 @@ pre {
       color-mix(in srgb, var(--color-accent) 8%, transparent),
       transparent 34%
     ),
-    var(--color-bg-primary);
+    var(--color-editor-bg);
   color: var(--color-text-tertiary);
 }
 

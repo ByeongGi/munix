@@ -1,11 +1,4 @@
-import {
-  Copy,
-  ExternalLink,
-  PinOff,
-  Pin,
-  Trash2,
-  X,
-} from "lucide-react";
+import { Copy, ExternalLink, PinOff, Pin, Trash2, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/cn";
 import type { VaultInfo } from "@/types/ipc";
@@ -41,13 +34,19 @@ export function VaultTabContextMenu({
       onClick={(e) => e.stopPropagation()}
       className={cn(
         "fixed z-50 min-w-[200px] rounded-md border p-1 shadow-lg",
-        "border-[var(--color-border-primary)] bg-[var(--color-bg-secondary)]",
+        "border-[var(--color-border-primary)] bg-[var(--color-bg-secondary-solid)]",
       )}
       style={{ left: x, top: y }}
     >
       <MenuItem
         onClick={() => onAction("togglePin")}
-        icon={pinned ? <PinOff className="h-3.5 w-3.5" /> : <Pin className="h-3.5 w-3.5" />}
+        icon={
+          pinned ? (
+            <PinOff className="h-3.5 w-3.5" />
+          ) : (
+            <Pin className="h-3.5 w-3.5" />
+          )
+        }
         label={pinned ? t("vault-dock:menu.unpin") : t("vault-dock:menu.pin")}
       />
       <MenuItem

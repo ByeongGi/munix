@@ -218,7 +218,12 @@ function sanitizeWorkspaceTabs(
 
   nextTree = pruneEmptyPanes(nextTree);
   if (!nextTree) {
-    return { tabs: [], activeId: null, workspaceTree: null, activePaneId: null };
+    return {
+      tabs: [],
+      activeId: null,
+      workspaceTree: null,
+      activePaneId: null,
+    };
   }
   if (isPaneNode(nextTree)) {
     return {

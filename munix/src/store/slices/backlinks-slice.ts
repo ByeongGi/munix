@@ -49,50 +49,50 @@ export function defaultBacklinksSlice(): BacklinksSlice {
   return { backlinks: defaultBacklinksState() };
 }
 
-export const createBacklinksSlice = (
-  vaultId: VaultId,
-): StateCreator<BacklinksSlice, [], [], BacklinksSlice> => (set, get) => {
-  const update = (patch: Partial<BacklinksState>) =>
-    set((s) => ({ backlinks: { ...s.backlinks, ...patch } }));
+export const createBacklinksSlice =
+  (vaultId: VaultId): StateCreator<BacklinksSlice, [], [], BacklinksSlice> =>
+  (set, get) => {
+    const update = (patch: Partial<BacklinksState>) =>
+      set((s) => ({ backlinks: { ...s.backlinks, ...patch } }));
 
-  return {
-    backlinks: {
-      index: new BacklinkIndex(),
-      status: "idle",
-      builtFor: null,
-      error: null,
+    return {
+      backlinks: {
+        index: new BacklinkIndex(),
+        status: "idle",
+        builtFor: null,
+        error: null,
 
-      build: async (root, files) => {
-        update({ status: "building", error: null });
-        try {
-          const idx = new BacklinkIndex();
-          await idx.build(files, vaultId);
-          update({ index: idx, status: "ready", builtFor: root });
-        } catch (e) {
-          update({
-            status: "error",
-            error: e instanceof Error ? e.message : String(e),
-          });
-        }
+        build: async (root, files) => {
+          update({ status: "building", error: null });
+          try {
+            const idx = new BacklinkIndex();
+            await idx.build(files, vaultId);
+            update({ index: idx, status: "ready", builtFor: root });
+          } catch (e) {
+            update({
+              status: "error",
+              error: e instanceof Error ? e.message : String(e),
+            });
+          }
+        },
+
+        updatePath: async (path) => {
+          await get().backlinks.index.updateDoc(path, vaultId);
+          update({});
+        },
+
+        removePath: (path) => {
+          get().backlinks.index.removeDoc(path);
+          update({});
+        },
+
+        renamePath: (oldPath, newPath) => {
+          get().backlinks.index.renamePath(oldPath, newPath);
+          update({});
+        },
+
+        backlinksOf: (path) => get().backlinks.index.backlinksOf(path),
+        forwardLinksOf: (path) => get().backlinks.index.forwardLinksOf(path),
       },
-
-      updatePath: async (path) => {
-        await get().backlinks.index.updateDoc(path, vaultId);
-        update({});
-      },
-
-      removePath: (path) => {
-        get().backlinks.index.removeDoc(path);
-        update({});
-      },
-
-      renamePath: (oldPath, newPath) => {
-        get().backlinks.index.renamePath(oldPath, newPath);
-        update({});
-      },
-
-      backlinksOf: (path) => get().backlinks.index.backlinksOf(path),
-      forwardLinksOf: (path) => get().backlinks.index.forwardLinksOf(path),
-    },
+    };
   };
-};

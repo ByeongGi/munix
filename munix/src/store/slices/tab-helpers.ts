@@ -38,7 +38,7 @@ export function closeTabInList(
   const nextTabs = tabs.filter((tab) => tab.id !== tabId);
   const nextActiveId =
     activeId === tabId
-      ? (nextTabs[index] ?? nextTabs[index - 1] ?? null)?.id ?? null
+      ? ((nextTabs[index] ?? nextTabs[index - 1] ?? null)?.id ?? null)
       : activeId;
   return {
     tabs: nextTabs,
@@ -81,9 +81,7 @@ export function closeUnpinnedTabsInList(
 ): { tabs: Tab[]; activeId: string | null } {
   const nextTabs = tabs.filter((tab) => tab.pinned);
   const nextActiveId =
-    nextTabs.find((tab) => tab.id === activeId)?.id ??
-    nextTabs[0]?.id ??
-    null;
+    nextTabs.find((tab) => tab.id === activeId)?.id ?? nextTabs[0]?.id ?? null;
   return { tabs: nextTabs, activeId: nextActiveId };
 }
 

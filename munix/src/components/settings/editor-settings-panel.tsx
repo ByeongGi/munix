@@ -28,6 +28,8 @@ export function EditorSettingsPanel() {
           { value: "base", label: t("settings:fontSize.base") },
           { value: "lg", label: t("settings:fontSize.lg") },
           { value: "xl", label: t("settings:fontSize.xl") },
+          { value: "xxl", label: t("settings:fontSize.xxl") },
+          { value: "xxxl", label: t("settings:fontSize.xxxl") },
         ]}
         onChange={(value) => set({ fontSize: value })}
       />

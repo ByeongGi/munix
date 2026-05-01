@@ -4,9 +4,7 @@ use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
 use notify::{EventKind, RecursiveMode};
-use notify_debouncer_full::{
-    new_debouncer, notify, DebounceEventResult, Debouncer, FileIdMap,
-};
+use notify_debouncer_full::{new_debouncer, notify, DebounceEventResult, Debouncer, FileIdMap};
 use serde::Serialize;
 use tauri::{AppHandle, Emitter};
 

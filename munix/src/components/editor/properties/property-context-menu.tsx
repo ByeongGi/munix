@@ -68,7 +68,7 @@ export function PropertyContextMenu({
           style={{ left: pos.x, top: pos.y }}
           className={cn(
             "fixed z-50 min-w-[180px] rounded-md border py-1 shadow-lg",
-            "border-[var(--color-border-primary)] bg-[var(--color-bg-secondary)]",
+            "border-[var(--color-border-primary)] bg-[var(--color-bg-secondary-solid)]",
             "text-xs",
           )}
         >

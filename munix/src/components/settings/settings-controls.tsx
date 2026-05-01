@@ -63,6 +63,84 @@ export function LanguageSelector({
   );
 }
 
+export function RangeControl({
+  label,
+  description,
+  value,
+  min,
+  max,
+  step = 1,
+  valueLabel,
+  onChange,
+}: {
+  label: string;
+  description?: string;
+  value: number;
+  min: number;
+  max: number;
+  step?: number;
+  valueLabel: string;
+  onChange: (value: number) => void;
+}) {
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center justify-between gap-3">
+        <div className="space-y-0.5">
+          <span className="text-sm">{label}</span>
+          {description ? (
+            <p className="text-[11px] text-[var(--color-text-tertiary)]">
+              {description}
+            </p>
+          ) : null}
+        </div>
+        <span className="shrink-0 rounded bg-[var(--color-bg-tertiary)] px-2 py-1 font-mono text-[11px] text-[var(--color-text-secondary)]">
+          {valueLabel}
+        </span>
+      </div>
+      <input
+        type="range"
+        min={min}
+        max={max}
+        step={step}
+        value={value}
+        onChange={(event) => onChange(Number(event.target.value))}
+        className="munix-slider w-full cursor-pointer"
+      />
+    </div>
+  );
+}
+
+export function ToggleControl({
+  label,
+  description,
+  checked,
+  onChange,
+}: {
+  label: string;
+  description?: string;
+  checked: boolean;
+  onChange: (checked: boolean) => void;
+}) {
+  return (
+    <label className="flex cursor-pointer items-center justify-between gap-4 rounded-md py-1">
+      <span className="space-y-0.5">
+        <span className="block text-sm">{label}</span>
+        {description ? (
+          <span className="block text-[11px] text-[var(--color-text-tertiary)]">
+            {description}
+          </span>
+        ) : null}
+      </span>
+      <input
+        type="checkbox"
+        checked={checked}
+        onChange={(event) => onChange(event.target.checked)}
+        className="h-4 w-4 shrink-0 cursor-pointer accent-[var(--color-accent)]"
+      />
+    </label>
+  );
+}
+
 export function VaultOverrideRow<T extends string | number>({
   label,
   keyName: _keyName,

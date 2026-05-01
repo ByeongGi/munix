@@ -22,7 +22,7 @@ export function ContextMenuSurface({
       onClick={(e) => e.stopPropagation()}
       className={cn(
         "fixed z-50 rounded-md border p-1 shadow-lg",
-        "border-[var(--color-border-primary)] bg-[var(--color-bg-secondary)]",
+        "border-[var(--color-border-primary)] bg-[var(--color-bg-secondary-solid)]",
       )}
       style={{ top: y, left: x, minWidth }}
     >

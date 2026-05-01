@@ -46,7 +46,7 @@ export function CommandDialog({
         onClick={(e) => e.stopPropagation()}
         className={cn(
           "relative w-full max-w-lg rounded-lg border shadow-2xl",
-          "border-[var(--color-border-primary)] bg-[var(--color-bg-secondary)]",
+          "border-[var(--color-border-primary)] bg-[var(--color-bg-secondary-solid)]",
         )}
       >
         <div className="flex items-center gap-2 border-b border-[var(--color-border-primary)] px-3 py-2">

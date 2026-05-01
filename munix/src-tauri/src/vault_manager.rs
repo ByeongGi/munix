@@ -60,10 +60,7 @@ impl VaultManager {
     /// 같은 path 가 `munix.json` 에 등록돼 있으면 그 id 를 재사용 (ADR-032 — 매 부팅마다
     /// 새 UUID 가 부여돼 registry 에 stale entry 가 쌓이는 문제 회피).
     pub fn open(&self, path: impl AsRef<Path>, app: AppHandle) -> VaultResult<VaultId> {
-        let canonical = path
-            .as_ref()
-            .canonicalize()
-            .map_err(VaultError::from)?;
+        let canonical = path.as_ref().canonicalize().map_err(VaultError::from)?;
 
         // 1. backend 내부 vaults 에서 검색
         {
@@ -80,14 +77,12 @@ impl VaultManager {
 
         // 2. munix.json 에서 같은 path 의 id 재사용 (ADR-032)
         let canonical_str = canonical.to_string_lossy().to_string();
-        let reused_id: Option<VaultId> = crate::vault_registry::load(&app)
-            .ok()
-            .and_then(|reg| {
-                reg.vaults
-                    .into_iter()
-                    .find(|(_, e)| e.path == canonical_str)
-                    .map(|(id, _)| id)
-            });
+        let reused_id: Option<VaultId> = crate::vault_registry::load(&app).ok().and_then(|reg| {
+            reg.vaults
+                .into_iter()
+                .find(|(_, e)| e.path == canonical_str)
+                .map(|(id, _)| id)
+        });
 
         let vault = Vault::open(&canonical)?;
         let id: VaultId = reused_id.unwrap_or_else(|| Uuid::new_v4().to_string());
@@ -199,10 +194,7 @@ impl VaultManager {
     /// (Phase D 이후) 남은 vault 수 — 0이면 Welcome 화면 표시.
     #[allow(dead_code)]
     pub fn count(&self) -> usize {
-        self.vaults
-            .read()
-            .map(|g| g.len())
-            .unwrap_or(0)
+        self.vaults.read().map(|g| g.len()).unwrap_or(0)
     }
 }
 

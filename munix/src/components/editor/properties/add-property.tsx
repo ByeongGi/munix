@@ -133,7 +133,7 @@ function TypeMenu({
     <div
       className={cn(
         "absolute left-1.5 top-7 z-50 w-36 rounded-md border p-1 shadow-lg",
-        "border-[var(--color-border-primary)] bg-[var(--color-bg-secondary)]",
+        "border-[var(--color-border-primary)] bg-[var(--color-bg-secondary-solid)]",
       )}
     >
       {KNOWN_PROPERTY_TYPES.map((item) => (

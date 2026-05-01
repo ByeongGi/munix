@@ -72,6 +72,7 @@ pub fn run() {
             commands::terminal::terminal_write,
             commands::terminal::terminal_resize,
             commands::terminal::terminal_kill,
+            commands::terminal::terminal_complete,
             vault_registry::vault_registry_load,
             vault_registry::vault_registry_save,
             vault_registry::vault_registry_remove,

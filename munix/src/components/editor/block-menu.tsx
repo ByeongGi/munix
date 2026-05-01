@@ -63,7 +63,7 @@ export function BlockMenu({ editor, pos, anchor, onClose }: BlockMenuProps) {
       style={{ top: anchor.y, left: anchor.x }}
       className={cn(
         "fixed z-50 min-w-[200px] rounded-md border p-1 shadow-xl",
-        "border-[var(--color-border-primary)] bg-[var(--color-bg-secondary)]",
+        "border-[var(--color-border-primary)] bg-[var(--color-bg-secondary-solid)]",
       )}
     >
       <Item

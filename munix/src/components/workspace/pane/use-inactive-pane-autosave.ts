@@ -1,4 +1,10 @@
-import { useCallback, useEffect, useRef, type Dispatch, type RefObject } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  type Dispatch,
+  type RefObject,
+} from "react";
 import type { Editor } from "@tiptap/react";
 import { useDebouncedCallback } from "use-debounce";
 import { ipc } from "@/lib/ipc";

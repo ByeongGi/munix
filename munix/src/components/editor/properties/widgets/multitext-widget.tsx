@@ -131,7 +131,7 @@ export function MultitextWidget({
         <ul
           className={cn(
             "absolute left-0 top-full z-50 mt-0.5 w-full rounded border shadow-md",
-            "border-[var(--color-border-primary)] bg-[var(--color-bg-secondary)]",
+            "border-[var(--color-border-primary)] bg-[var(--color-bg-secondary-solid)]",
             "max-h-48 overflow-y-auto text-xs",
           )}
         >

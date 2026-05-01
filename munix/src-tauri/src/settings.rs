@@ -35,8 +35,7 @@ pub fn load_settings(app: &AppHandle) -> Result<String, String> {
 /// 1. `serde_json::Value` 로 파싱이 통과해야 함 (구조 검증은 안 함).
 /// 2. 같은 디렉터리에 `.tmp` 로 쓴 뒤 rename — 부분 쓰기로 인한 손상 방지.
 pub fn save_settings(app: &AppHandle, json: &str) -> Result<(), String> {
-    serde_json::from_str::<serde_json::Value>(json)
-        .map_err(|e| format!("invalid JSON: {e}"))?;
+    serde_json::from_str::<serde_json::Value>(json).map_err(|e| format!("invalid JSON: {e}"))?;
 
     let path = settings_path(app)?;
     let tmp = path.with_extension("json.tmp");

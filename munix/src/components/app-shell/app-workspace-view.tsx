@@ -38,10 +38,7 @@ interface AppWorkspaceViewProps {
   handleCreateFolderAt: (parent: string) => Promise<void>;
   handleAction: ComponentProps<typeof AppSidebar>["onFileAction"];
   handleMove: (fromPath: string, toFolderPath: string) => Promise<void>;
-  handleMoveMany: (
-    fromPaths: string[],
-    toFolderPath: string,
-  ) => Promise<void>;
+  handleMoveMany: (fromPaths: string[], toFolderPath: string) => Promise<void>;
   handleDeleteMany: ComponentProps<typeof AppSidebar>["onDeleteMany"];
   handleRenameSubmit: ComponentProps<typeof AppSidebar>["onRenameSubmit"];
   onRenameCancel: () => void;

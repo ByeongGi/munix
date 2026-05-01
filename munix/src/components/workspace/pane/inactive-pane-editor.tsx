@@ -119,7 +119,7 @@ export function InactivePaneEditor({
 
   return (
     <div
-      className="relative min-h-0 min-w-0 flex-1 overflow-y-auto bg-[var(--color-bg-primary)]"
+      className="relative min-h-0 min-w-0 flex-1 overflow-y-auto bg-[var(--color-editor-bg)]"
       onMouseDown={handleEditorEmptyAreaMouseDown}
     >
       <InactivePaneEditorStatusBanner status={status} />

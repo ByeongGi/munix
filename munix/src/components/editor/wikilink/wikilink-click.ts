@@ -3,7 +3,10 @@ import { Plugin, PluginKey } from "@tiptap/pm/state";
 import i18next from "i18next";
 import type { FileNode } from "@/types/ipc";
 import { useVaultStore } from "@/store/vault-store";
-import { openPathInActivePane, openPathInSplit } from "@/lib/workspace-commands";
+import {
+  openPathInActivePane,
+  openPathInSplit,
+} from "@/lib/workspace-commands";
 
 function findFileByTitle(nodes: FileNode[], title: string): string | null {
   for (const n of nodes) {

@@ -1,4 +1,9 @@
-import { useCallback, useState, type CSSProperties, type DragEvent } from "react";
+import {
+  useCallback,
+  useState,
+  type CSSProperties,
+  type DragEvent,
+} from "react";
 
 import { TAB_DND_MIME, parseTabPayload } from "@/lib/dnd-mime";
 import type { DropZone } from "@/store/workspace-types";
@@ -57,13 +62,16 @@ export function usePaneDropTarget({
 }: UsePaneDropTargetParams): UsePaneDropTargetResult {
   const [dropZone, setDropZone] = useState<DropZone | null>(null);
 
-  const computeZone = useCallback((event: DragEvent<HTMLDivElement>): DropZone => {
-    const target = event.target as HTMLElement | null;
-    if (target?.closest?.("[data-no-edge-drop]")) return "center";
+  const computeZone = useCallback(
+    (event: DragEvent<HTMLDivElement>): DropZone => {
+      const target = event.target as HTMLElement | null;
+      if (target?.closest?.("[data-no-edge-drop]")) return "center";
 
-    const rect = event.currentTarget.getBoundingClientRect();
-    return classifyDropZone(rect, event.clientX, event.clientY);
-  }, []);
+      const rect = event.currentTarget.getBoundingClientRect();
+      return classifyDropZone(rect, event.clientX, event.clientY);
+    },
+    [],
+  );
 
   const isTabDragOverPaneContent = useCallback(
     (event: DragEvent<HTMLDivElement>): boolean => {

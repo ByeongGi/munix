@@ -59,12 +59,7 @@ export function SidebarResizer({
         "group relative z-20 w-0 shrink-0 cursor-col-resize bg-transparent",
       )}
     >
-      <div
-        className={cn(
-          "absolute inset-y-0 -left-2 w-4",
-          "bg-transparent",
-        )}
-      />
+      <div className={cn("absolute inset-y-0 -left-2 w-4", "bg-transparent")} />
       <div
         className={cn(
           "absolute inset-y-3 left-0 w-px -translate-x-1/2 rounded-full",

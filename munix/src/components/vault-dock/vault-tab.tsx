@@ -60,9 +60,7 @@ export function VaultTab({
         className={cn(
           "flex h-6 w-6 shrink-0 items-center justify-center rounded-md",
           "bg-sidebar-item-bg text-[11px] font-semibold leading-none",
-          active
-            ? "bg-accent-muted text-accent"
-            : "text-sidebar-text-subtle",
+          active ? "bg-accent-muted text-accent" : "text-sidebar-text-subtle",
         )}
         aria-hidden
       >
@@ -71,9 +69,7 @@ export function VaultTab({
       <span className="min-w-0 flex-1 truncate text-xs font-medium">
         {info.name}
       </span>
-      {pinned && (
-        <Pin className="h-3 w-3 shrink-0 text-accent" />
-      )}
+      {pinned && <Pin className="h-3 w-3 shrink-0 text-accent" />}
       {unsavedCount && unsavedCount > 0 ? (
         <AlertTriangle className="h-3 w-3 shrink-0 text-[var(--color-warning)]" />
       ) : null}

@@ -34,10 +34,7 @@ pub async fn open_vault(
 
 /// vault 닫기. id 미지정 시 active vault 사용.
 #[tauri::command]
-pub async fn close_vault(
-    vault_id: Option<VaultId>,
-    state: State<'_, AppState>,
-) -> VaultResult<()> {
+pub async fn close_vault(vault_id: Option<VaultId>, state: State<'_, AppState>) -> VaultResult<()> {
     let id = resolve_id(&state, vault_id)?;
     state.vault_manager.close(&id)?;
 
@@ -135,10 +132,7 @@ pub async fn trust_path(path: String, app: AppHandle) -> Result<(), String> {
 /// active vault id 변경 (어댑터용). Phase B에서 frontend가 직접 vault_id를
 /// 보내게 되면 이 커맨드는 deprecated 처리 가능.
 #[tauri::command]
-pub async fn set_active_vault(
-    vault_id: VaultId,
-    state: State<'_, AppState>,
-) -> VaultResult<()> {
+pub async fn set_active_vault(vault_id: VaultId, state: State<'_, AppState>) -> VaultResult<()> {
     // 등록된 vault인지 검증
     state.vault_manager.info(&vault_id)?;
     let mut slot = state

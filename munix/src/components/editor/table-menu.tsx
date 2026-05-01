@@ -33,7 +33,7 @@ export function TableMenu({ editor }: TableMenuProps) {
       }}
       className={cn(
         "flex items-center gap-0.5 rounded-md border p-1 shadow-lg",
-        "border-[var(--color-border-primary)] bg-[var(--color-bg-secondary)]",
+        "border-[var(--color-border-primary)] bg-[var(--color-bg-secondary-solid)]",
       )}
     >
       <Btn

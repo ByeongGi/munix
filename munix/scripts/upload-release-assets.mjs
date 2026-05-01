@@ -1,17 +1,18 @@
-import { existsSync, readdirSync, statSync } from 'node:fs';
-import { spawnSync } from 'node:child_process';
-import { join } from 'node:path';
-import packageJson from '../package.json' with { type: 'json' };
+import { existsSync, readdirSync, statSync } from "node:fs";
+import { spawnSync } from "node:child_process";
+import { join } from "node:path";
+import packageJson from "../package.json" with { type: "json" };
 
 const args = process.argv.slice(2);
-const tagFlagIndex = args.indexOf('--tag');
-const tag = tagFlagIndex >= 0 ? args[tagFlagIndex + 1] : `v${packageJson.version}`;
-const releaseDir = join('..', 'release-dist', tag);
+const tagFlagIndex = args.indexOf("--tag");
+const tag =
+  tagFlagIndex >= 0 ? args[tagFlagIndex + 1] : `v${packageJson.version}`;
+const releaseDir = join("..", "release-dist", tag);
 
 function run(command, commandArgs, options = {}) {
   const result = spawnSync(command, commandArgs, {
-    stdio: 'inherit',
-    shell: process.platform === 'win32',
+    stdio: "inherit",
+    shell: process.platform === "win32",
     ...options,
   });
 
@@ -33,26 +34,29 @@ function collectFiles(dir) {
 const files = collectFiles(releaseDir);
 
 if (files.length === 0) {
-  console.error(`No assets found in ${releaseDir}. Run pnpm release:collect on each build machine first.`);
+  console.error(
+    `No assets found in ${releaseDir}. Run pnpm release:collect on each build machine first.`,
+  );
   process.exit(1);
 }
 
-const releaseExists = spawnSync('gh', ['release', 'view', tag], {
-  stdio: 'ignore',
-  shell: process.platform === 'win32',
-}).status === 0;
+const releaseExists =
+  spawnSync("gh", ["release", "view", tag], {
+    stdio: "ignore",
+    shell: process.platform === "win32",
+  }).status === 0;
 
 if (!releaseExists) {
-  run('gh', [
-    'release',
-    'create',
+  run("gh", [
+    "release",
+    "create",
     tag,
-    '--draft',
-    '--title',
+    "--draft",
+    "--title",
     `Munix ${tag}`,
-    '--notes',
-    'Local Munix desktop release assets.',
+    "--notes",
+    "Local Munix desktop release assets.",
   ]);
 }
 
-run('gh', ['release', 'upload', tag, ...files, '--clobber']);
+run("gh", ["release", "upload", tag, ...files, "--clobber"]);

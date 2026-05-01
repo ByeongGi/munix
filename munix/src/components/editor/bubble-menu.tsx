@@ -48,8 +48,7 @@ export function BubbleMenuBar({ editor }: BubbleMenuBarProps) {
     (command: (range: { from: number; to: number }) => void) => {
       if (!editor) return;
       const { from, to } = editor.state.selection;
-      const range =
-        from !== to ? { from, to } : selectionRangeRef.current;
+      const range = from !== to ? { from, to } : selectionRangeRef.current;
       if (!editor || !range || range.from === range.to) return;
       command(range);
     },
@@ -152,7 +151,9 @@ export function BubbleMenuBar({ editor }: BubbleMenuBarProps) {
         const editingRange = linkEditingRangeRef.current;
         if (
           linkOpen &&
-          (!editingRange || editingRange.from !== from || editingRange.to !== to)
+          (!editingRange ||
+            editingRange.from !== from ||
+            editingRange.to !== to)
         ) {
           linkEditingRangeRef.current = null;
           setLinkOpen(false);
@@ -162,7 +163,7 @@ export function BubbleMenuBar({ editor }: BubbleMenuBarProps) {
       }}
       className={cn(
         "flex items-center gap-0.5 rounded-md border p-1 shadow-lg",
-        "border-[var(--color-border-primary)] bg-[var(--color-bg-secondary)]",
+        "border-[var(--color-border-primary)] bg-[var(--color-bg-secondary-solid)]",
       )}
     >
       {linkOpen ? (
@@ -275,83 +276,103 @@ export function BubbleMenuBar({ editor }: BubbleMenuBarProps) {
         </form>
       ) : (
         <>
-      <MenuBtn
-        icon={Bold}
-        label={t("editor:bubbleMenu.bold")}
-        active={editor.isActive("bold")}
-        onClick={() =>
-          runWithSelection((range) =>
-            editor.chain().focus().setTextSelection(range).toggleBold().run(),
-          )
-        }
-      />
-      <MenuBtn
-        icon={Italic}
-        label={t("editor:bubbleMenu.italic")}
-        active={editor.isActive("italic")}
-        onClick={() =>
-          runWithSelection((range) =>
-            editor.chain().focus().setTextSelection(range).toggleItalic().run(),
-          )
-        }
-      />
-      <MenuBtn
-        icon={Underline}
-        label={t("editor:bubbleMenu.underline")}
-        active={editor.isActive("underline")}
-        onClick={() =>
-          runWithSelection((range) =>
-            editor
-              .chain()
-              .focus()
-              .setTextSelection(range)
-              .toggleUnderline()
-              .run(),
-          )
-        }
-      />
-      <MenuBtn
-        icon={Strikethrough}
-        label={t("editor:bubbleMenu.strike")}
-        active={editor.isActive("strike")}
-        onClick={() =>
-          runWithSelection((range) =>
-            editor.chain().focus().setTextSelection(range).toggleStrike().run(),
-          )
-        }
-      />
-      <MenuBtn
-        icon={Code}
-        label={t("editor:bubbleMenu.code")}
-        active={editor.isActive("code")}
-        onClick={() =>
-          runWithSelection((range) =>
-            editor.chain().focus().setTextSelection(range).toggleCode().run(),
-          )
-        }
-      />
-      <MenuBtn
-        icon={Highlighter}
-        label={t("editor:bubbleMenu.highlight")}
-        active={editor.isActive("highlight")}
-        onClick={() =>
-          runWithSelection((range) =>
-            editor
-              .chain()
-              .focus()
-              .setTextSelection(range)
-              .toggleHighlight()
-              .run(),
-          )
-        }
-      />
-      <div className="mx-1 h-4 w-px bg-[var(--color-border-primary)]" />
-      <MenuBtn
-        icon={LinkIcon}
-        label={t("editor:bubbleMenu.link")}
-        active={editor.isActive("link")}
-        onClick={handleLinkOpen}
-      />
+          <MenuBtn
+            icon={Bold}
+            label={t("editor:bubbleMenu.bold")}
+            active={editor.isActive("bold")}
+            onClick={() =>
+              runWithSelection((range) =>
+                editor
+                  .chain()
+                  .focus()
+                  .setTextSelection(range)
+                  .toggleBold()
+                  .run(),
+              )
+            }
+          />
+          <MenuBtn
+            icon={Italic}
+            label={t("editor:bubbleMenu.italic")}
+            active={editor.isActive("italic")}
+            onClick={() =>
+              runWithSelection((range) =>
+                editor
+                  .chain()
+                  .focus()
+                  .setTextSelection(range)
+                  .toggleItalic()
+                  .run(),
+              )
+            }
+          />
+          <MenuBtn
+            icon={Underline}
+            label={t("editor:bubbleMenu.underline")}
+            active={editor.isActive("underline")}
+            onClick={() =>
+              runWithSelection((range) =>
+                editor
+                  .chain()
+                  .focus()
+                  .setTextSelection(range)
+                  .toggleUnderline()
+                  .run(),
+              )
+            }
+          />
+          <MenuBtn
+            icon={Strikethrough}
+            label={t("editor:bubbleMenu.strike")}
+            active={editor.isActive("strike")}
+            onClick={() =>
+              runWithSelection((range) =>
+                editor
+                  .chain()
+                  .focus()
+                  .setTextSelection(range)
+                  .toggleStrike()
+                  .run(),
+              )
+            }
+          />
+          <MenuBtn
+            icon={Code}
+            label={t("editor:bubbleMenu.code")}
+            active={editor.isActive("code")}
+            onClick={() =>
+              runWithSelection((range) =>
+                editor
+                  .chain()
+                  .focus()
+                  .setTextSelection(range)
+                  .toggleCode()
+                  .run(),
+              )
+            }
+          />
+          <MenuBtn
+            icon={Highlighter}
+            label={t("editor:bubbleMenu.highlight")}
+            active={editor.isActive("highlight")}
+            onClick={() =>
+              runWithSelection((range) =>
+                editor
+                  .chain()
+                  .focus()
+                  .setTextSelection(range)
+                  .toggleHighlight()
+                  .run(),
+              )
+            }
+          />
+          <div className="mx-1 h-4 w-px bg-[var(--color-border-primary)]" />
+          <MenuBtn
+            icon={LinkIcon}
+            label={t("editor:bubbleMenu.link")}
+            active={editor.isActive("link")}
+            onClick={handleLinkOpen}
+          />
         </>
       )}
     </TiptapBubbleMenu>

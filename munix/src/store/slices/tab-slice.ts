@@ -188,9 +188,7 @@ export const createTabSlice: StateCreator<TabFullSlice, [], [], TabSlice> = (
 
   openTab: (path) => {
     const { workspaceTree, activePaneId, tabs } = get();
-    const existing = tabs.find(
-      (t) => !isTerminalTab(t) && t.path === path,
-    );
+    const existing = tabs.find((t) => !isTerminalTab(t) && t.path === path);
     if (existing) {
       const nextTree = workspaceTree
         ? patchActivePaneTabs(workspaceTree, activePaneId, tabs, existing.id)
@@ -307,8 +305,7 @@ export const createTabSlice: StateCreator<TabFullSlice, [], [], TabSlice> = (
     if (!next) return;
     closeTerminalSessionsForTabs(
       tabs.filter(
-        (tab) =>
-          !next.tabs.some((remainingTab) => remainingTab.id === tab.id),
+        (tab) => !next.tabs.some((remainingTab) => remainingTab.id === tab.id),
       ),
     );
     const target = next.tabs.find((tab) => tab.id === next.activeId);
@@ -328,8 +325,7 @@ export const createTabSlice: StateCreator<TabFullSlice, [], [], TabSlice> = (
     const next = closeUnpinnedTabsInList(tabs, get().activeId);
     closeTerminalSessionsForTabs(
       tabs.filter(
-        (tab) =>
-          !next.tabs.some((remainingTab) => remainingTab.id === tab.id),
+        (tab) => !next.tabs.some((remainingTab) => remainingTab.id === tab.id),
       ),
     );
     set({ tabs: next.tabs, activeId: next.activeId });
@@ -348,8 +344,7 @@ export const createTabSlice: StateCreator<TabFullSlice, [], [], TabSlice> = (
     if (!next) return;
     closeTerminalSessionsForTabs(
       tabs.filter(
-        (tab) =>
-          !next.tabs.some((remainingTab) => remainingTab.id === tab.id),
+        (tab) => !next.tabs.some((remainingTab) => remainingTab.id === tab.id),
       ),
     );
     set({ tabs: next.tabs, activeId: next.activeId });

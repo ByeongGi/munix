@@ -101,8 +101,7 @@ export function useGlobalShortcuts({
             const index = dock.vaults.findIndex(
               (vault) => vault.id === dock.activeVaultId,
             );
-            const nextIndex =
-              index < 0 ? 0 : (index + 1) % dock.vaults.length;
+            const nextIndex = index < 0 ? 0 : (index + 1) % dock.vaults.length;
             const target = dock.vaults[nextIndex];
             if (target) void dock.setActive(target.id);
             return;
@@ -144,7 +143,12 @@ export function useGlobalShortcuts({
       }
 
       const mod = event.metaKey || event.ctrlKey;
-      if (mod && !event.shiftKey && !event.altKey && /^[1-9]$/.test(event.key)) {
+      if (
+        mod &&
+        !event.shiftKey &&
+        !event.altKey &&
+        /^[1-9]$/.test(event.key)
+      ) {
         event.preventDefault();
         activateIndex(parseInt(event.key, 10) - 1);
         return;

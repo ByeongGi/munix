@@ -67,7 +67,7 @@ export function SearchBar({ editor, open, onClose }: SearchBarProps) {
     <div
       className={cn(
         "absolute right-4 top-3 z-40 flex items-center gap-1 rounded-md border p-1 shadow-lg",
-        "border-[var(--color-border-primary)] bg-[var(--color-bg-secondary)]",
+        "border-[var(--color-border-primary)] bg-[var(--color-bg-secondary-solid)]",
       )}
     >
       <Search className="ml-1 h-3.5 w-3.5 text-[var(--color-text-tertiary)]" />

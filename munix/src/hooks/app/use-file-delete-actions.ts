@@ -26,9 +26,7 @@ export function useFileDeleteActions({
 
   const handleDelete = useCallback(
     (node: FileNode) => {
-      const ok = window.confirm(
-        t("delete.confirmPrompt", { name: node.name }),
-      );
+      const ok = window.confirm(t("delete.confirmPrompt", { name: node.name }));
       if (!ok) return;
 
       void (async () => {

@@ -62,7 +62,9 @@ describe("keymapsEqual", () => {
 });
 
 describe("eventToKeymap", () => {
-  function ev(opts: Partial<KeyboardEventInit & { key: string }>): KeyboardEvent {
+  function ev(
+    opts: Partial<KeyboardEventInit & { key: string }>,
+  ): KeyboardEvent {
     // jsdom 의 KeyboardEvent 는 metaKey/ctrlKey 등 init 그대로 받는다.
     return new KeyboardEvent("keydown", opts);
   }

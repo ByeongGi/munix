@@ -46,6 +46,8 @@ export function VaultSettingsPanel() {
               { value: "base", label: t("settings:fontSize.base") },
               { value: "lg", label: t("settings:fontSize.lg") },
               { value: "xl", label: t("settings:fontSize.xl") },
+              { value: "xxl", label: t("settings:fontSize.xxl") },
+              { value: "xxxl", label: t("settings:fontSize.xxxl") },
             ]}
             onSet={(value) => setVaultOverride({ fontSize: value })}
             onClear={() => clearVaultOverride("fontSize")}

@@ -105,7 +105,9 @@ export function usePaletteItems({
       const headings = extractHeadings(editorBody);
       const query = text.toLowerCase();
       const filtered = query
-        ? headings.filter((heading) => heading.text.toLowerCase().includes(query))
+        ? headings.filter((heading) =>
+            heading.text.toLowerCase().includes(query),
+          )
         : headings;
 
       return filtered.map((heading, index) => ({

@@ -48,7 +48,7 @@ export const WikilinkList = forwardRef<WikilinkListHandle, WikilinkListProps>(
         <div
           className={cn(
             "rounded-md border p-3 text-xs shadow-lg",
-            "border-[var(--color-border-primary)] bg-[var(--color-bg-secondary)]",
+            "border-[var(--color-border-primary)] bg-[var(--color-bg-secondary-solid)]",
             "text-[var(--color-text-tertiary)]",
           )}
         >
@@ -61,7 +61,7 @@ export const WikilinkList = forwardRef<WikilinkListHandle, WikilinkListProps>(
       <div
         className={cn(
           "max-h-64 w-64 overflow-y-auto rounded-md border p-1 shadow-lg",
-          "border-[var(--color-border-primary)] bg-[var(--color-bg-secondary)]",
+          "border-[var(--color-border-primary)] bg-[var(--color-bg-secondary-solid)]",
         )}
       >
         {items.map((item, i) => {

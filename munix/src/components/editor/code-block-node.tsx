@@ -37,7 +37,10 @@ function isMermaidLanguage(language: string | null | undefined): boolean {
   return language?.trim().split(/\s+/)[0]?.toLowerCase() === MERMAID_LANGUAGE;
 }
 
-function isSelectionInsideNode(editor: Editor, getPos: NodeViewProps["getPos"]) {
+function isSelectionInsideNode(
+  editor: Editor,
+  getPos: NodeViewProps["getPos"],
+) {
   const pos = typeof getPos === "function" ? getPos() : null;
   if (typeof pos !== "number") return false;
   const { from, to } = editor.state.selection;
@@ -245,9 +248,7 @@ function CodeBlockView({
           ))}
         </select>
       </div>
-      {showMermaidPreview ? (
-        <MermaidPreview source={node.textContent} />
-      ) : null}
+      {showMermaidPreview ? <MermaidPreview source={node.textContent} /> : null}
       <pre className={showMermaidPreview ? "sr-only" : undefined}>
         <NodeViewContent />
       </pre>
@@ -261,8 +262,7 @@ function MermaidPreview({ source }: { source: string }) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isVisible, setIsVisible] = useState(false);
-  const [renderState, setRenderState] =
-    useState<MermaidRenderState>("idle");
+  const [renderState, setRenderState] = useState<MermaidRenderState>("idle");
   const isLoading =
     renderState === "idle" ||
     renderState === "pending" ||

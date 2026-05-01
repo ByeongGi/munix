@@ -120,14 +120,18 @@ export function PropertyRow({
       case "date":
         return (
           <DateWidget
-            value={typeof value === "string" || value instanceof Date ? value : null}
+            value={
+              typeof value === "string" || value instanceof Date ? value : null
+            }
             onChange={(v, flush) => onValueChange(v, flush)}
           />
         );
       case "datetime":
         return (
           <DatetimeWidget
-            value={typeof value === "string" || value instanceof Date ? value : null}
+            value={
+              typeof value === "string" || value instanceof Date ? value : null
+            }
             onChange={(v, flush) => onValueChange(v, flush)}
           />
         );
@@ -170,10 +174,7 @@ export function PropertyRow({
           </span>
         </span>
         <div
-          className={cn(
-            "min-w-0",
-            complex && "opacity-50",
-          )}
+          className={cn("min-w-0", complex && "opacity-50")}
           title={complex ? "Complex YAML values are read-only." : undefined}
         >
           {renderWidget()}

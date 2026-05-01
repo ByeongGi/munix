@@ -6,7 +6,9 @@ import type { InactiveEditorStatus } from "./inactive-pane-editor-types";
 export function canRequestInactiveEditorSave(
   status: InactiveEditorStatus,
 ): boolean {
-  return status !== "conflict" && status !== "loading" && status !== "loadError";
+  return (
+    status !== "conflict" && status !== "loading" && status !== "loadError"
+  );
 }
 
 export function updateIndexesAfterInactiveSave(path: string, body: string) {

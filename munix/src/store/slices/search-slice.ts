@@ -75,91 +75,91 @@ export function defaultSearchSlice(): SearchSlice {
   return { search: defaultSearchState() };
 }
 
-export const createSearchSlice = (
-  vaultId: VaultId,
-): StateCreator<SearchSlice, [], [], SearchSlice> => (set, get) => {
-  const update = (patch: Partial<SearchState>) =>
-    set((s) => ({ search: { ...s.search, ...patch } }));
+export const createSearchSlice =
+  (vaultId: VaultId): StateCreator<SearchSlice, [], [], SearchSlice> =>
+  (set, get) => {
+    const update = (patch: Partial<SearchState>) =>
+      set((s) => ({ search: { ...s.search, ...patch } }));
 
-  return {
-    search: {
-      index: new VaultSearchIndex(),
-      status: "idle",
-      error: null,
-      query: "",
-      results: [],
-      builtFor: null,
-      useRegex: false,
-      regexError: null,
+    return {
+      search: {
+        index: new VaultSearchIndex(),
+        status: "idle",
+        error: null,
+        query: "",
+        results: [],
+        builtFor: null,
+        useRegex: false,
+        regexError: null,
 
-      buildIndex: async (root, files) => {
-        update({ status: "building", error: null });
-        try {
-          const idx = new VaultSearchIndex();
-          await idx.build(files, vaultId);
-          const { query, useRegex } = get().search;
-          const { results, regexError } = runSearch(idx, query, useRegex);
+        buildIndex: async (root, files) => {
+          update({ status: "building", error: null });
+          try {
+            const idx = new VaultSearchIndex();
+            await idx.build(files, vaultId);
+            const { query, useRegex } = get().search;
+            const { results, regexError } = runSearch(idx, query, useRegex);
+            update({
+              index: idx,
+              status: "ready",
+              builtFor: root,
+              results,
+              regexError,
+            });
+          } catch (e) {
+            update({
+              status: "error",
+              error: e instanceof Error ? e.message : String(e),
+            });
+          }
+        },
+
+        setQuery: (q) => {
+          const { index, status, useRegex } = get().search;
+          if (status !== "ready") {
+            update({ query: q, results: [], regexError: null });
+            return;
+          }
+          const { results, regexError } = runSearch(index, q, useRegex);
+          update({ query: q, results, regexError });
+        },
+
+        setUseRegex: (v) => {
+          const { index, status, query } = get().search;
+          if (status !== "ready") {
+            update({ useRegex: v, regexError: null });
+            return;
+          }
+          const { results, regexError } = runSearch(index, query, v);
+          update({ useRegex: v, results, regexError });
+        },
+
+        renamePath: (oldPath, newPath) => {
+          const cur = get().search;
+          if (cur.status !== "ready") return;
+          cur.index.renameDoc(oldPath, newPath);
+          if (cur.query) {
+            const { results, regexError } = runSearch(
+              cur.index,
+              cur.query,
+              cur.useRegex,
+            );
+            update({ results, regexError });
+          }
+        },
+
+        reset: () => {
           update({
-            index: idx,
-            status: "ready",
-            builtFor: root,
-            results,
-            regexError,
+            index: new VaultSearchIndex(),
+            status: "idle",
+            error: null,
+            query: "",
+            results: [],
+            builtFor: null,
+            useRegex: false,
+            regexError: null,
           });
-        } catch (e) {
-          update({
-            status: "error",
-            error: e instanceof Error ? e.message : String(e),
-          });
-        }
+        },
       },
-
-      setQuery: (q) => {
-        const { index, status, useRegex } = get().search;
-        if (status !== "ready") {
-          update({ query: q, results: [], regexError: null });
-          return;
-        }
-        const { results, regexError } = runSearch(index, q, useRegex);
-        update({ query: q, results, regexError });
-      },
-
-      setUseRegex: (v) => {
-        const { index, status, query } = get().search;
-        if (status !== "ready") {
-          update({ useRegex: v, regexError: null });
-          return;
-        }
-        const { results, regexError } = runSearch(index, query, v);
-        update({ useRegex: v, results, regexError });
-      },
-
-      renamePath: (oldPath, newPath) => {
-        const cur = get().search;
-        if (cur.status !== "ready") return;
-        cur.index.renameDoc(oldPath, newPath);
-        if (cur.query) {
-          const { results, regexError } = runSearch(
-            cur.index,
-            cur.query,
-            cur.useRegex,
-          );
-          update({ results, regexError });
-        }
-      },
-
-      reset: () => {
-        update({
-          index: new VaultSearchIndex(),
-          status: "idle",
-          error: null,
-          query: "",
-          results: [],
-          builtFor: null,
-          useRegex: false,
-          regexError: null,
-        });
-      },
-    },
+    };
   };
-};

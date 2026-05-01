@@ -56,9 +56,7 @@ export const SLASH_GROUP_ORDER: SlashGroup[] = [
  * UI 언어 영어인 사용자가 콜아웃을 삽입하면 placeholder 가 영문으로 보이는 게 더 자연스러우므로
  * `getSlashItems(t)` 형태로 t 를 받는다.
  */
-export function getSlashItems(
-  t: (key: string) => string,
-): SlashItem[] {
+export function getSlashItems(t: (key: string) => string): SlashItem[] {
   const calloutContent = t("editor:slashCommands.calloutContent");
 
   return [

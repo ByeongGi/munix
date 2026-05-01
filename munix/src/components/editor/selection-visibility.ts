@@ -33,7 +33,9 @@ function selectionIntersectsNode(
 ): boolean {
   const { selection } = state;
   if (selection instanceof NodeSelection) return false;
-  return !selection.empty && selection.from < pos + nodeSize && selection.to > pos;
+  return (
+    !selection.empty && selection.from < pos + nodeSize && selection.to > pos
+  );
 }
 
 function createSelectionDecorations(state: EditorState): DecorationSet {
@@ -94,7 +96,8 @@ export const SelectionVisibility = Extension.create({
           ) => {
             const next = tr.getMeta(pluginKey);
             if (typeof next === "boolean") return next;
-            if (tr.selectionSet || tr.docChanged) return coversDocument(newState);
+            if (tr.selectionSet || tr.docChanged)
+              return coversDocument(newState);
             return value;
           },
         },

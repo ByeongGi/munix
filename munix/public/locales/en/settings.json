@@ -4,6 +4,7 @@
     "general": "General",
     "appearance": "Appearance",
     "editor": "Editor",
+    "terminal": "Terminal",
     "shortcuts": "Shortcuts",
     "advanced": "Advanced — Custom CSS",
     "about": "About",
@@ -30,7 +31,9 @@
     "sm": "Small",
     "base": "Default",
     "lg": "Large",
-    "xl": "Extra large"
+    "xl": "Extra large",
+    "xxl": "Huge",
+    "xxxl": "Maximum"
   },
   "editorWidth": {
     "label": "Editor width",
@@ -52,6 +55,40 @@
     "auto": "System",
     "ko": "한국어",
     "en": "English"
+  },
+  "backgroundOpacity": {
+    "label": "App shell background opacity",
+    "description": "Adjust how much of the content behind the sidebar and workspace shell shows through.",
+    "value": "{{value}}%"
+  },
+  "editorBackgroundOpacity": {
+    "label": "Editor background opacity",
+    "description": "Adjust the document reading surface separately.",
+    "value": "{{value}}%"
+  },
+  "terminalBackgroundOpacity": {
+    "label": "Terminal background opacity",
+    "description": "Adjust the terminal panel background separately.",
+    "value": "{{value}}%"
+  },
+  "terminalFontSize": {
+    "label": "Terminal font size",
+    "description": "Adjust the monospace font size in terminal panels.",
+    "value": "{{value}}px"
+  },
+  "terminalLineHeight": {
+    "label": "Terminal line height",
+    "description": "Tune terminal output spacing when it feels too tight or loose.",
+    "value": "{{value}}%"
+  },
+  "terminalScrollback": {
+    "label": "Terminal scrollback",
+    "description": "Number of previous output lines kept by new terminal sessions.",
+    "value": "{{value}} lines"
+  },
+  "terminalCursorBlink": {
+    "label": "Blinking cursor",
+    "description": "Turn terminal cursor blinking on or off."
   },
   "customCss": {
     "description": "Extra CSS applied to the whole app. Updates take effect immediately. Leave empty to disable.",

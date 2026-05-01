@@ -229,7 +229,9 @@ export function OutlinePanel() {
                     )}
                     title={h.text}
                   >
-                    <span className="truncate">{h.text || t("panels:outline.emptyTitle")}</span>
+                    <span className="truncate">
+                      {h.text || t("panels:outline.emptyTitle")}
+                    </span>
                   </button>
                 </li>
               );
@@ -243,7 +245,9 @@ export function OutlinePanel() {
           <Link2 className="h-3 w-3" />
           {t("panels:outline.backlinks")}
           {status === "building" && (
-            <span className="ml-auto text-[10px]">{t("panels:outline.indexing")}</span>
+            <span className="ml-auto text-[10px]">
+              {t("panels:outline.indexing")}
+            </span>
           )}
         </header>
         {status !== "ready" ? (

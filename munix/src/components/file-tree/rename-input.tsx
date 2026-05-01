@@ -5,8 +5,7 @@ import { cn } from "@/lib/cn";
 /** Rust vault::validate_name과 같은 규칙 — frontend에서 즉시 피드백.
  * 실제 검증/저장은 Rust IPC가 다시 검사하므로 여기는 UX 힌트일 뿐. */
 const FORBIDDEN_CHARS = /[\\/:*?"<>|\x00-\x1f]/;
-const RESERVED_RE =
-  /^(con|prn|aux|nul|com[1-9]|lpt[1-9])(\.[^.]*)?$/i;
+const RESERVED_RE = /^(con|prn|aux|nul|com[1-9]|lpt[1-9])(\.[^.]*)?$/i;
 
 function nameError(
   value: string,
@@ -19,8 +18,7 @@ function nameError(
   if (v === "..") return t("rename.dotDotForbidden");
   if (FORBIDDEN_CHARS.test(v)) return t("rename.forbiddenChars");
   if (RESERVED_RE.test(v)) return t("rename.windowsReserved");
-  if (v.endsWith(".") || v.endsWith(" "))
-    return t("rename.trailingDotOrSpace");
+  if (v.endsWith(".") || v.endsWith(" ")) return t("rename.trailingDotOrSpace");
   if (v === initial) return null;
   return null;
 }
@@ -79,7 +77,7 @@ export function RenameInput({
   };
 
   return (
-    <span className="relative flex flex-1 min-w-0 flex-col">
+    <span className="relative flex min-w-0 flex-1 flex-col">
       <input
         ref={ref}
         value={value}
@@ -88,7 +86,7 @@ export function RenameInput({
         onBlur={commit}
         aria-invalid={error ? "true" : undefined}
         className={cn(
-          "min-w-0 rounded border px-1 py-0 text-sm outline-none",
+          "min-w-0 rounded border px-2 py-1 text-lg leading-tight outline-none",
           error
             ? "border-[var(--color-danger)] bg-[var(--color-bg-tertiary)]"
             : "border-[var(--color-accent)] bg-[var(--color-bg-tertiary)]",

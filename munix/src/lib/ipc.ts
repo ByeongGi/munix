@@ -7,6 +7,7 @@ import type {
   VaultInfo,
   WriteResult,
 } from "@/types/ipc";
+import type { TerminalCompletionSuggestion } from "@/types/terminal-completion";
 
 export const ipc = {
   /**
@@ -137,6 +138,18 @@ export const ipc = {
   terminalResize: (id: string, cols: number, rows: number) =>
     invoke<void>("terminal_resize", { id, cols, rows }),
   terminalKill: (id: string) => invoke<void>("terminal_kill", { id }),
+  terminalComplete: (
+    input: string,
+    history: string[],
+    vaultId?: string,
+    sessionId?: string,
+  ) =>
+    invoke<TerminalCompletionSuggestion[]>("terminal_complete", {
+      input,
+      history,
+      sessionId: sessionId ?? null,
+      vaultId: vaultId ?? null,
+    }),
 };
 
 export interface VaultRegistryEntry {

@@ -105,7 +105,7 @@ export const SlashMenuList = forwardRef<
       <div
         className={cn(
           "rounded-md border p-3 shadow-lg",
-          "border-[var(--color-border-primary)] bg-[var(--color-bg-secondary)]",
+          "border-[var(--color-border-primary)] bg-[var(--color-bg-secondary-solid)]",
           "text-xs text-[var(--color-text-tertiary)]",
         )}
       >
@@ -119,7 +119,7 @@ export const SlashMenuList = forwardRef<
       ref={scrollRef}
       className={cn(
         "max-h-80 w-64 overflow-y-auto rounded-md border p-1 shadow-lg",
-        "border-[var(--color-border-primary)] bg-[var(--color-bg-secondary)]",
+        "border-[var(--color-border-primary)] bg-[var(--color-bg-secondary-solid)]",
       )}
     >
       {grouped.map(({ group, entries }) => (

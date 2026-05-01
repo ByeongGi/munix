@@ -14,6 +14,9 @@ import {
 import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/cn";
 import { ipc } from "@/lib/ipc";
+import { useSettingsStore } from "@/store/settings-store";
+import { useVaultStore } from "@/store/vault-store";
+import type { TerminalCompletionSuggestion } from "@/types/terminal-completion";
 import {
   appendTerminalOutputToScreenState,
   ensureTerminalScreenState,
@@ -25,6 +28,7 @@ import {
   resizeTerminalScreenState,
   setTerminalSessionId,
 } from "@/lib/terminal-session-registry";
+import { TerminalCompletionPopup } from "./terminal-completion-popup";
 
 interface TerminalViewProps {
   terminalTabId: string;
@@ -40,7 +44,12 @@ interface TerminalDataPayload extends TerminalEventPayload {
   data: string;
 }
 
-const TERMINAL_FONT_SIZE_KEY = "munix:terminalFontSize";
+interface TerminalCompletionAnchor {
+  left: number;
+  top: number;
+  placement: "above" | "below";
+}
+
 const DEFAULT_TERMINAL_FONT_SIZE = 13;
 const MIN_TERMINAL_FONT_SIZE = 10;
 const MAX_TERMINAL_FONT_SIZE = 24;
@@ -48,6 +57,11 @@ const TERMINAL_FONT_FAMILY =
   '"JetBrainsMono Nerd Font Mono", "JetBrainsMono Nerd Font", "JetBrains Mono", "SFMono-Regular", Consolas, "Liberation Mono", monospace';
 const TERMINAL_BUNDLED_FONT = "JetBrainsMono Nerd Font Mono";
 const TERMINAL_LAYOUT_SETTLE_FRAMES = 2;
+const TERMINAL_HISTORY_LIMIT = 80;
+
+function terminalBackgroundColor(opacityPercent: number): string {
+  return `rgba(12, 16, 18, ${(opacityPercent / 100).toFixed(2)})`;
+}
 
 async function loadTerminalFont(fontSize: number): Promise<void> {
   if (!("fonts" in document)) return;
@@ -55,14 +69,57 @@ async function loadTerminalFont(fontSize: number): Promise<void> {
   await document.fonts.ready;
 }
 
-function readInitialFontSize(): number {
-  const raw = localStorage.getItem(TERMINAL_FONT_SIZE_KEY);
-  const value = raw ? Number.parseInt(raw, 10) : DEFAULT_TERMINAL_FONT_SIZE;
-  if (Number.isNaN(value)) return DEFAULT_TERMINAL_FONT_SIZE;
-  return Math.max(
-    MIN_TERMINAL_FONT_SIZE,
-    Math.min(MAX_TERMINAL_FONT_SIZE, value),
+function isPrintableInput(data: string): boolean {
+  return /^[\x20-\x7e]+$/.test(data);
+}
+
+function updateInputLine(current: string, data: string): string {
+  if (data === "\r") return "";
+  if (data === "\u0003") return "";
+  if (data === "\u0015") return "";
+  if (data === "\u007f") return current.slice(0, -1);
+  if (data === "\u0017") return current.replace(/\s*\S+$/, "");
+  if (data === "\u0001" || data === "\u0005") return current;
+  if (data.startsWith("\u001b")) return current;
+  if (isPrintableInput(data)) return `${current}${data}`;
+  return current;
+}
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.max(min, Math.min(max, value));
+}
+
+function getTerminalCursorAnchor(
+  terminal: Terminal,
+  host: HTMLElement,
+): TerminalCompletionAnchor | null {
+  const screen = host.querySelector(".xterm-screen");
+  if (!(screen instanceof HTMLElement)) return null;
+  const hostRect = host.getBoundingClientRect();
+  const screenRect = screen.getBoundingClientRect();
+  if (screenRect.width <= 0 || screenRect.height <= 0) return null;
+
+  const cellWidth = screenRect.width / Math.max(terminal.cols, 1);
+  const cellHeight = screenRect.height / Math.max(terminal.rows, 1);
+  const cursorX = clamp(
+    terminal.buffer.active.cursorX,
+    0,
+    Math.max(terminal.cols - 1, 0),
   );
+  const cursorY = clamp(
+    terminal.buffer.active.cursorY,
+    0,
+    Math.max(terminal.rows - 1, 0),
+  );
+  const rawLeft = screenRect.left - hostRect.left + cursorX * cellWidth;
+  const rawTop = screenRect.top - hostRect.top + cursorY * cellHeight;
+  const left = clamp(rawLeft, 12, Math.max(hostRect.width - 536, 12));
+  const top = clamp(rawTop, 20, Math.max(hostRect.height - 20, 20));
+  return {
+    left,
+    top,
+    placement: top > 220 ? "above" : "below",
+  };
 }
 
 export function TerminalView({
@@ -78,9 +135,117 @@ export function TerminalView({
   const onExitedRef = useRef(onExited);
   const [error, setError] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
-  const [fontSize, setFontSize] = useState(readInitialFontSize);
-  const initialFontSizeRef = useRef(fontSize);
+  const [inputLine, setInputLine] = useState("");
+  const [completionOpen, setCompletionOpen] = useState(true);
+  const [selectedCompletionIndex, setSelectedCompletionIndex] = useState(0);
+  const [commandHistory, setCommandHistory] = useState<string[]>([]);
+  const [completionSuggestions, setCompletionSuggestions] = useState<
+    TerminalCompletionSuggestion[]
+  >([]);
+  const [completionAnchor, setCompletionAnchor] =
+    useState<TerminalCompletionAnchor | null>(null);
+  const vaultId = useVaultStore((state) => state.info?.id);
+  const terminalFontSize = useSettingsStore((state) => state.terminalFontSize);
+  const terminalLineHeight = useSettingsStore(
+    (state) => state.terminalLineHeight,
+  );
+  const terminalCursorBlink = useSettingsStore(
+    (state) => state.terminalCursorBlink,
+  );
+  const terminalScrollback = useSettingsStore(
+    (state) => state.terminalScrollback,
+  );
+  const setSettings = useSettingsStore((state) => state.set);
+  const terminalBackgroundOpacity = useSettingsStore(
+    (state) => state.terminalBackgroundOpacity,
+  );
+  const terminalBackground = terminalBackgroundColor(terminalBackgroundOpacity);
+  const terminalBackgroundRef = useRef(terminalBackground);
+  const terminalFontSizeRef = useRef(terminalFontSize);
+  const terminalLineHeightRef = useRef(terminalLineHeight);
+  const terminalCursorBlinkRef = useRef(terminalCursorBlink);
+  const terminalScrollbackRef = useRef(terminalScrollback);
   const settleFrameRef = useRef<number | null>(null);
+  const inputLineRef = useRef(inputLine);
+  const completionOpenRef = useRef(completionOpen);
+  const commandHistoryRef = useRef(commandHistory);
+  const completionPointerInsideRef = useRef(false);
+  const completionRequestRef = useRef(0);
+
+  const updateCompletionAnchor = useCallback(() => {
+    const terminal = terminalRef.current;
+    const host = containerRef.current;
+    if (!terminal || !host) return;
+    setCompletionAnchor(getTerminalCursorAnchor(terminal, host));
+  }, []);
+
+  const selectedCompletion =
+    completionSuggestions[
+      Math.min(selectedCompletionIndex, completionSuggestions.length - 1)
+    ];
+
+  useEffect(() => {
+    inputLineRef.current = inputLine;
+    setSelectedCompletionIndex(0);
+  }, [inputLine]);
+
+  useEffect(() => {
+    if (!completionOpen || inputLine.trimStart().length === 0) {
+      completionRequestRef.current += 1;
+      setCompletionSuggestions([]);
+      return;
+    }
+
+    const requestId = completionRequestRef.current + 1;
+    completionRequestRef.current = requestId;
+    const sessionId = sessionIdRef.current ?? undefined;
+    void ipc
+      .terminalComplete(inputLine, commandHistory, vaultId, sessionId)
+      .then((suggestions) => {
+        if (completionRequestRef.current !== requestId) return;
+        setCompletionSuggestions(suggestions);
+      })
+      .catch((err) => {
+        if (completionRequestRef.current !== requestId) return;
+        setCompletionSuggestions([]);
+        if (import.meta.env.DEV) {
+          console.warn("[terminal] completion failed", err);
+        }
+      });
+  }, [commandHistory, completionOpen, inputLine, vaultId]);
+
+  useEffect(() => {
+    setSelectedCompletionIndex((index) =>
+      completionSuggestions.length === 0
+        ? 0
+        : Math.min(index, completionSuggestions.length - 1),
+    );
+  }, [completionSuggestions.length]);
+
+  useEffect(() => {
+    completionOpenRef.current = completionOpen;
+  }, [completionOpen]);
+
+  useEffect(() => {
+    commandHistoryRef.current = commandHistory;
+  }, [commandHistory]);
+
+  useEffect(() => {
+    const handlePointerDown = (event: PointerEvent) => {
+      const target = event.target;
+      if (!(target instanceof Node)) return;
+      const host = containerRef.current;
+      const popup = document.querySelector("[data-terminal-completion-popup]");
+      if (popup?.contains(target)) return;
+      if (host?.contains(target)) return;
+      setCompletionOpen(false);
+    };
+
+    document.addEventListener("pointerdown", handlePointerDown, true);
+    return () => {
+      document.removeEventListener("pointerdown", handlePointerDown, true);
+    };
+  }, []);
 
   useEffect(() => {
     onExitedRef.current = onExited;
@@ -95,6 +260,11 @@ export function TerminalView({
     sessionIdRef.current = null;
     setError(null);
     setReady(false);
+    setInputLine("");
+    setCompletionOpen(true);
+    setCompletionSuggestions([]);
+    setSelectedCompletionIndex(0);
+    setCompletionAnchor(null);
   }, [terminalTabId]);
 
   const resizeToFit = useCallback(() => {
@@ -102,9 +272,10 @@ export function TerminalView({
     const terminal = terminalRef.current;
     if (!fit || !terminal) return;
     fit.fit();
+    updateCompletionAnchor();
     const id = sessionIdRef.current;
     if (id) void ipc.terminalResize(id, terminal.cols, terminal.rows);
-  }, []);
+  }, [updateCompletionAnchor]);
 
   const waitForSettledFit = useCallback(() => {
     if (settleFrameRef.current !== null) {
@@ -135,30 +306,82 @@ export function TerminalView({
         MIN_TERMINAL_FONT_SIZE,
         Math.min(MAX_TERMINAL_FONT_SIZE, nextSize),
       );
-      setFontSize(next);
-      localStorage.setItem(TERMINAL_FONT_SIZE_KEY, String(next));
-      const terminal = terminalRef.current;
-      if (terminal) {
-        terminal.options.fontSize = next;
-        requestAnimationFrame(resizeToFit);
-      }
+      setSettings({ terminalFontSize: next });
     },
-    [resizeToFit],
+    [setSettings],
+  );
+
+  const writeToTerminal = useCallback((data: string) => {
+    const id = sessionIdRef.current;
+    if (!id) return;
+    void ipc.terminalWrite(id, data);
+  }, []);
+
+  const applyCompletion = useCallback(
+    (suggestion: TerminalCompletionSuggestion | undefined) => {
+      if (!suggestion) return;
+      const current = inputLineRef.current;
+      const replacement = suggestion.insertValue;
+      const next = `${current.slice(
+        0,
+        suggestion.replacementStart,
+      )}${replacement}${current.slice(suggestion.replacementEnd)}`;
+      const suffix = next.slice(current.length);
+      if (!suffix) return;
+      writeToTerminal(suffix);
+      inputLineRef.current = next;
+      setInputLine(next);
+      setCompletionOpen(false);
+    },
+    [writeToTerminal],
   );
 
   const handleKeyDownCapture = useCallback(
     (event: KeyboardEvent<HTMLDivElement>) => {
+      if (completionSuggestions.length > 0 && completionOpen) {
+        if (event.key === "Tab") {
+          event.preventDefault();
+          event.stopPropagation();
+          applyCompletion(selectedCompletion);
+          return;
+        }
+        if (event.key === "ArrowDown") {
+          event.preventDefault();
+          event.stopPropagation();
+          setSelectedCompletionIndex(
+            (index) => (index + 1) % completionSuggestions.length,
+          );
+          return;
+        }
+        if (event.key === "ArrowUp") {
+          event.preventDefault();
+          event.stopPropagation();
+          setSelectedCompletionIndex(
+            (index) =>
+              (index - 1 + completionSuggestions.length) %
+              completionSuggestions.length,
+          );
+          return;
+        }
+        if (event.key === "Escape") {
+          event.preventDefault();
+          event.stopPropagation();
+          setCompletionOpen(false);
+          return;
+        }
+      }
+
       if ((!event.ctrlKey && !event.metaKey) || event.altKey) return;
       if (event.key === "+" || event.key === "=") {
         event.preventDefault();
         event.stopPropagation();
-        updateFontSize(fontSize + 1);
+        updateFontSize(terminalFontSize + 1);
         return;
       }
       if (event.key === "-") {
         event.preventDefault();
         event.stopPropagation();
-        updateFontSize(fontSize - 1);
+        updateFontSize(terminalFontSize - 1);
         return;
       }
       if (event.key === "0") {
@@ -167,8 +390,55 @@ export function TerminalView({
         updateFontSize(DEFAULT_TERMINAL_FONT_SIZE);
       }
     },
-    [fontSize, updateFontSize],
+    [
+      applyCompletion,
+      completionOpen,
+      completionSuggestions.length,
+      selectedCompletion,
+      terminalFontSize,
+      updateFontSize,
+    ],
   );
+
+  useEffect(() => {
+    terminalBackgroundRef.current = terminalBackground;
+    const terminal = terminalRef.current;
+    if (!terminal) return;
+    terminal.options.theme = {
+      ...terminal.options.theme,
+      background: terminalBackground,
+    };
+  }, [terminalBackground]);
+
+  useEffect(() => {
+    terminalFontSizeRef.current = terminalFontSize;
+    const terminal = terminalRef.current;
+    if (!terminal) return;
+    terminal.options.fontSize = terminalFontSize;
+    requestAnimationFrame(resizeToFit);
+  }, [resizeToFit, terminalFontSize]);
+
+  useEffect(() => {
+    terminalLineHeightRef.current = terminalLineHeight;
+    const terminal = terminalRef.current;
+    if (!terminal) return;
+    terminal.options.lineHeight = terminalLineHeight / 100;
+    requestAnimationFrame(resizeToFit);
+  }, [resizeToFit, terminalLineHeight]);
+
+  useEffect(() => {
+    terminalCursorBlinkRef.current = terminalCursorBlink;
+    const terminal = terminalRef.current;
+    if (!terminal) return;
+    terminal.options.cursorBlink = terminalCursorBlink;
+  }, [terminalCursorBlink]);
+
+  useEffect(() => {
+    terminalScrollbackRef.current = terminalScrollback;
+    const terminal = terminalRef.current;
+    if (!terminal) return;
+    terminal.options.scrollback = terminalScrollback;
+  }, [terminalScrollback]);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -183,6 +453,9 @@ export function TerminalView({
     let resizeObserver: ResizeObserver | null = null;
     let dataDisposable: IDisposable | null = null;
     let resizeDisposable: IDisposable | null = null;
+    let cursorDisposable: IDisposable | null = null;
+    let renderDisposable: IDisposable | null = null;
+    let writeParsedDisposable: IDisposable | null = null;
     const existingSessionId = getTerminalSessionId(terminalTabId);
     if (!existingSessionId) {
       resetTerminalSessionState(terminalTabId);
@@ -193,6 +466,7 @@ export function TerminalView({
       const mount = document.createElement("div");
       mount.dataset.munixTerminalMount = "true";
       Object.assign(mount.style, {
+        backgroundColor: "transparent",
         boxSizing: "border-box",
         height: `${Math.max(rect.height, 1)}px`,
         left: "-10000px",
@@ -214,6 +488,7 @@ export function TerminalView({
           host.replaceChildren(terminalMount);
         }
         Object.assign(terminalMount.style, {
+          backgroundColor: "transparent",
           height: "100%",
           left: "",
           padding: "0",
@@ -223,6 +498,7 @@ export function TerminalView({
           width: "100%",
         });
         setReady(true);
+        updateCompletionAnchor();
       });
     };
 
@@ -240,37 +516,41 @@ export function TerminalView({
     async function start() {
       try {
         setReady(false);
-        await loadTerminalFont(initialFontSizeRef.current);
+        await loadTerminalFont(terminalFontSizeRef.current);
         if (cancelled) return;
 
         const terminal = new Terminal({
           allowProposedApi: true,
-          cursorBlink: true,
+          allowTransparency: true,
+          cursorBlink: terminalCursorBlinkRef.current,
           fontFamily: TERMINAL_FONT_FAMILY,
-          fontSize: initialFontSizeRef.current,
-          scrollback: 10000,
+          fontSize: terminalFontSizeRef.current,
+          lineHeight: terminalLineHeightRef.current / 100,
+          letterSpacing: 0,
+          scrollback: terminalScrollbackRef.current,
           smoothScrollDuration: 80,
           theme: {
-            background: "#111416",
-            foreground: "#e5e7eb",
+            background: terminalBackgroundRef.current,
+            foreground: "#d7dee2",
             cursor: "#5eead4",
-            selectionBackground: "#0f766e",
-            selectionForeground: "#ffffff",
-            black: "#111416",
-            red: "#ef4444",
-            green: "#22c55e",
-            yellow: "#eab308",
-            blue: "#3b82f6",
-            magenta: "#a855f7",
-            cyan: "#14b8a6",
-            white: "#e5e7eb",
-            brightBlack: "#64748b",
+            cursorAccent: "#071012",
+            selectionBackground: "#155e59",
+            selectionForeground: "#f8fafc",
+            black: "#0c1012",
+            red: "#f87171",
+            green: "#4ade80",
+            yellow: "#facc15",
+            blue: "#60a5fa",
+            magenta: "#c084fc",
+            cyan: "#2dd4bf",
+            white: "#d7dee2",
+            brightBlack: "#74838a",
             brightRed: "#f87171",
-            brightGreen: "#4ade80",
-            brightYellow: "#facc15",
-            brightBlue: "#60a5fa",
-            brightMagenta: "#c084fc",
-            brightCyan: "#2dd4bf",
+            brightGreen: "#86efac",
+            brightYellow: "#fde047",
+            brightBlue: "#93c5fd",
+            brightMagenta: "#d8b4fe",
+            brightCyan: "#5eead4",
             brightWhite: "#ffffff",
           },
         });
@@ -329,13 +609,36 @@ export function TerminalView({
         dataDisposable = terminal.onData((data) => {
           const id = sessionIdRef.current;
           if (id) void ipc.terminalWrite(id, data);
+          const previous = inputLineRef.current;
+          if (data === "\r") {
+            const command = previous.trim();
+            if (command) {
+              setCommandHistory((history) =>
+                [command, ...history.filter((item) => item !== command)].slice(
+                  0,
+                  TERMINAL_HISTORY_LIMIT,
+                ),
+              );
+            }
+          }
+          const next = updateInputLine(previous, data);
+          if (next !== previous || data === "\r") {
+            inputLineRef.current = next;
+            setInputLine(next);
+            setCompletionOpen(data !== "\r");
+            requestAnimationFrame(updateCompletionAnchor);
+          }
         });
         resizeDisposable = terminal.onResize(({ cols, rows }) => {
           const id = sessionIdRef.current;
           if (!id) return;
           resizeTerminalScreenState(terminalTabId, id, cols, rows);
           void ipc.terminalResize(id, cols, rows);
+          updateCompletionAnchor();
         });
+        cursorDisposable = terminal.onCursorMove(updateCompletionAnchor);
+        renderDisposable = terminal.onRender(updateCompletionAnchor);
+        writeParsedDisposable = terminal.onWriteParsed(updateCompletionAnchor);
 
         unlistenData = await listen<TerminalDataPayload>(
           "terminal:data",
@@ -347,6 +650,7 @@ export function TerminalView({
               event.payload.data,
             );
             terminal.write(event.payload.data, () => revealTerminal(terminal));
+            updateCompletionAnchor();
           },
         );
         unlistenExit = await listen<TerminalEventPayload>(
@@ -376,6 +680,9 @@ export function TerminalView({
       unlistenExit?.();
       dataDisposable?.dispose();
       resizeDisposable?.dispose();
+      cursorDisposable?.dispose();
+      renderDisposable?.dispose();
+      writeParsedDisposable?.dispose();
       resizeObserver?.disconnect();
       resizeObserver = null;
       sessionIdRef.current = null;
@@ -394,32 +701,57 @@ export function TerminalView({
       terminalMount = null;
       host.replaceChildren();
     };
-  }, [resizeToFit, t, terminalTabId, waitForSettledFit]);
+  }, [
+    resizeToFit,
+    t,
+    terminalTabId,
+    updateCompletionAnchor,
+    waitForSettledFit,
+  ]);
 
   return (
     <div
       onKeyDownCapture={handleKeyDownCapture}
+      onPointerDown={() => {
+        if (completionPointerInsideRef.current) {
+          completionPointerInsideRef.current = false;
+          return;
+        }
+        if (completionSuggestions.length === 0) return;
+        setCompletionOpen(false);
+      }}
       className={cn(
-        "relative isolate flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-[var(--color-bg-primary)]",
+        "munix-terminal-panel relative isolate flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden",
         className,
       )}
     >
       {error ? (
-        <div className="flex flex-1 items-center justify-center p-6 text-sm text-[var(--color-text-secondary)]">
+        <div className="flex flex-1 items-center justify-center p-6 text-sm text-[var(--color-terminal-muted)]">
           {t("app:terminal.error")}
         </div>
       ) : (
-        <div className="relative min-h-0 flex-1 overflow-hidden bg-[var(--color-bg-primary)]">
+        <div className="relative min-h-0 flex-1 overflow-hidden px-2 pb-2 pt-1.5">
           <div
             key={terminalTabId}
             ref={containerRef}
             data-munix-terminal-viewport="true"
             className={cn(
-              "relative z-0 min-h-0 h-full overflow-hidden font-mono",
+              "relative z-0 h-full min-h-0 overflow-hidden font-mono",
             )}
           />
           {!ready ? (
-            <div className="pointer-events-none absolute inset-0 z-50 bg-[var(--color-bg-primary)]" />
+            <div className="pointer-events-none absolute inset-0 z-50 bg-[var(--color-terminal-bg)]" />
+          ) : null}
+          <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 h-2 bg-[var(--color-terminal-bg)]" />
+          {ready ? (
+            <TerminalCompletionPopup
+              suggestions={completionSuggestions}
+              selectedIndex={selectedCompletionIndex}
+              anchor={completionAnchor}
+              onPointerDownInside={() => {
+                completionPointerInsideRef.current = true;
+              }}
+            />
           ) : null}
         </div>
       )}

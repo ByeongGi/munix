@@ -4,6 +4,7 @@
     "general": "일반",
     "appearance": "모양",
     "editor": "에디터",
+    "terminal": "터미널",
     "shortcuts": "단축키",
     "advanced": "고급 — 사용자 CSS",
     "about": "정보",
@@ -30,7 +31,9 @@
     "sm": "작게",
     "base": "기본",
     "lg": "크게",
-    "xl": "더 크게"
+    "xl": "더 크게",
+    "xxl": "아주 크게",
+    "xxxl": "최대"
   },
   "editorWidth": {
     "label": "에디터 너비",
@@ -52,6 +55,40 @@
     "auto": "시스템",
     "ko": "한국어",
     "en": "English"
+  },
+  "backgroundOpacity": {
+    "label": "앱 셸 배경 불투명도",
+    "description": "사이드바와 작업 영역 바탕이 창 뒤 배경을 비치는 정도를 조절합니다.",
+    "value": "{{value}}%"
+  },
+  "editorBackgroundOpacity": {
+    "label": "에디터 배경 불투명도",
+    "description": "문서 읽기 영역의 배경 불투명도를 별도로 조절합니다.",
+    "value": "{{value}}%"
+  },
+  "terminalBackgroundOpacity": {
+    "label": "터미널 배경 불투명도",
+    "description": "터미널 패널의 배경 불투명도를 별도로 조절합니다.",
+    "value": "{{value}}%"
+  },
+  "terminalFontSize": {
+    "label": "터미널 글자 크기",
+    "description": "터미널 패널의 고정폭 글자 크기를 조절합니다.",
+    "value": "{{value}}px"
+  },
+  "terminalLineHeight": {
+    "label": "터미널 줄 간격",
+    "description": "명령 출력이 빽빽하거나 헐거워 보일 때 조절합니다.",
+    "value": "{{value}}%"
+  },
+  "terminalScrollback": {
+    "label": "터미널 스크롤백",
+    "description": "터미널이 보관할 이전 출력 줄 수입니다. 새 터미널 세션부터 적용됩니다.",
+    "value": "{{value}}줄"
+  },
+  "terminalCursorBlink": {
+    "label": "커서 깜빡임",
+    "description": "터미널 입력 커서의 깜빡임을 켜거나 끕니다."
   },
   "customCss": {
     "description": "앱 전체에 추가로 적용할 CSS. 변경 즉시 반영. 빈 값이면 비활성.",

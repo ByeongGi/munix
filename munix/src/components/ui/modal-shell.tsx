@@ -33,7 +33,7 @@ export function ModalShell({
         onClick={(e) => e.stopPropagation()}
         className={cn(
           "relative rounded-lg border shadow-2xl",
-          "border-[var(--color-border-primary)] bg-[var(--color-bg-secondary)]",
+          "border-[var(--color-border-primary)] bg-[var(--color-bg-secondary-solid)]",
           panelClassName,
         )}
       >

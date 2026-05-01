@@ -114,24 +114,21 @@ export function KeyCapture({
     [t, onCancel, onSubmit, allowBareKey],
   );
 
-  const handleKeyUp = useCallback(
-    (e: React.KeyboardEvent<HTMLDivElement>) => {
-      // modifier 를 떼면 preview 도 초기화 (사용자가 modifier 만 토글하다가 안 누르고 떼는 경우)
-      if (
-        e.key === "Meta" ||
-        e.key === "Control" ||
-        e.key === "Alt" ||
-        e.key === "Shift"
-      ) {
-        if (!e.metaKey && !e.ctrlKey && !e.altKey) {
-          setPending(null);
-        } else {
-          setPending(buildModifierPreview(e));
-        }
+  const handleKeyUp = useCallback((e: React.KeyboardEvent<HTMLDivElement>) => {
+    // modifier 를 떼면 preview 도 초기화 (사용자가 modifier 만 토글하다가 안 누르고 떼는 경우)
+    if (
+      e.key === "Meta" ||
+      e.key === "Control" ||
+      e.key === "Alt" ||
+      e.key === "Shift"
+    ) {
+      if (!e.metaKey && !e.ctrlKey && !e.altKey) {
+        setPending(null);
+      } else {
+        setPending(buildModifierPreview(e));
       }
-    },
-    [],
-  );
+    }
+  }, []);
 
   const display = pending ? formatKeymap(pending) : t("keyCapture.prompt");
 

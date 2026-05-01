@@ -185,7 +185,7 @@ function ImageView({ node, updateAttributes, selected }: NodeViewProps) {
               contentEditable={false}
               className={cn(
                 "absolute -top-7 right-1 rounded px-2 py-0.5 text-[10px]",
-                "bg-[var(--color-bg-secondary)] text-[var(--color-text-secondary)]",
+                "bg-[var(--color-bg-secondary-solid)] text-[var(--color-text-secondary)]",
                 "border border-[var(--color-border-secondary)] shadow-sm",
               )}
             >
@@ -196,7 +196,7 @@ function ImageView({ node, updateAttributes, selected }: NodeViewProps) {
             contentEditable={false}
             className={cn(
               "absolute left-1 right-6 bottom-1 flex items-center gap-1 rounded",
-              "bg-[var(--color-bg-secondary)]/95 backdrop-blur px-2 py-1",
+              "bg-[var(--color-bg-secondary-solid)] px-2 py-1",
               "border border-[var(--color-border-secondary)] shadow-sm",
             )}
           >

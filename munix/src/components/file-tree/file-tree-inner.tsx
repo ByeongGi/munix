@@ -134,7 +134,8 @@ export function FlatTreeRow({
       role="button"
       aria-label={displayName}
       className={cn(
-        "group mx-1 flex h-8 items-center gap-1.5 rounded-md px-2 text-[15px] select-none",
+        "group mx-1 flex items-center gap-1.5 rounded-md px-2 text-[15px] select-none",
+        isRenaming ? "min-h-11 py-1" : "h-8",
         "text-sidebar-tree-text hover:bg-sidebar-item-hovered hover:text-sidebar-text",
         (isDir || isOpenable) && !isRenaming && "cursor-pointer",
         isDisabledFile && "cursor-default",

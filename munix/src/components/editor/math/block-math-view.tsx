@@ -65,7 +65,7 @@ export function BlockMathView({
           contentEditable={false}
           className={cn(
             "mt-2 flex flex-col gap-1 rounded",
-            "bg-[var(--color-bg-secondary)]/95 px-2 py-1.5",
+            "bg-[var(--color-bg-secondary-solid)] px-2 py-1.5",
             "border border-[var(--color-border-secondary)]",
           )}
         >

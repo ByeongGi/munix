@@ -12,7 +12,8 @@ import { error as logError, warn as logWarn } from "@tauri-apps/plugin-log";
  */
 export function installDevErrorTrap(): void {
   const onError = (ev: ErrorEvent): void => {
-    const e = ev.error instanceof Error ? ev.error : new Error(String(ev.message));
+    const e =
+      ev.error instanceof Error ? ev.error : new Error(String(ev.message));
     const payload = `[window.error] ${e.name}: ${e.message}\n${e.stack ?? "(no stack)"}\nat ${ev.filename}:${ev.lineno}:${ev.colno}`;
     void logError(payload).catch(() => undefined);
     console.error("[dev-trap]", e, ev);

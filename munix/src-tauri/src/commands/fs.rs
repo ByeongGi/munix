@@ -7,9 +7,8 @@ use crate::state::AppState;
 use crate::thumbnail;
 use crate::trust;
 use crate::vault::{
-    list_all_at_root, read_file_at_root, read_markdown_batch_at_root,
-    read_markdown_file_at_root, FileContent, FileNode, MarkdownBatchItem,
-    MarkdownFileContent, WriteResult,
+    list_all_at_root, read_file_at_root, read_markdown_batch_at_root, read_markdown_file_at_root,
+    FileContent, FileNode, MarkdownBatchItem, MarkdownFileContent, WriteResult,
 };
 use crate::vault_manager::VaultId;
 
@@ -133,7 +132,9 @@ pub async fn rename_entry(
         let new_abs = vault.resolve(&new_rel)?;
         Ok((n, old_abs, new_abs))
     })?;
-    state.vault_manager.record_writes(&id, &[&old_abs, &new_abs])?;
+    state
+        .vault_manager
+        .record_writes(&id, &[&old_abs, &new_abs])?;
     Ok(node)
 }
 
