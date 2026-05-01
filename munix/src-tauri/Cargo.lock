@@ -2850,7 +2850,7 @@ dependencies = [
 
 [[package]]
 name = "munix"
-version = "0.1.10"
+version = "0.1.11"
 dependencies = [
  "chrono",
  "gray_matter",
