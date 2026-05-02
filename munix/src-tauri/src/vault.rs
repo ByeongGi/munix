@@ -771,4 +771,40 @@ mod tests {
 
         std::fs::remove_dir_all(root).unwrap();
     }
+
+    #[test]
+    fn resolve_rejects_path_traversal() {
+        let (root, vault) = temp_vault();
+
+        for path in [
+            "../outside.md",
+            "folder/../../outside.md",
+            "/tmp/outside.md",
+            "\\tmp\\outside.md",
+        ] {
+            assert!(
+                matches!(vault.resolve(path), Err(VaultError::PathTraversal(_))),
+                "{path:?} should be rejected"
+            );
+        }
+
+        std::fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
+    fn save_asset_allows_images_and_rejects_other_extensions() {
+        let (root, vault) = temp_vault();
+
+        let rel_path = vault.save_asset(b"not-a-real-image", ".png").unwrap();
+        assert!(rel_path.starts_with("assets/"));
+        assert!(rel_path.ends_with(".png"));
+        assert!(root.join(&rel_path).exists());
+
+        assert!(matches!(
+            vault.save_asset(b"plain text", "txt"),
+            Err(VaultError::InvalidName(_))
+        ));
+
+        std::fs::remove_dir_all(root).unwrap();
+    }
 }

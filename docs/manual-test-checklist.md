@@ -64,7 +64,7 @@
 - [ ] 🔴 컨텍스트 메뉴: "경로 복사" — 절대 경로 클립보드 복사
 - [ ] 🔴 컨텍스트 메뉴: "시스템 파인더에서 보기" — 파일이면 부모 폴더 열기, 폴더면 자체 열기 (plugin-opener)
 
-> 자동화 완료: Rust `validate_name` 금지 문자/Windows 예약어/trailing dot·space 검증, create_file/create_folder/rename InvalidName 회귀.
+> 자동화 완료: Rust `validate_name` 금지 문자/Windows 예약어/trailing dot·space 검증, create_file/create_folder/rename InvalidName 회귀, vault relative path traversal 차단.
 
 ## 3. 파일/폴더 드래그 앤 드롭 (DnD) — ✅ 검증 완료
 
@@ -107,11 +107,13 @@
 
 - [ ] 🔴 🔄 재구성 버튼 동작 (코드 확인됨 — `search-panel.tsx:49-61`, 검증만 남음)
 - [ ] 🔴 watcher가 deleted/created/modified 이벤트로 인덱스 자동 증분 갱신 (수동 재구성 없이도 결과 갱신)
-- [ ] 🔴 정규식 모드 토글 (`Regex` 아이콘) — 활성 시 입력창 monospace, MiniSearch 우회하고 `searchRegex`로 직접 매칭. 잘못된 정규식이면 빨간 에러 메시지 표시
+- [ ] 🔴 정규식 모드 UI 토글 (`Regex` 아이콘) — 활성 시 입력창 monospace, 잘못된 정규식이면 빨간 에러 메시지 표시
 - [ ] 🔴 결과를 폴더(부모 디렉터리)별로 그룹 헤더 (sticky `📁 path · N건`)로 묶어 표시
 - [ ] 🔴 검색 결과 클릭 → 해당 파일 열림 + 검색어 하이라이트 + 결과에 표시된 `Line N` 근처로 스크롤
 - [ ] 🔴 같은 파일에 동일 검색어가 여러 번 있을 때 첫 번째 결과가 아닌 항목을 클릭해도 해당 결과 라인 근처로 이동
 - [ ] 🔴 검색 결과 이동 후 인파일 검색바가 열리고 Enter/Shift+Enter로 다음/이전 매치 이동
+
+> 자동화 완료: `VaultSearchIndex` build/search, regex 검색 MiniSearch 우회, 잘못된 regex throw, update/rename/removeDoc 회귀.
 
 ## 9. QuickOpen / Command Palette / 치트시트 / 설정
 
@@ -197,12 +199,13 @@
 - [ ] 🔴 저장 시 `![alt](assets/...)` 마크다운 (Obsidian 호환)
 - [ ] 🔴 .md 파일 reload 시 이미지 정상 표시
 - [ ] 🔴 다른 탭의 같은 이미지도 표시
-- [ ] 🔴 비-image 확장자는 차단 (whitelist)
 - [ ] 🔴 이미지 노드 선택 시 alt 텍스트 편집 입력 표시 (NodeView, blur 시 저장)
 - [ ] 🔴 이미지 selected 시 우측 하단 보라색 resize 핸들. 드래그 시 픽셀 width 표시 + 실시간 크기 변경 (64–2000px). 더블클릭 시 원래 크기로
 - [ ] 🔴 이미지에 width 있을 때 저장: 표준 markdown 대신 inline `<img src=... alt=... width=N>` HTML로 직렬화 (Obsidian/GFM 호환)
 - [ ] 🔴 width 없는 이미지: 표준 `![alt](src)` 마크다운 유지
 - [ ] 🔴 reload 시 HTML img의 width 속성 보존되어 같은 크기로 표시
+
+> 자동화 완료: Rust `save_asset` 이미지 확장자 whitelist 허용/차단.
 
 ## 17. 에디터 — Code block
 
@@ -234,10 +237,10 @@
 - [ ] 🔴 값 편집 (Enter/blur) → 자동 저장 트리거
 - [ ] 🔴 `+ 필드 추가`
 - [ ] 🔴 × 버튼으로 필드 삭제
-- [ ] 🔴 `tags`/`aliases`/`keywords` 쉼표 분리 → 배열 자동 변환
-- [ ] 🔴 true/false/숫자 자동 형 변환
 - [ ] 🔴 `updated` 필드 있을 때 저장 시 자동으로 오늘 날짜(YYYY-MM-DD)로 갱신 (없으면 추가하지 않음)
-- [ ] 🔴 타입별 입력 UI: boolean → 토글 스위치, number → 숫자 입력, date(키 이름이 date/created/updated/published 등 또는 YYYY-MM-DD 패턴) → 날짜 picker, 그 외 텍스트
+- [ ] 🔴 타입별 입력 UI: boolean → 토글 스위치, number → 숫자 입력, date → 날짜 picker, 그 외 텍스트
+
+> 자동화 완료: frontmatter 값 표시, `tags`/`aliases`/`keywords` 쉼표 배열 변환, boolean/number scalar 변환, date/number/boolean/text field kind 판별.
 
 ## 20.5 에디터 — Properties (Obsidian 호환) 🆕
 
@@ -362,4 +365,4 @@
 
 **문서 버전:** v1.3
 **작성일:** 2026-04-25
-**최근 업데이트:** 2026-05-02 — 자동화 검증 완료 항목 정리(no-vault/mock workspace/recent vault UI, Rust validate_name, command palette parser, property type heuristic, tab helper 로직).
+**최근 업데이트:** 2026-05-02 — 백엔드/프론트 분리 전환 시작. 검색 인덱스, frontmatter 값 변환, Rust vault path/asset safety 자동화 추가.
