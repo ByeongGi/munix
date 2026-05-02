@@ -1,8 +1,15 @@
-import { useEditor, EditorContent } from "@tiptap/react";
+import { EditorContent } from "@tiptap/react";
+import {
+  Editor as TiptapEditor,
+  type EditorOptions,
+  type JSONContent,
+} from "@tiptap/core";
 import {
   startTransition,
   useCallback,
   useEffect,
+  useLayoutEffect,
+  useMemo,
   useRef,
   useState,
 } from "react";
@@ -27,7 +34,6 @@ import {
   focusEditorEndOnEmptySurface,
   focusEditorStartOnNextFrame,
 } from "@/components/editor/editor-focus";
-import type { JSONContent } from "@tiptap/core";
 import type {
   DocumentRuntime,
   ScrollRuntimeState,
@@ -36,6 +42,7 @@ import type {
 const DEFER_DOCUMENT_HYDRATION_MIN_LENGTH = 80_000;
 const SCROLL_RESTORE_MAX_ATTEMPTS = 3;
 const SCROLL_RESTORE_OBSERVER_MS = 1200;
+const LIVE_EDITOR_CACHE_LIMIT = 2;
 
 interface EditorViewProps {
   className?: string;
@@ -53,7 +60,7 @@ function normalizeSourceLine(line: string): string {
 }
 
 function captureScrollAnchor(
-  editor: NonNullable<ReturnType<typeof useEditor>>,
+  editor: TiptapEditor,
   scrollEl: HTMLDivElement | null,
 ): ScrollRuntimeState | undefined {
   if (!scrollEl || editor.isDestroyed) return undefined;
@@ -95,7 +102,7 @@ function clampSelection(
 }
 
 function restoreScrollAnchor(
-  editor: NonNullable<ReturnType<typeof useEditor>>,
+  editor: TiptapEditor,
   scrollEl: HTMLDivElement | null,
   scroll: ScrollRuntimeState | undefined,
 ): boolean {
@@ -129,7 +136,7 @@ function getRuntimeEditorJson(
 }
 
 function scheduleScrollAnchorRestore(
-  editor: NonNullable<ReturnType<typeof useEditor>>,
+  editor: TiptapEditor,
   scrollEl: HTMLDivElement | null,
   scroll: ScrollRuntimeState | undefined,
 ): () => void {
@@ -171,6 +178,89 @@ function scheduleScrollAnchorRestore(
     if (timerId) window.clearTimeout(timerId);
     observer?.disconnect();
   };
+}
+
+interface CachedEditorEntry {
+  editor: TiptapEditor;
+  lastAccessedAt: number;
+  path: string;
+}
+
+function destroyEditor(editor: TiptapEditor): void {
+  if (!editor.isDestroyed) editor.destroy();
+}
+
+function pruneLiveEditorCache(
+  cache: Map<string, CachedEditorEntry>,
+  activeTabId: string,
+): void {
+  const evictable = Array.from(cache.entries())
+    .filter(([tabId]) => tabId !== activeTabId)
+    .sort(([, a], [, b]) => a.lastAccessedAt - b.lastAccessedAt);
+
+  while (cache.size > LIVE_EDITOR_CACHE_LIMIT) {
+    const next = evictable.shift();
+    if (!next) break;
+    const [tabId, entry] = next;
+    cache.delete(tabId);
+    destroyEditor(entry.editor);
+  }
+}
+
+function useLiveEditor(
+  tabId: string | null,
+  path: string | null,
+  options: Partial<EditorOptions>,
+): TiptapEditor | null {
+  const [editor, setEditor] = useState<TiptapEditor | null>(null);
+  const cacheRef = useRef(new Map<string, CachedEditorEntry>());
+  const previousOptionsRef = useRef(options);
+
+  useLayoutEffect(() => {
+    if (previousOptionsRef.current === options) return;
+    for (const entry of cacheRef.current.values()) {
+      destroyEditor(entry.editor);
+    }
+    cacheRef.current.clear();
+    previousOptionsRef.current = options;
+    setEditor(null);
+  }, [options]);
+
+  useLayoutEffect(() => {
+    if (!tabId || !path) {
+      setEditor(null);
+      return;
+    }
+
+    const cache = cacheRef.current;
+    const cached = cache.get(tabId);
+    const entry =
+      cached && !cached.editor.isDestroyed
+        ? cached
+        : {
+            editor: new TiptapEditor(options),
+            lastAccessedAt: Date.now(),
+            path,
+          };
+
+    entry.lastAccessedAt = Date.now();
+    entry.path = path;
+    cache.set(tabId, entry);
+    setEditor(entry.editor);
+    pruneLiveEditorCache(cache, tabId);
+  }, [options, path, tabId]);
+
+  useEffect(() => {
+    const cache = cacheRef.current;
+    return () => {
+      for (const entry of cache.values()) {
+        destroyEditor(entry.editor);
+      }
+      cache.clear();
+    };
+  }, []);
+
+  return editor;
 }
 
 export function EditorView({ className }: EditorViewProps) {
@@ -233,9 +323,10 @@ export function EditorView({ className }: EditorViewProps) {
   const hasPendingSearch =
     useEditorStore.getState().pendingSearchQuery !== null;
 
-  const editor = useEditor(
-    {
-      extensions: createEditorExtensions(t("editor:placeholder.document"), {
+  const placeholder = t("editor:placeholder.document");
+  const editorOptions = useMemo<Partial<EditorOptions>>(
+    () => ({
+      extensions: createEditorExtensions(placeholder, {
         hasFrontmatter: () => useEditorStore.getState().frontmatter !== null,
         onFrontmatterTrigger: () => {
           const store = useEditorStore.getState();
@@ -261,9 +352,10 @@ export function EditorView({ className }: EditorViewProps) {
           ),
         },
       },
-    },
-    [t],
+    }),
+    [placeholder],
   );
+  const editor = useLiveEditor(currentTabId, currentPath, editorOptions);
   const handleEditorEmptyAreaMouseDown = useCallback(
     (event: React.MouseEvent<HTMLElement>) => {
       focusEditorEndOnEmptySurface(editor, event);
@@ -414,6 +506,21 @@ export function EditorView({ className }: EditorViewProps) {
       appliedSourceVersionRef.current = sourceVersion;
       const applySource = () => {
         if (cancelled || editor.isDestroyed) return;
+        const finishSourceApply = () => {
+          setIsHydrating(false);
+          const handledSearch = runPendingSearch();
+          if (!handledSearch && !hasPendingSearch && currentPath) {
+            const restored = restoreRuntimeViewState();
+            if (!restored) focusEditorStartOnNextFrame(editor);
+          }
+        };
+        const storage = editor.storage as unknown as {
+          markdown: { getMarkdown: () => string };
+        };
+        if (storage.markdown.getMarkdown() === body) {
+          finishSourceApply();
+          return;
+        }
         const runtime = ws.getState().documentRuntimes[currentTabId ?? ""];
         const runtimeJson = getRuntimeEditorJson(
           runtime ?? null,
@@ -433,12 +540,7 @@ export function EditorView({ className }: EditorViewProps) {
             emitUpdate: false,
           });
         }
-        setIsHydrating(false);
-        const handledSearch = runPendingSearch();
-        if (!handledSearch && !hasPendingSearch && currentPath) {
-          const restored = restoreRuntimeViewState();
-          if (!restored) focusEditorStartOnNextFrame(editor);
-        }
+        finishSourceApply();
       };
 
       if (body.length < DEFER_DOCUMENT_HYDRATION_MIN_LENGTH) {

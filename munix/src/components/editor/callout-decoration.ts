@@ -2,7 +2,7 @@ import { Extension } from "@tiptap/core";
 import { Plugin, PluginKey } from "@tiptap/pm/state";
 import { Decoration, DecorationSet } from "@tiptap/pm/view";
 import type { Node as PMNode } from "@tiptap/pm/model";
-import type { EditorState } from "@tiptap/pm/state";
+import type { EditorState, Transaction } from "@tiptap/pm/state";
 
 /**
  * Obsidian callout: blockquote 첫 줄이 `[!KIND]` 형식이면 스타일링.
@@ -72,6 +72,42 @@ interface PluginStateShape {
 
 const calloutKey = new PluginKey<PluginStateShape>("calloutDecoration");
 
+function mapPositions(positions: Set<number>, tr: Transaction): Set<number> {
+  if (!tr.docChanged || positions.size === 0) return positions;
+  const next = new Set<number>();
+  for (const pos of positions) {
+    const mapped = tr.mapping.mapResult(pos, -1);
+    if (!mapped.deleted) next.add(mapped.pos);
+  }
+  return next;
+}
+
+function transactionTouchesNodeType(
+  tr: Transaction,
+  state: EditorState,
+  typeName: string,
+): boolean {
+  if (!tr.docChanged) return false;
+  let touched = false;
+  const docSize = state.doc.content.size;
+
+  for (const stepMap of tr.mapping.maps) {
+    stepMap.forEach((_oldStart, _oldEnd, newStart, newEnd) => {
+      if (touched) return;
+      const from = Math.max(0, Math.min(newStart, docSize));
+      const to = Math.max(from, Math.min(newEnd, docSize));
+      state.doc.nodesBetween(from, to, (node) => {
+        if (node.type.name !== typeName) return;
+        touched = true;
+        return false;
+      });
+    });
+    if (touched) break;
+  }
+
+  return touched;
+}
+
 function buildDecorations(
   state: EditorState,
   userToggled: Set<number>,
@@ -118,13 +154,19 @@ export const CalloutDecoration = Extension.create({
             const meta = tr.getMeta(calloutKey) as
               | { toggle: number }
               | undefined;
-            let next = prev.userToggled;
+            let next = mapPositions(prev.userToggled, tr);
             if (meta) {
-              next = new Set(prev.userToggled);
+              next = new Set(next);
               if (next.has(meta.toggle)) next.delete(meta.toggle);
               else next.add(meta.toggle);
             }
             if (!tr.docChanged && !meta) return prev;
+            if (!meta && !transactionTouchesNodeType(tr, newState, "blockquote")) {
+              return {
+                userToggled: next,
+                decorations: prev.decorations.map(tr.mapping, tr.doc),
+              };
+            }
             return {
               userToggled: next,
               decorations: buildDecorations(newState, next),

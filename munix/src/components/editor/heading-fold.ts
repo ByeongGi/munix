@@ -1,7 +1,7 @@
 import { Extension } from "@tiptap/core";
 import { Plugin, PluginKey } from "@tiptap/pm/state";
 import { Decoration, DecorationSet } from "@tiptap/pm/view";
-import type { EditorState } from "@tiptap/pm/state";
+import type { EditorState, Transaction } from "@tiptap/pm/state";
 
 /**
  * 헤딩 접기. 헤딩 좌측에 ▾/▸ 버튼을 표시 (CSS ::before),
@@ -16,6 +16,42 @@ interface HeadingFoldState {
 }
 
 const headingFoldKey = new PluginKey<HeadingFoldState>("headingFold");
+
+function mapPositions(positions: Set<number>, tr: Transaction): Set<number> {
+  if (!tr.docChanged || positions.size === 0) return positions;
+  const next = new Set<number>();
+  for (const pos of positions) {
+    const mapped = tr.mapping.mapResult(pos, -1);
+    if (!mapped.deleted) next.add(mapped.pos);
+  }
+  return next;
+}
+
+function transactionTouchesNodeType(
+  tr: Transaction,
+  state: EditorState,
+  typeName: string,
+): boolean {
+  if (!tr.docChanged) return false;
+  let touched = false;
+  const docSize = state.doc.content.size;
+
+  for (const stepMap of tr.mapping.maps) {
+    stepMap.forEach((_oldStart, _oldEnd, newStart, newEnd) => {
+      if (touched) return;
+      const from = Math.max(0, Math.min(newStart, docSize));
+      const to = Math.max(from, Math.min(newEnd, docSize));
+      state.doc.nodesBetween(from, to, (node) => {
+        if (node.type.name !== typeName) return;
+        touched = true;
+        return false;
+      });
+    });
+    if (touched) break;
+  }
+
+  return touched;
+}
 
 function buildDecorations(
   state: EditorState,
@@ -74,16 +110,25 @@ export const HeadingFold = Extension.create({
             const meta = tr.getMeta(headingFoldKey) as
               | { toggle: number }
               | undefined;
-            let folded = prev.folded;
+            let folded = mapPositions(prev.folded, tr);
             let changed = false;
             if (meta) {
-              folded = new Set(prev.folded);
+              folded = new Set(folded);
               if (folded.has(meta.toggle)) folded.delete(meta.toggle);
               else folded.add(meta.toggle);
               changed = true;
             }
-            // doc 변경 시 stale 위치 정리는 일단 생략 (folded 위치 변동은 사용자 편집과 함께 자연 갱신)
             if (!tr.docChanged && !changed) return prev;
+            if (
+              !changed &&
+              folded.size === 0 &&
+              !transactionTouchesNodeType(tr, newState, "heading")
+            ) {
+              return {
+                folded,
+                decorations: prev.decorations.map(tr.mapping, tr.doc),
+              };
+            }
             return {
               folded,
               decorations: buildDecorations(newState, folded),
