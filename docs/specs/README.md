@@ -25,6 +25,7 @@
 | 15  | [multi-vault-spec.md](./multi-vault-spec.md) 🆕             | 멀티 vault 워크스페이스 (cmux 스타일 좌측 세로 탭, 탭 → 새 창 승격)          | 5/6   | **proposed**       |
 | 16  | [mermaid-spec.md](./mermaid-spec.md) 🆕                     | Mermaid fenced code block 렌더링과 구분값 정책                               | 4/7+  | **proposed**       |
 | 17  | [tab-runtime-cache-spec.md](./tab-runtime-cache-spec.md) 🆕 | 탭 전환 비용 절감을 위한 document runtime cache와 scroll/selection 복원 정책 | 5/7+  | **partial**        |
+| 18  | [ui-ux-spec.md](./ui-ux-spec.md) 🆕                         | 체감 성능, 피드백, 정보 구조, 접근성, 상태 표현의 앱 전체 UX 기준            | 전체  | **proposed**       |
 
 ---
 
@@ -92,6 +93,14 @@ vault-trust-spec ──┬──> vault-spec
                    ├──> plugin-spec
                    └──> terminal-spec
 
+ui-ux-spec ──┬──> theme-spec (contrast / motion / density)
+             ├──> editor-spec (typing / layout stability)
+             ├──> auto-save-spec (save feedback)
+             ├──> search-spec (palette / wait UX)
+             ├──> file-tree-spec (tree density / target size)
+             ├──> workspace-split-spec (focus / pane context)
+             └──> tab-runtime-cache-spec (tab switch timing)
+
 # 🆕 v1.5 (proposed — ADR-031)
 multi-vault-spec ──┬──> vault-spec (VaultManager 도입)
                    ├──> keymap-spec (⌘1~9, ⌘T, ⌘W 등)
@@ -115,6 +124,7 @@ multi-vault-spec ──┬──> vault-spec (VaultManager 도입)
 - **최근 업데이트 (2026-04-29):** terminal-spec v0.2 (partial — workspace tab 기반 터미널, vault cwd, key event, Nerd Font, font-size shortcuts P0 정의)
 - **최근 추가 (2026-04-29):** mermaid-spec v0.1 (proposed — fenced code block `mermaid` 구분값과 렌더링 정책 정의)
 - **최근 추가 (2026-05-02):** tab-runtime-cache-spec v0.1 (partial — 탭 전환 runtime snapshot cache, selection/scroll anchor 복원, Mermaid async layout 보정 1차 구현)
+- **최근 추가 (2026-05-02):** ui-ux-spec v0.1 (proposed — UX 조사 기반 체감 성능 budget, loading/feedback/accessibility 기준 정의)
 
 ---
 
