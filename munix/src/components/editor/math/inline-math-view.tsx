@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import katex from "katex";
 import { NodeViewWrapper, type NodeViewProps } from "@tiptap/react";
 import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/cn";
+import { renderMathToString } from "./render-cache";
 
 /** 인라인 수식 NodeView. selected 시 raw `$latex$` input으로 편집 가능 (image-node 패턴). */
 export function InlineMathView({
@@ -28,16 +28,7 @@ export function InlineMathView({
     }
   }, [selected]);
 
-  const html = useMemo(() => {
-    try {
-      return katex.renderToString(latex, {
-        throwOnError: false,
-        displayMode: false,
-      });
-    } catch {
-      return `<span class="munix-math-error">${escapeHtml(latex)}</span>`;
-    }
-  }, [latex]);
+  const html = useMemo(() => renderMathToString(latex, false), [latex]);
 
   const commit = () => {
     if (draft !== latex) {
@@ -100,8 +91,4 @@ export function InlineMathView({
       )}
     </NodeViewWrapper>
   );
-}
-
-function escapeHtml(s: string): string {
-  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }

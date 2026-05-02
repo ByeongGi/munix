@@ -4,6 +4,7 @@
  */
 import {
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -60,6 +61,7 @@ function isSelectionInsideNode(
 }
 
 function getMermaidTheme(): "default" | "dark" {
+  if (typeof document === "undefined") return "dark";
   return document.documentElement.getAttribute("data-theme") === "light"
     ? "default"
     : "dark";
@@ -119,9 +121,8 @@ function reserveHeightForResult(
 function getMermaidCacheKey(
   source: string,
   theme: string,
-  containerWidth: number,
 ): string {
-  return [theme, Math.round(containerWidth), source].join("\n");
+  return [theme, source].join("\n");
 }
 
 function enqueueMermaidRender(
@@ -329,9 +330,17 @@ function MermaidPreview({ source }: { source: string }) {
   const { t } = useTranslation(["editor"]);
   const wrapperRef = useRef<HTMLDivElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
+  const theme = getMermaidTheme();
+  const cacheKey = useMemo(
+    () => getMermaidCacheKey(source, theme),
+    [source, theme],
+  );
   const [error, setError] = useState<string | null>(null);
-  const [isVisible, setIsVisible] = useState(false);
-  const [renderState, setRenderState] = useState<MermaidRenderState>("idle");
+  const [isVisible, setIsVisible] = useState(() =>
+    mermaidRenderCache.has(cacheKey),
+  );
+  const [renderState, setRenderState] =
+    useState<MermaidRenderState>("idle");
   const isRendering =
     renderState === "idle" ||
     renderState === "pending" ||
@@ -341,8 +350,12 @@ function MermaidPreview({ source }: { source: string }) {
   );
 
   useEffect(() => {
+    if (mermaidRenderCache.has(cacheKey)) {
+      setIsVisible(true);
+      return;
+    }
     setReservedHeight(estimateMermaidFallbackHeight(source));
-  }, [source]);
+  }, [cacheKey, source]);
 
   useEffect(() => {
     const wrapper = wrapperRef.current;
@@ -366,20 +379,12 @@ function MermaidPreview({ source }: { source: string }) {
     return () => observer.disconnect();
   }, []);
 
-  useEffect(() => {
-    if (!isVisible) return;
-
+  useLayoutEffect(() => {
     const container = containerRef.current;
     if (!container) return;
 
     let cancelled = false;
     const target = container;
-    const theme = getMermaidTheme();
-    const cacheKey = getMermaidCacheKey(
-      source,
-      theme,
-      target.getBoundingClientRect().width,
-    );
     const cached = readMermaidCache(cacheKey);
 
     if (cached) {
@@ -391,6 +396,8 @@ function MermaidPreview({ source }: { source: string }) {
       setRenderState(cached.error ? "error" : "done");
       return;
     }
+
+    if (!isVisible) return;
 
     async function renderMermaid() {
       if (cancelled) return;
@@ -447,7 +454,7 @@ function MermaidPreview({ source }: { source: string }) {
       cancelled = true;
       cancelScheduledRender();
     };
-  }, [isVisible, source]);
+  }, [cacheKey, isVisible, source, theme]);
 
   const previewStyle = useMemo(
     () =>

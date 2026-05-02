@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import katex from "katex";
 import { NodeViewWrapper, type NodeViewProps } from "@tiptap/react";
 import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/cn";
+import { renderMathToString } from "./render-cache";
 
 /** 블록 수식 NodeView. selected 시 raw `$$...$$` textarea 편집 (image-node 패턴). */
 export function BlockMathView({
@@ -28,16 +28,7 @@ export function BlockMathView({
     }
   }, [selected]);
 
-  const html = useMemo(() => {
-    try {
-      return katex.renderToString(latex, {
-        throwOnError: false,
-        displayMode: true,
-      });
-    } catch {
-      return `<span class="munix-math-error">${escapeHtml(latex)}</span>`;
-    }
-  }, [latex]);
+  const html = useMemo(() => renderMathToString(latex, true), [latex]);
 
   const commit = () => {
     if (draft !== latex) {
@@ -101,8 +92,4 @@ export function BlockMathView({
       )}
     </NodeViewWrapper>
   );
-}
-
-function escapeHtml(s: string): string {
-  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }

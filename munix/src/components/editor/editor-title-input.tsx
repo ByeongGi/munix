@@ -134,7 +134,7 @@ export function EditorTitleInput({
       className={cn(
         "munix-editor-title-input w-full min-w-0 bg-transparent outline-none",
         "font-semibold text-[var(--color-text-primary)]",
-        "px-12 pt-8 pb-2",
+        "px-16 pt-8 pb-2 sm:px-20 lg:px-24",
         "placeholder:text-[var(--color-text-tertiary)]",
         className,
       )}

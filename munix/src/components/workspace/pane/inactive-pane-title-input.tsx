@@ -114,7 +114,7 @@ export function InactivePaneTitleInput({
       value={value}
       placeholder={t("editor:placeholder.title", { defaultValue: "Untitled" })}
       className={cn(
-        "munix-editor-title-input w-full min-w-0 bg-transparent px-12 pt-8 pb-2 outline-none",
+        "munix-editor-title-input w-full min-w-0 bg-transparent px-16 pt-8 pb-2 outline-none sm:px-20 lg:px-24",
         "font-semibold text-[var(--color-text-primary)]",
         "placeholder:text-[var(--color-text-tertiary)]",
       )}

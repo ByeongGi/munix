@@ -76,7 +76,7 @@ export function InactivePaneEditor({
         attributes: {
           class: cn(
             "tiptap prose",
-            "min-h-full px-6 pt-4 pb-10 outline-none sm:px-8 lg:px-12",
+            "min-h-full px-16 pt-4 pb-10 outline-none sm:px-20 lg:px-24",
             "prose-headings:font-semibold prose-headings:tracking-tight",
             "prose-p:my-2 prose-li:my-0",
             "prose-code:before:content-none prose-code:after:content-none",

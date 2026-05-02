@@ -15,6 +15,7 @@ import {
 import { createEditorExtensions } from "@/components/editor/extensions";
 import { useAutoSave } from "@/hooks/use-auto-save";
 import { useEditorStore } from "@/store/editor-store";
+import { useTabStore } from "@/store/tab-store";
 import { useActiveWorkspaceStore } from "@/lib/active-vault";
 import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/cn";
@@ -42,7 +43,6 @@ import type {
 const DEFER_DOCUMENT_HYDRATION_MIN_LENGTH = 80_000;
 const SCROLL_RESTORE_MAX_ATTEMPTS = 3;
 const SCROLL_RESTORE_OBSERVER_MS = 1200;
-const LIVE_EDITOR_CACHE_LIMIT = 2;
 
 interface EditorViewProps {
   className?: string;
@@ -135,6 +135,13 @@ function getRuntimeEditorJson(
   return runtime.editorJson ?? null;
 }
 
+function getEditorMarkdown(editor: TiptapEditor): string {
+  const storage = editor.storage as unknown as {
+    markdown: { getMarkdown: () => string };
+  };
+  return storage.markdown.getMarkdown();
+}
+
 function scheduleScrollAnchorRestore(
   editor: TiptapEditor,
   scrollEl: HTMLDivElement | null,
@@ -192,16 +199,10 @@ function destroyEditor(editor: TiptapEditor): void {
 
 function pruneLiveEditorCache(
   cache: Map<string, CachedEditorEntry>,
-  activeTabId: string,
+  openTabIds: Set<string>,
 ): void {
-  const evictable = Array.from(cache.entries())
-    .filter(([tabId]) => tabId !== activeTabId)
-    .sort(([, a], [, b]) => a.lastAccessedAt - b.lastAccessedAt);
-
-  while (cache.size > LIVE_EDITOR_CACHE_LIMIT) {
-    const next = evictable.shift();
-    if (!next) break;
-    const [tabId, entry] = next;
+  for (const [tabId, entry] of cache.entries()) {
+    if (openTabIds.has(tabId)) continue;
     cache.delete(tabId);
     destroyEditor(entry.editor);
   }
@@ -211,6 +212,7 @@ function useLiveEditor(
   tabId: string | null,
   path: string | null,
   options: Partial<EditorOptions>,
+  openTabIds: Set<string>,
 ): TiptapEditor | null {
   const [editor, setEditor] = useState<TiptapEditor | null>(null);
   const cacheRef = useRef(new Map<string, CachedEditorEntry>());
@@ -247,8 +249,8 @@ function useLiveEditor(
     entry.path = path;
     cache.set(tabId, entry);
     setEditor(entry.editor);
-    pruneLiveEditorCache(cache, tabId);
-  }, [options, path, tabId]);
+    pruneLiveEditorCache(cache, openTabIds);
+  }, [openTabIds, options, path, tabId]);
 
   useEffect(() => {
     const cache = cacheRef.current;
@@ -273,6 +275,13 @@ export function EditorView({ className }: EditorViewProps) {
   const isOpening = useEditorStore((s) => s.isOpening);
   const pendingJumpHeading = useEditorStore((s) => s.pendingJumpHeading);
   const pendingJumpLine = useEditorStore((s) => s.pendingJumpLine);
+  const openTabIdsKey = useTabStore((s) =>
+    s.tabs.map((tab) => tab.id).join("\0"),
+  );
+  const openTabIds = useMemo(
+    () => new Set(openTabIdsKey ? openTabIdsKey.split("\0") : []),
+    [openTabIdsKey],
+  );
   const [searchOpen, setSearchOpen] = useState(false);
   // blockPos는 DragHandle onNodeChange 콜백이 갱신. state로 두면 매 호버마다
   // EditorView rerender → DragHandle props 재생성 → 내부 useEffect 재발동으로
@@ -345,7 +354,7 @@ export function EditorView({ className }: EditorViewProps) {
         attributes: {
           class: cn(
             "tiptap prose",
-            "min-h-full px-6 pt-4 pb-10 outline-none sm:px-8 lg:px-12",
+            "min-h-full px-16 pt-4 pb-10 outline-none sm:px-20 lg:px-24",
             "prose-headings:font-semibold prose-headings:tracking-tight",
             "prose-p:my-2 prose-li:my-0",
             "prose-code:before:content-none prose-code:after:content-none",
@@ -357,8 +366,22 @@ export function EditorView({ className }: EditorViewProps) {
     }),
     [placeholder],
   );
-  const editor = useLiveEditor(currentTabId, currentPath, editorOptions);
-  const showDocumentLoading = !editor || isOpening || isHydrating;
+  const editor = useLiveEditor(
+    currentTabId,
+    currentPath,
+    editorOptions,
+    openTabIds,
+  );
+  const hasPendingDocumentApply =
+    !!currentPath &&
+    !!editor &&
+    !isOpening &&
+    !editor.isDestroyed &&
+    (appliedEditorRef.current !== editor
+      ? getEditorMarkdown(editor) !== body
+      : appliedSourceVersionRef.current !== sourceVersion);
+  const showDocumentLoading =
+    !editor || isOpening || isHydrating || hasPendingDocumentApply;
   const handleEditorEmptyAreaMouseDown = useCallback(
     (event: React.MouseEvent<HTMLElement>) => {
       focusEditorEndOnEmptySurface(editor, event);
@@ -453,11 +476,12 @@ export function EditorView({ className }: EditorViewProps) {
   );
 
   useEffect(() => {
-    // Editor option changes can replace the Tiptap instance without changing
-    // sourceVersion, so the new instance still needs the current body applied.
     if (appliedEditorRef.current !== editor) {
       appliedEditorRef.current = editor;
-      appliedSourceVersionRef.current = null;
+      appliedSourceVersionRef.current =
+        editor && !editor.isDestroyed && getEditorMarkdown(editor) === body
+          ? sourceVersion
+          : null;
     }
     if (!editor) return;
     if (editor.isDestroyed) return;
@@ -534,10 +558,7 @@ export function EditorView({ className }: EditorViewProps) {
           }
           finishHydratingAfterPaint();
         };
-        const storage = editor.storage as unknown as {
-          markdown: { getMarkdown: () => string };
-        };
-        if (storage.markdown.getMarkdown() === body) {
+        if (getEditorMarkdown(editor) === body) {
           finishSourceApply();
           return;
         }
@@ -707,7 +728,7 @@ export function EditorView({ className }: EditorViewProps) {
         <div
           role="status"
           aria-live="polite"
-          className="pointer-events-none absolute inset-0 z-30 flex items-center justify-center bg-[var(--color-editor-bg)]"
+          className="absolute inset-0 z-50 flex cursor-wait items-center justify-center bg-[var(--color-editor-loading-overlay)] backdrop-blur-sm"
         >
           <div className="flex items-center gap-3 rounded-md border border-[var(--color-border-primary)] bg-[var(--color-bg-secondary-solid)] px-4 py-3 text-sm text-[var(--color-text-secondary)] shadow-[var(--shadow-popover)]">
             <LoaderCircle className="h-4 w-4 animate-spin text-[var(--color-text-tertiary)]" />
@@ -737,7 +758,7 @@ export function EditorView({ className }: EditorViewProps) {
           <DragHandle
             editor={editor}
             onNodeChange={handleNodeChange}
-            className="flex h-6 w-6 cursor-grab items-center justify-center rounded text-[var(--color-text-tertiary)] hover:bg-[var(--color-bg-hover)] active:cursor-grabbing"
+            className="flex h-6 w-6 -translate-x-6 cursor-grab items-center justify-center rounded text-[var(--color-text-tertiary)] hover:bg-[var(--color-bg-hover)] active:cursor-grabbing"
           >
             <button
               type="button"

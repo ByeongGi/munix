@@ -2,6 +2,7 @@ import { Extension } from "@tiptap/core";
 import { Plugin, PluginKey } from "@tiptap/pm/state";
 import { Decoration, DecorationSet } from "@tiptap/pm/view";
 import type { EditorState, Transaction } from "@tiptap/pm/state";
+import type { EditorView } from "@tiptap/pm/view";
 
 /**
  * 헤딩 접기. 헤딩 좌측에 ▾/▸ 버튼을 표시 (CSS ::before),
@@ -95,6 +96,52 @@ function buildDecorations(
   return DecorationSet.create(doc, decos);
 }
 
+function findHeadingPosFromElement(
+  state: EditorState,
+  view: { nodeDOM: (pos: number) => globalThis.Node | null },
+  heading: Element,
+): number | null {
+  let headingPos: number | null = null;
+
+  state.doc.forEach((node, pos) => {
+    if (headingPos !== null || node.type.name !== "heading") return;
+    if (view.nodeDOM(pos) === heading) {
+      headingPos = pos;
+    }
+  });
+
+  return headingPos;
+}
+
+function maybeToggleHeadingFold(
+  view: Pick<EditorView, "dispatch" | "nodeDOM" | "state">,
+  event: MouseEvent,
+): boolean {
+  if (event.button !== 0) return false;
+  const target = event.target;
+  if (!(target instanceof Element)) return false;
+
+  const heading = target.closest("h1, h2, h3, h4, h5, h6");
+  if (!heading) return false;
+
+  // 왼쪽 gutter 안에서도 DragHandle보다 텍스트에 가까운 영역만
+  // fold affordance로 취급한다.
+  const rect = heading.getBoundingClientRect();
+  const x = event.clientX;
+  if (x < rect.left - 40 || x > rect.left + 8) return false;
+
+  const headingPos = findHeadingPosFromElement(view.state, view, heading);
+  if (headingPos === null) return false;
+
+  event.preventDefault();
+  view.dispatch(
+    view.state.tr.setMeta(headingFoldKey, {
+      toggle: headingPos,
+    }),
+  );
+  return true;
+}
+
 export const HeadingFold = Extension.create({
   name: "headingFold",
   addProseMirrorPlugins() {
@@ -139,32 +186,10 @@ export const HeadingFold = Extension.create({
           decorations(state) {
             return headingFoldKey.getState(state)?.decorations;
           },
-          handleClick(view, pos, event) {
-            const target = event.target as HTMLElement | null;
-            if (!target) return false;
-            const heading = target.closest("h1, h2, h3, h4, h5, h6");
-            if (!heading) return false;
-            // 헤딩의 경계 내에서, ::before 영역 (left of text) 클릭만 허용
-            const rect = heading.getBoundingClientRect();
-            const x = event.clientX;
-            // ::before는 left: -1.4em에 있음 (24-32px 가량 왼쪽)
-            if (x < rect.left - 36 || x > rect.left + 4) return false;
-
-            // 헤딩 노드의 시작 pos 찾기
-            const $pos = view.state.doc.resolve(pos);
-            for (let d = $pos.depth; d >= 0; d--) {
-              if ($pos.node(d).type.name === "heading") {
-                const headingPos = $pos.before(d);
-                event.preventDefault();
-                view.dispatch(
-                  view.state.tr.setMeta(headingFoldKey, {
-                    toggle: headingPos,
-                  }),
-                );
-                return true;
-              }
-            }
-            return false;
+          handleDOMEvents: {
+            click(view, event) {
+              return maybeToggleHeadingFold(view, event);
+            },
           },
         },
       }),

@@ -3,7 +3,7 @@
  * export. extension은 컴포넌트가 아니라 fast-refresh 대상이 아니므로 분리할
  * 실익이 적음. 컴포넌트만 변경 시 fast-refresh가 안 되는 것은 trade-off로 수용.
  */
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Image from "@tiptap/extension-image";
 import {
   NodeViewWrapper,
@@ -43,7 +43,11 @@ function ImageView({ node, updateAttributes, selected }: NodeViewProps) {
   const alt = (node.attrs.alt as string | null) ?? "";
   const widthAttr = node.attrs.width as number | null | undefined;
   const info = useVaultStore((s) => s.info);
-  const [resolved, setResolved] = useState<string>(src);
+  const resolved = useMemo(() => {
+    if (!src || isExternalUrl(src)) return src;
+    if (!info) return src;
+    return convertFileSrc(`${info.root}/${src}`);
+  }, [info, src]);
   const [draftAlt, setDraftAlt] = useState<string>(alt);
   const [draftWidth, setDraftWidth] = useState<number | null>(
     typeof widthAttr === "number" ? widthAttr : null,
@@ -54,25 +58,6 @@ function ImageView({ node, updateAttributes, selected }: NodeViewProps) {
   const resizeStartRef = useRef<{ startX: number; startWidth: number } | null>(
     null,
   );
-
-  useEffect(() => {
-    let cancelled = false;
-    if (!src || isExternalUrl(src)) {
-      setResolved(src);
-      return;
-    }
-    if (!info) {
-      setResolved(src);
-      return;
-    }
-    // rel path → absolute → convertFileSrc
-    const abs = `${info.root}/${src}`;
-    const converted = convertFileSrc(abs);
-    if (!cancelled) setResolved(converted);
-    return () => {
-      cancelled = true;
-    };
-  }, [src, info]);
 
   // node attrs가 외부에서 바뀌면 draft 동기화
   useEffect(() => {

@@ -137,7 +137,6 @@ export const createEditorSlice: StateCreator<
         currentPath: relPath,
         frontmatter: runtime.frontmatter,
         body: runtime.body,
-        sourceVersion: get().sourceVersion + 1,
         isOpening: false,
         baseModified: runtime.baseModified,
         status: runtime.status,
