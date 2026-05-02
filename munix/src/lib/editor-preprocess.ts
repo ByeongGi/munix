@@ -35,6 +35,30 @@ function withCodeProtected(
   return out;
 }
 
+const PREPROCESS_CACHE_MAX_ENTRIES = 12;
+const PREPROCESS_CACHE_MAX_CHARS = 1_500_000;
+const preprocessCache = new Map<string, { value: string; chars: number }>();
+let preprocessCacheChars = 0;
+
+function rememberPreprocessedMarkdown(source: string, value: string): string {
+  const chars = source.length + value.length;
+  preprocessCache.set(source, { value, chars });
+  preprocessCacheChars += chars;
+
+  while (
+    preprocessCache.size > PREPROCESS_CACHE_MAX_ENTRIES ||
+    preprocessCacheChars > PREPROCESS_CACHE_MAX_CHARS
+  ) {
+    const oldest = preprocessCache.keys().next().value;
+    if (oldest === undefined) break;
+    const entry = preprocessCache.get(oldest);
+    if (entry) preprocessCacheChars -= entry.chars;
+    preprocessCache.delete(oldest);
+  }
+
+  return value;
+}
+
 /** Obsidian 확장 문법을 Tiptap이 이해하는 HTML로 변환 (로드 시 1회). */
 export function preprocessMarkdown(md: string): string {
   return withCodeProtected(md, (input) => {
@@ -77,4 +101,15 @@ export function preprocessMarkdown(md: string): string {
     });
     return out;
   });
+}
+
+export function preprocessMarkdownCached(md: string): string {
+  const cached = preprocessCache.get(md);
+  if (cached) {
+    preprocessCache.delete(md);
+    preprocessCache.set(md, cached);
+    return cached.value;
+  }
+
+  return rememberPreprocessedMarkdown(md, preprocessMarkdown(md));
 }

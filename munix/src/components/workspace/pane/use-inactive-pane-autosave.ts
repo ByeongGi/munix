@@ -6,6 +6,7 @@ import {
   type RefObject,
 } from "react";
 import type { Editor } from "@tiptap/react";
+import type { JSONContent } from "@tiptap/core";
 import { useDebouncedCallback } from "use-debounce";
 import { useActiveWorkspaceStore } from "@/lib/active-vault";
 import { ipc } from "@/lib/ipc";
@@ -28,6 +29,7 @@ interface UseInactivePaneAutosaveOptions {
   frontmatterRef: RefObject<Record<string, unknown> | null>;
   baseModifiedRef: RefObject<number | null>;
   setBody: Dispatch<React.SetStateAction<string>>;
+  setEditorJson: Dispatch<React.SetStateAction<JSONContent | null>>;
   setBaseModified: Dispatch<React.SetStateAction<number | null>>;
   setStatus: Dispatch<React.SetStateAction<InactiveEditorStatus>>;
 }
@@ -40,6 +42,7 @@ export function useInactivePaneAutosave({
   frontmatterRef,
   baseModifiedRef,
   setBody,
+  setEditorJson,
   setBaseModified,
   setStatus,
 }: UseInactivePaneAutosaveOptions) {
@@ -74,13 +77,16 @@ export function useInactivePaneAutosave({
         return;
       }
       baseModifiedRef.current = result.modified;
+      const editorJson = editor.getJSON();
       setBaseModified(result.modified);
       setBody(nextBody);
+      setEditorJson(editorJson);
       setStatus("ready");
       ws.getState().upsertDocumentRuntime({
         tabId,
         path,
         body: nextBody,
+        editorJson,
         frontmatter: frontmatterRef.current,
         baseModified: result.modified,
         status: { kind: "saved", at: Date.now() },
@@ -105,6 +111,7 @@ export function useInactivePaneAutosave({
     path,
     setBaseModified,
     setBody,
+    setEditorJson,
     setStatus,
     statusRef,
     tabId,

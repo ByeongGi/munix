@@ -66,6 +66,7 @@ export function useAutoSave(editor: Editor | null): {
             tabId: currentTabId,
             path: currentPath,
             body,
+            editorJson: editor.getJSON(),
             frontmatter,
             baseModified: result.modified,
             status: { kind: "saved", at: Date.now() },

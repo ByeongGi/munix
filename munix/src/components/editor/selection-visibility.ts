@@ -10,7 +10,14 @@ import {
 import { Plugin } from "@tiptap/pm/state";
 import { Decoration, DecorationSet } from "@tiptap/pm/view";
 
-const pluginKey = new PluginKey<boolean>("selectionVisibility");
+interface SelectionVisibilityState {
+  forceAllSelected: boolean;
+  decorations: DecorationSet;
+}
+
+const pluginKey = new PluginKey<SelectionVisibilityState>(
+  "selectionVisibility",
+);
 
 function coversDocument(state: EditorState): boolean {
   const { selection, doc } = state;
@@ -20,10 +27,6 @@ function coversDocument(state: EditorState): boolean {
   const docStart = 1;
   const docEnd = Math.max(docStart, doc.content.size);
   return selection.from <= docStart && selection.to >= docEnd;
-}
-
-function shouldDecorateAllSelection(state: EditorState): boolean {
-  return pluginKey.getState(state) === true || coversDocument(state);
 }
 
 function selectionIntersectsNode(
@@ -38,9 +41,18 @@ function selectionIntersectsNode(
   );
 }
 
-function createSelectionDecorations(state: EditorState): DecorationSet {
+function createSelectionDecorations(
+  state: EditorState,
+  forceAllSelected: boolean,
+): DecorationSet {
+  const { selection } = state;
+  const decorateText = forceAllSelected || coversDocument(state);
+
+  if (!decorateText && selection.empty) {
+    return DecorationSet.empty;
+  }
+
   const decorations: Decoration[] = [];
-  const decorateText = shouldDecorateAllSelection(state);
 
   state.doc.descendants((node, pos) => {
     if (
@@ -87,22 +99,39 @@ export const SelectionVisibility = Extension.create({
       new Plugin({
         key: pluginKey,
         state: {
-          init: () => false,
+          init: (_, state): SelectionVisibilityState => ({
+            forceAllSelected: false,
+            decorations: createSelectionDecorations(state, false),
+          }),
           apply: (
             tr: Transaction,
-            value: boolean,
+            value: SelectionVisibilityState,
             _oldState: EditorState,
             newState: EditorState,
-          ) => {
+          ): SelectionVisibilityState => {
             const next = tr.getMeta(pluginKey);
-            if (typeof next === "boolean") return next;
-            if (tr.selectionSet || tr.docChanged)
-              return coversDocument(newState);
-            return value;
+            const forceAllSelected =
+              typeof next === "boolean" ? next : coversDocument(newState);
+
+            if (
+              !tr.selectionSet &&
+              !tr.docChanged &&
+              typeof next !== "boolean"
+            ) {
+              return value;
+            }
+
+            return {
+              forceAllSelected,
+              decorations: createSelectionDecorations(
+                newState,
+                forceAllSelected,
+              ),
+            };
           },
         },
         props: {
-          decorations: (state) => createSelectionDecorations(state),
+          decorations: (state) => pluginKey.getState(state)?.decorations,
           handleKeyDown: (view, event) => {
             const isSelectAll =
               event.key.toLowerCase() === "a" &&

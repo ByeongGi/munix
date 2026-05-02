@@ -41,8 +41,15 @@ export function InactivePaneEditor({
   const { t } = useTranslation(["editor", "app", "properties"]);
   const ws = useActiveWorkspaceStore();
   const scrollRef = useRef<HTMLDivElement | null>(null);
+  const appliedDocumentRef = useRef<{
+    tabId: string;
+    path: string;
+    body: string;
+  } | null>(null);
   const {
+    body,
     setBody,
+    setEditorJson,
     content,
     frontmatter,
     setFrontmatter,
@@ -89,13 +96,28 @@ export function InactivePaneEditor({
     frontmatterRef,
     baseModifiedRef,
     setBody,
+    setEditorJson,
     setBaseModified,
     setStatus,
   });
 
   useEffect(() => {
     if (!editor || editor.isDestroyed) return;
+    const storage = editor.storage as unknown as {
+      markdown: { getMarkdown: () => string };
+    };
+    const appliedDocument = appliedDocumentRef.current;
+    if (
+      appliedDocument?.tabId === tabId &&
+      appliedDocument.path === path &&
+      storage.markdown.getMarkdown() === body
+    ) {
+      appliedDocumentRef.current = { tabId, path, body };
+      return;
+    }
+
     editor.commands.setContent(content, { emitUpdate: false });
+    appliedDocumentRef.current = { tabId, path, body };
     const runtime = ws.getState().getDocumentRuntime(tabId);
     if (runtime?.selection) {
       const max = Math.max(1, editor.state.doc.content.size - 1);
@@ -106,7 +128,7 @@ export function InactivePaneEditor({
     if (runtime?.scroll && scrollRef.current) {
       scrollRef.current.scrollTop = runtime.scroll.top;
     }
-  }, [content, editor, tabId, ws]);
+  }, [body, content, editor, path, tabId, ws]);
 
   const captureRuntime = useCallback((): DocumentRuntime | null => {
     if (!editor || editor.isDestroyed) return null;
@@ -128,6 +150,7 @@ export function InactivePaneEditor({
       tabId,
       path,
       body: nextBody,
+      editorJson: editor.getJSON(),
       frontmatter: frontmatterRef.current,
       baseModified: baseModifiedRef.current,
       status: saveStatus,

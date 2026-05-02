@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { preprocessMarkdown } from "@/lib/editor-preprocess";
+import type { JSONContent } from "@tiptap/core";
+import { preprocessMarkdownCached } from "@/lib/editor-preprocess";
 import { useActiveWorkspaceStore } from "@/lib/active-vault";
 import { ipc } from "@/lib/ipc";
 import { parseDocument } from "@/lib/markdown";
@@ -24,11 +25,15 @@ export function useInactivePaneDocumentLoader(path: string, tabId: string) {
     unknown
   > | null>(null);
   const [baseModified, setBaseModified] = useState<number | null>(null);
+  const [editorJson, setEditorJson] = useState<JSONContent | null>(null);
   const [status, setStatus] = useState<InactiveEditorStatus>("loading");
   const statusRef = useRef<InactiveEditorStatus>("loading");
   const frontmatterRef = useRef<Record<string, unknown> | null>(null);
   const baseModifiedRef = useRef<number | null>(null);
-  const content = useMemo(() => preprocessMarkdown(body), [body]);
+  const content = useMemo(
+    () => editorJson ?? preprocessMarkdownCached(body),
+    [body, editorJson],
+  );
 
   useEffect(() => {
     statusRef.current = status;
@@ -49,6 +54,7 @@ export function useInactivePaneDocumentLoader(path: string, tabId: string) {
       frontmatterRef.current = runtime.frontmatter;
       baseModifiedRef.current = runtime.baseModified;
       setBody(runtime.body);
+      setEditorJson(runtime.editorJson ?? null);
       setFrontmatter(runtime.frontmatter);
       setBaseModified(runtime.baseModified);
       setStatus(inactiveStatusFromSaveStatus(runtime.status));
@@ -67,6 +73,7 @@ export function useInactivePaneDocumentLoader(path: string, tabId: string) {
         frontmatterRef.current = parsed.frontmatter;
         baseModifiedRef.current = file.modified;
         setBody(parsed.body);
+        setEditorJson(null);
         setFrontmatter(parsed.frontmatter);
         setBaseModified(file.modified);
         setStatus("ready");
@@ -85,6 +92,7 @@ export function useInactivePaneDocumentLoader(path: string, tabId: string) {
         if (cancelled) return;
         console.error("inactive pane editor failed", e);
         setBody("");
+        setEditorJson(null);
         frontmatterRef.current = null;
         baseModifiedRef.current = null;
         setFrontmatter(null);
@@ -99,6 +107,8 @@ export function useInactivePaneDocumentLoader(path: string, tabId: string) {
   return {
     body,
     setBody,
+    editorJson,
+    setEditorJson,
     content,
     frontmatter,
     setFrontmatter,

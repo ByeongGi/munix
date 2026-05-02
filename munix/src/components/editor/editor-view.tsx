@@ -22,11 +22,12 @@ import { BlockMenu } from "@/components/editor/block-menu";
 import { DragHandle } from "@tiptap/extension-drag-handle-react";
 import { GripVertical } from "lucide-react";
 import { useKeymapMatcher } from "@/hooks/use-keymap";
-import { preprocessMarkdown } from "@/lib/editor-preprocess";
+import { preprocessMarkdownCached } from "@/lib/editor-preprocess";
 import {
   focusEditorEndOnEmptySurface,
   focusEditorStartOnNextFrame,
 } from "@/components/editor/editor-focus";
+import type { JSONContent } from "@tiptap/core";
 import type {
   DocumentRuntime,
   ScrollRuntimeState,
@@ -114,6 +115,17 @@ function restoreScrollAnchor(
   const currentOffsetTop = dom.getBoundingClientRect().top - containerTop;
   scrollEl.scrollTop += currentOffsetTop - scroll.anchorOffsetTop;
   return true;
+}
+
+function getRuntimeEditorJson(
+  runtime: DocumentRuntime | null,
+  path: string | null,
+  body: string,
+): JSONContent | null {
+  if (!runtime || !path) return null;
+  if (runtime.path !== path || runtime.externalModified) return null;
+  if (runtime.body !== body) return null;
+  return runtime.editorJson ?? null;
 }
 
 function scheduleScrollAnchorRestore(
@@ -288,6 +300,7 @@ export function EditorView({ className }: EditorViewProps) {
         baseModified: store.baseModified,
         status,
         selection,
+        editorJson: editor.getJSON(),
         scroll: captureScrollAnchor(editor, scrollRef.current),
         dirty: status.kind === "dirty" || status.kind === "conflict",
         lastAccessedAt: Date.now(),
@@ -401,9 +414,25 @@ export function EditorView({ className }: EditorViewProps) {
       appliedSourceVersionRef.current = sourceVersion;
       const applySource = () => {
         if (cancelled || editor.isDestroyed) return;
-        editor.commands.setContent(preprocessMarkdown(body), {
-          emitUpdate: false,
-        });
+        const runtime = ws.getState().documentRuntimes[currentTabId ?? ""];
+        const runtimeJson = getRuntimeEditorJson(
+          runtime ?? null,
+          currentPath,
+          body,
+        );
+        try {
+          editor.commands.setContent(
+            runtimeJson ?? preprocessMarkdownCached(body),
+            {
+              emitUpdate: false,
+            },
+          );
+        } catch (error) {
+          if (!runtimeJson) throw error;
+          editor.commands.setContent(preprocessMarkdownCached(body), {
+            emitUpdate: false,
+          });
+        }
         setIsHydrating(false);
         const handledSearch = runPendingSearch();
         if (!handledSearch && !hasPendingSearch && currentPath) {

@@ -190,6 +190,23 @@ export const SearchHighlight = Extension.create({
               return prev;
             }
 
+            if (!query) {
+              if (
+                prev.query === "" &&
+                prev.matches.length === 0 &&
+                prev.currentIndex === 0
+              ) {
+                return prev;
+              }
+              return {
+                query: "",
+                caseInsensitive,
+                matches: [],
+                currentIndex: 0,
+                decorations: DecorationSet.empty,
+              };
+            }
+
             const matches = findMatches(newState.doc, query, caseInsensitive);
             const safeIndex =
               matches.length === 0

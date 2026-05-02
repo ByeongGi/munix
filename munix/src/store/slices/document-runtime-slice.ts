@@ -1,4 +1,5 @@
 import type { StateCreator } from "zustand";
+import type { JSONContent } from "@tiptap/core";
 
 import type { SaveStatus } from "./editor-slice";
 
@@ -17,6 +18,7 @@ export interface DocumentRuntime {
   tabId: string;
   path: string;
   body: string;
+  editorJson?: JSONContent;
   frontmatter: Record<string, unknown> | null;
   baseModified: number | null;
   status: SaveStatus;
