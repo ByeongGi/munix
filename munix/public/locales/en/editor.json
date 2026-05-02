@@ -101,7 +101,7 @@
   },
   "documentLoading": {
     "title": "Loading document",
-    "description": "Preparing a large document."
+    "description": "Preparing the document contents."
   },
   "mermaid": {
     "edit": "Edit Mermaid",

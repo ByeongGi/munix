@@ -6,6 +6,10 @@ import { open as openDialog } from "@tauri-apps/plugin-dialog";
 import { useVaultDockStore } from "@/store/vault-dock-store";
 import { useVaultStore } from "@/store/vault-store";
 import { ipc } from "@/lib/ipc";
+import {
+  requestCloseContextMenus,
+  subscribeContextMenuClose,
+} from "@/lib/context-menu-coordinator";
 import type { VaultInfo } from "@/types/ipc";
 import { cn } from "@/lib/cn";
 import {
@@ -36,9 +40,11 @@ export function VaultDock({ onOpenSwitcher }: VaultDockProps) {
   useEffect(() => {
     if (!menu) return;
     const close = () => setMenu(null);
+    const unsubscribeContextMenuClose = subscribeContextMenuClose(close);
     window.addEventListener("click", close);
     window.addEventListener("contextmenu", close, { once: true });
     return () => {
+      unsubscribeContextMenuClose();
       window.removeEventListener("click", close);
       window.removeEventListener("contextmenu", close);
     };
@@ -121,6 +127,7 @@ export function VaultDock({ onOpenSwitcher }: VaultDockProps) {
           onClick={onOpenSwitcher}
           onContextMenu={(e) => {
             e.preventDefault();
+            requestCloseContextMenus();
             setMenu({ vault: activeVault, x: e.clientX, y: e.clientY });
           }}
           title={`${activeVault.name}\n${activeVault.root}`}

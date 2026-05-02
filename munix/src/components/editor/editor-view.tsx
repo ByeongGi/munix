@@ -5,7 +5,6 @@ import {
   type JSONContent,
 } from "@tiptap/core";
 import {
-  startTransition,
   useCallback,
   useEffect,
   useLayoutEffect,
@@ -30,6 +29,7 @@ import { DragHandle } from "@tiptap/extension-drag-handle-react";
 import { GripVertical, LoaderCircle } from "lucide-react";
 import { useKeymapMatcher } from "@/hooks/use-keymap";
 import { preprocessMarkdownCached } from "@/lib/editor-preprocess";
+import { requestCloseContextMenus } from "@/lib/context-menu-coordinator";
 import {
   focusEditorEndOnEmptySurface,
   focusEditorStartOnNextFrame,
@@ -43,26 +43,9 @@ const DEFER_DOCUMENT_HYDRATION_MIN_LENGTH = 80_000;
 const SCROLL_RESTORE_MAX_ATTEMPTS = 3;
 const SCROLL_RESTORE_OBSERVER_MS = 1200;
 const LIVE_EDITOR_CACHE_LIMIT = 2;
-const DOCUMENT_LOADING_DELAY_MS = 350;
 
 interface EditorViewProps {
   className?: string;
-}
-
-function useDelayedVisible(active: boolean, delayMs: number): boolean {
-  const [visible, setVisible] = useState(false);
-
-  useEffect(() => {
-    if (!active) {
-      setVisible(false);
-      return;
-    }
-
-    const timer = window.setTimeout(() => setVisible(true), delayMs);
-    return () => window.clearTimeout(timer);
-  }, [active, delayMs]);
-
-  return visible;
 }
 
 function normalizeSourceLine(line: string): string {
@@ -326,6 +309,7 @@ export function EditorView({ className }: EditorViewProps) {
       e.stopPropagation();
       const pos = blockPosRef.current;
       if (pos == null) return;
+      requestCloseContextMenus();
       const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
       setBlockMenu({
         pos,
@@ -374,11 +358,7 @@ export function EditorView({ className }: EditorViewProps) {
     [placeholder],
   );
   const editor = useLiveEditor(currentTabId, currentPath, editorOptions);
-  const showOpeningLoading = useDelayedVisible(
-    isOpening,
-    DOCUMENT_LOADING_DELAY_MS,
-  );
-  const showDocumentLoading = isHydrating || showOpeningLoading;
+  const showDocumentLoading = !editor || isOpening || isHydrating;
   const handleEditorEmptyAreaMouseDown = useCallback(
     (event: React.MouseEvent<HTMLElement>) => {
       focusEditorEndOnEmptySurface(editor, event);
@@ -533,15 +513,26 @@ export function EditorView({ className }: EditorViewProps) {
 
     if (appliedSourceVersionRef.current !== sourceVersion) {
       appliedSourceVersionRef.current = sourceVersion;
+      setIsHydrating(true);
+
+      const finishHydratingAfterPaint = () => {
+        if (frameId) window.cancelAnimationFrame(frameId);
+        frameId = window.requestAnimationFrame(() => {
+          frameId = window.requestAnimationFrame(() => {
+            if (!cancelled) setIsHydrating(false);
+          });
+        });
+      };
+
       const applySource = () => {
         if (cancelled || editor.isDestroyed) return;
         const finishSourceApply = () => {
-          setIsHydrating(false);
           const handledSearch = runPendingSearch();
           if (!handledSearch && !hasPendingSearch && currentPath) {
             const restored = restoreRuntimeViewState();
             if (!restored) focusEditorStartOnNextFrame(editor);
           }
+          finishHydratingAfterPaint();
         };
         const storage = editor.storage as unknown as {
           markdown: { getMarkdown: () => string };
@@ -576,10 +567,11 @@ export function EditorView({ className }: EditorViewProps) {
         applySource();
         return () => {
           cancelled = true;
+          if (frameId) window.cancelAnimationFrame(frameId);
+          if (timerId) window.clearTimeout(timerId);
         };
       }
 
-      startTransition(() => setIsHydrating(true));
       frameId = window.requestAnimationFrame(() => {
         timerId = window.setTimeout(applySource, 0);
       });
@@ -715,10 +707,19 @@ export function EditorView({ className }: EditorViewProps) {
         <div
           role="status"
           aria-live="polite"
-          className="pointer-events-none absolute top-3 left-1/2 z-30 flex -translate-x-1/2 items-center gap-2 rounded-md border border-[var(--color-border-primary)] bg-[var(--color-bg-secondary)] px-3 py-1.5 text-xs text-[var(--color-text-secondary)] shadow-[var(--shadow-popover)]"
+          className="pointer-events-none absolute inset-0 z-30 flex items-center justify-center bg-[var(--color-editor-bg)]"
         >
-          <LoaderCircle className="h-3.5 w-3.5 animate-spin text-[var(--color-text-tertiary)]" />
-          <span>{t("editor:documentLoading.title")}</span>
+          <div className="flex items-center gap-3 rounded-md border border-[var(--color-border-primary)] bg-[var(--color-bg-secondary-solid)] px-4 py-3 text-sm text-[var(--color-text-secondary)] shadow-[var(--shadow-popover)]">
+            <LoaderCircle className="h-4 w-4 animate-spin text-[var(--color-text-tertiary)]" />
+            <div className="flex flex-col gap-0.5">
+              <span className="font-medium text-[var(--color-text-primary)]">
+                {t("editor:documentLoading.title")}
+              </span>
+              <span className="text-xs text-[var(--color-text-tertiary)]">
+                {t("editor:documentLoading.description")}
+              </span>
+            </div>
+          </div>
         </div>
       ) : null}
       <div

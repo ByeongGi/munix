@@ -4,6 +4,10 @@ import {
   PaneActionsButton,
   PaneActionsMenu,
 } from "@/components/workspace/pane/pane-context-menu";
+import {
+  requestCloseContextMenus,
+  subscribeContextMenuClose,
+} from "@/lib/context-menu-coordinator";
 
 type Translate = (key: string) => string;
 
@@ -33,10 +37,12 @@ export function TabPaneActions({
     if (!menu) return;
 
     const close = () => setMenu(null);
+    const unsubscribeContextMenuClose = subscribeContextMenuClose(close);
     window.addEventListener("click", close);
     window.addEventListener("contextmenu", close, { once: true });
 
     return () => {
+      unsubscribeContextMenuClose();
       window.removeEventListener("click", close);
       window.removeEventListener("contextmenu", close);
     };
@@ -53,6 +59,7 @@ export function TabPaneActions({
         label={label}
         onClick={(event) => {
           event.stopPropagation();
+          requestCloseContextMenus();
           const rect = event.currentTarget.getBoundingClientRect();
           setMenu({ x: rect.left, y: rect.bottom + 4 });
         }}

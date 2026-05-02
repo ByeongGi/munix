@@ -8,6 +8,10 @@ import {
   revealTabInFileTree,
   revealTabInSystem,
 } from "@/components/tab/tab-actions";
+import {
+  requestCloseContextMenus,
+  subscribeContextMenuClose,
+} from "@/lib/context-menu-coordinator";
 import { TabContextMenu } from "@/components/tab/tab-context-menu";
 import type { Tab } from "@/store/tab-store";
 
@@ -45,10 +49,12 @@ export function useTabContextMenu({
     if (!menu) return;
 
     const close = () => setMenu(null);
+    const unsubscribeContextMenuClose = subscribeContextMenuClose(close);
     window.addEventListener("click", close);
     window.addEventListener("contextmenu", close, { once: true });
 
     return () => {
+      unsubscribeContextMenuClose();
       window.removeEventListener("click", close);
       window.removeEventListener("contextmenu", close);
     };
@@ -59,6 +65,7 @@ export function useTabContextMenu({
   const openMenu = (event: MouseEvent<HTMLElement>, tab: Tab) => {
     event.preventDefault();
     event.stopPropagation();
+    requestCloseContextMenus();
     setMenu({ x: event.clientX, y: event.clientY, tab });
   };
 

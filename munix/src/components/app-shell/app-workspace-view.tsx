@@ -138,7 +138,6 @@ export function AppWorkspaceView({
               title={titleFromPath(currentPath)}
               subtitle={info.name}
               onQuickOpen={onQuickOpen}
-              onNewFile={() => void handleCreateFileAt("")}
               onOpenTerminal={openTerminalTab}
             />
           ) : null}

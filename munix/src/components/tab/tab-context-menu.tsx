@@ -49,7 +49,7 @@ export function TabContextMenu({
   const isEmptyTab = tab.id === EMPTY_TAB_ID;
 
   return (
-    <ContextMenuSurface x={x} y={y}>
+    <ContextMenuSurface x={x} y={y} estimatedHeight={420}>
       <ContextMenuItem
         label={t("tabs:contextMenu.close")}
         shortcut="⌘W"

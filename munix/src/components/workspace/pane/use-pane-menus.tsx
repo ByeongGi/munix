@@ -1,6 +1,10 @@
 import { useEffect, useState, type MouseEvent } from "react";
 import type { TFunction } from "i18next";
 
+import {
+  requestCloseContextMenus,
+  subscribeContextMenuClose,
+} from "@/lib/context-menu-coordinator";
 import { ipc } from "@/lib/ipc";
 import { makeTabId } from "@/store/slices/tab-slice";
 import type { PaneNode } from "@/store/workspace-types";
@@ -65,10 +69,12 @@ export function usePaneMenus({
       setPaneMenu(null);
       setTabMenu(null);
     };
+    const unsubscribeContextMenuClose = subscribeContextMenuClose(close);
     window.addEventListener("click", close);
     window.addEventListener("contextmenu", close, { once: true });
 
     return () => {
+      unsubscribeContextMenuClose();
       window.removeEventListener("click", close);
       window.removeEventListener("contextmenu", close);
     };
@@ -76,6 +82,7 @@ export function usePaneMenus({
 
   const openPaneMenu = (event: MouseEvent<HTMLButtonElement>) => {
     event.stopPropagation();
+    requestCloseContextMenus();
     const rect = event.currentTarget.getBoundingClientRect();
     setPaneMenu({ x: rect.left, y: rect.bottom + 4 });
   };
@@ -248,6 +255,10 @@ export function usePaneMenus({
       </>
     ),
     openPaneMenu,
-    openTabMenu: setTabMenu,
+    openTabMenu: (state: TabMenuState) => {
+      requestCloseContextMenus();
+      setPaneMenu(null);
+      setTabMenu(state);
+    },
   };
 }

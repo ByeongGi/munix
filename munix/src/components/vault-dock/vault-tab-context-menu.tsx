@@ -1,6 +1,8 @@
 import { Copy, ExternalLink, PinOff, Pin, Trash2, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { ContextMenuPortal } from "@/components/ui/context-menu-portal";
 import { cn } from "@/lib/cn";
+import { getContextMenuSurfaceStyle } from "@/lib/context-menu-position";
 import type { VaultInfo } from "@/types/ipc";
 
 export type VaultTabAction =
@@ -29,49 +31,58 @@ export function VaultTabContextMenu({
   const { t } = useTranslation(["vault-dock", "common"]);
 
   return (
-    <div
-      role="menu"
-      onClick={(e) => e.stopPropagation()}
-      className={cn(
-        "fixed z-50 min-w-[200px] rounded-md border p-1 shadow-lg",
-        "border-[var(--color-border-primary)] bg-[var(--color-bg-secondary-solid)]",
-      )}
-      style={{ left: x, top: y }}
-    >
-      <MenuItem
-        onClick={() => onAction("togglePin")}
-        icon={
-          pinned ? (
-            <PinOff className="h-3.5 w-3.5" />
-          ) : (
-            <Pin className="h-3.5 w-3.5" />
-          )
-        }
-        label={pinned ? t("vault-dock:menu.unpin") : t("vault-dock:menu.pin")}
-      />
-      <MenuItem
-        onClick={() => onAction("copyPath")}
-        icon={<Copy className="h-3.5 w-3.5" />}
-        label={t("vault-dock:menu.copyPath")}
-      />
-      <MenuItem
-        onClick={() => onAction("revealInSystem")}
-        icon={<ExternalLink className="h-3.5 w-3.5" />}
-        label={t("vault-dock:menu.revealInSystem")}
-      />
-      <Divider />
-      <MenuItem
-        onClick={() => onAction("close")}
-        icon={<X className="h-3.5 w-3.5" />}
-        label={t("vault-dock:menu.close")}
-      />
-      <MenuItem
-        onClick={() => onAction("removeFromHistory")}
-        icon={<Trash2 className="h-3.5 w-3.5" />}
-        label={t("vault-dock:menu.removeFromHistory")}
-        danger
-      />
-    </div>
+    <ContextMenuPortal>
+      <div
+        role="menu"
+        onClick={(e) => e.stopPropagation()}
+        className={cn(
+          "munix-context-menu fixed z-50 min-w-[200px] rounded-md border p-1 shadow-lg",
+          "border-[var(--color-border-primary)] bg-[var(--color-context-menu-bg)]",
+        )}
+        style={getContextMenuSurfaceStyle({
+          x,
+          y,
+          minWidth: 200,
+          estimatedHeight: 180,
+        })}
+      >
+        <MenuItem
+          onClick={() => onAction("togglePin")}
+          icon={
+            pinned ? (
+              <PinOff className="h-3.5 w-3.5" />
+            ) : (
+              <Pin className="h-3.5 w-3.5" />
+            )
+          }
+          label={
+            pinned ? t("vault-dock:menu.unpin") : t("vault-dock:menu.pin")
+          }
+        />
+        <MenuItem
+          onClick={() => onAction("copyPath")}
+          icon={<Copy className="h-3.5 w-3.5" />}
+          label={t("vault-dock:menu.copyPath")}
+        />
+        <MenuItem
+          onClick={() => onAction("revealInSystem")}
+          icon={<ExternalLink className="h-3.5 w-3.5" />}
+          label={t("vault-dock:menu.revealInSystem")}
+        />
+        <Divider />
+        <MenuItem
+          onClick={() => onAction("close")}
+          icon={<X className="h-3.5 w-3.5" />}
+          label={t("vault-dock:menu.close")}
+        />
+        <MenuItem
+          onClick={() => onAction("removeFromHistory")}
+          icon={<Trash2 className="h-3.5 w-3.5" />}
+          label={t("vault-dock:menu.removeFromHistory")}
+          danger
+        />
+      </div>
+    </ContextMenuPortal>
   );
 }
 
@@ -92,11 +103,11 @@ function MenuItem({
       role="menuitem"
       onClick={onClick}
       className={cn(
-        "flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-sm",
+        "munix-context-menu-item flex w-full items-center gap-2 rounded px-2 py-1.5 text-left",
         "hover:bg-[var(--color-bg-hover)]",
         danger
-          ? "text-[var(--color-text-primary)]"
-          : "text-[var(--color-text-secondary)]",
+          ? "text-[var(--color-context-menu-danger)]"
+          : "text-[var(--color-context-menu-text)]",
       )}
     >
       {icon}

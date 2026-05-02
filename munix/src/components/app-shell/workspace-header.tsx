@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next";
-import { MoreHorizontal, Plus, Search, TerminalIcon } from "lucide-react";
+import { Search, TerminalIcon } from "lucide-react";
 
 import { IconButton } from "@/components/ui/icon-button";
 import { handleWindowTitleMouseDown } from "@/lib/window-drag";
@@ -8,13 +8,11 @@ export function WorkspaceHeader({
   title,
   subtitle,
   onQuickOpen,
-  onNewFile,
   onOpenTerminal,
 }: {
   title: string;
   subtitle: string;
   onQuickOpen: () => void;
-  onNewFile: () => void;
   onOpenTerminal: () => void;
 }) {
   const { t } = useTranslation("app");
@@ -40,21 +38,10 @@ export function WorkspaceHeader({
           icon={<Search className="h-3.5 w-3.5" />}
         />
         <IconButton
-          onClick={onNewFile}
-          label={t("header.newFile")}
-          size="sm"
-          icon={<Plus className="h-3.5 w-3.5" />}
-        />
-        <IconButton
           onClick={onOpenTerminal}
           label={t("terminal.toggle")}
           size="sm"
           icon={<TerminalIcon className="h-3.5 w-3.5" />}
-        />
-        <IconButton
-          label={t("workspace.more")}
-          size="sm"
-          icon={<MoreHorizontal className="h-3.5 w-3.5" />}
         />
       </div>
     </div>

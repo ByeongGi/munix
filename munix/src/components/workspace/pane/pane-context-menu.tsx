@@ -1,7 +1,9 @@
 import { MoreHorizontal } from "lucide-react";
 import type { MouseEvent, ReactNode } from "react";
 
+import { ContextMenuPortal } from "@/components/ui/context-menu-portal";
 import { cn } from "@/lib/cn";
+import { getContextMenuSurfaceStyle } from "@/lib/context-menu-position";
 
 type Translate = (key: string) => string;
 
@@ -9,25 +11,34 @@ export function ContextMenuSurface({
   x,
   y,
   minWidth = 180,
+  estimatedHeight,
   children,
 }: {
   x: number;
   y: number;
   minWidth?: number;
+  estimatedHeight?: number;
   children: ReactNode;
 }) {
   return (
-    <div
-      role="menu"
-      onClick={(e) => e.stopPropagation()}
-      className={cn(
-        "fixed z-50 rounded-md border p-1 shadow-lg",
-        "border-[var(--color-border-primary)] bg-[var(--color-bg-secondary-solid)]",
-      )}
-      style={{ top: y, left: x, minWidth }}
-    >
-      {children}
-    </div>
+    <ContextMenuPortal>
+      <div
+        role="menu"
+        onClick={(e) => e.stopPropagation()}
+        className={cn(
+          "munix-context-menu fixed z-50 rounded-md border p-1 shadow-lg",
+          "border-[var(--color-border-primary)] bg-[var(--color-context-menu-bg)]",
+        )}
+        style={getContextMenuSurfaceStyle({
+          x,
+          y,
+          minWidth,
+          estimatedHeight,
+        })}
+      >
+        {children}
+      </div>
+    </ContextMenuPortal>
   );
 }
 
@@ -52,15 +63,17 @@ export function ContextMenuItem({
       disabled={disabled}
       onClick={onClick}
       className={cn(
-        "flex w-full items-center justify-between gap-3 rounded px-2 py-1.5 text-left text-xs",
+        "munix-context-menu-item flex w-full items-center justify-between gap-3 rounded px-2 py-1.5 text-left",
         disabled
-          ? "cursor-default text-[var(--color-text-tertiary)] opacity-60"
-          : "text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-hover)]",
+          ? "cursor-default text-[var(--color-context-menu-disabled)]"
+          : "text-[var(--color-context-menu-text)] hover:bg-[var(--color-bg-hover)]",
       )}
     >
       <span>{label}</span>
       {shortcut ? (
-        <span className="text-[var(--color-text-tertiary)]">{shortcut}</span>
+        <span className="munix-context-menu-shortcut text-[var(--color-context-menu-muted)]">
+          {shortcut}
+        </span>
       ) : null}
     </button>
   );
@@ -107,7 +120,7 @@ export function PaneActionsMenu({
   onClosePane: () => void;
 }) {
   return (
-    <ContextMenuSurface x={x} y={y} minWidth={112}>
+    <ContextMenuSurface x={x} y={y} minWidth={112} estimatedHeight={112}>
       <ContextMenuItem
         label={t("tabs:contextMenu.splitRight")}
         onClick={onSplitRight}
@@ -163,7 +176,7 @@ export function TabActionsMenu({
   pinned: boolean;
 }) {
   return (
-    <ContextMenuSurface x={x} y={y}>
+    <ContextMenuSurface x={x} y={y} estimatedHeight={380}>
       <ContextMenuItem label={t("tabs:contextMenu.close")} onClick={onClose} />
       <ContextMenuItem
         label={t("tabs:contextMenu.closeOthers")}

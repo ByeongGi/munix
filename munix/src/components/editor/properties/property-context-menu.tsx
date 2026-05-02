@@ -1,7 +1,13 @@
 import { useEffect, useRef, useState } from "react";
 import { Check } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { ContextMenuPortal } from "@/components/ui/context-menu-portal";
 import { cn } from "@/lib/cn";
+import {
+  requestCloseContextMenus,
+  subscribeContextMenuClose,
+} from "@/lib/context-menu-coordinator";
+import { getContextMenuSurfaceStyle } from "@/lib/context-menu-position";
 import { KNOWN_PROPERTY_TYPES, type PropertyType } from "@/types/frontmatter";
 
 const TAGS_KEYS = new Set(["tags", "tag", "aliases", "alias"]);
@@ -44,9 +50,13 @@ export function PropertyContextMenu({
     const keyHandler = (e: KeyboardEvent) => {
       if (e.key === "Escape") setPos(null);
     };
+    const unsubscribeContextMenuClose = subscribeContextMenuClose(() =>
+      setPos(null),
+    );
     document.addEventListener("mousedown", handler);
     document.addEventListener("keydown", keyHandler);
     return () => {
+      unsubscribeContextMenuClose();
       document.removeEventListener("mousedown", handler);
       document.removeEventListener("keydown", keyHandler);
     };
@@ -54,6 +64,7 @@ export function PropertyContextMenu({
 
   const handleContextMenu = (e: React.MouseEvent) => {
     e.preventDefault();
+    requestCloseContextMenus();
     setPos({ x: e.clientX, y: e.clientY });
   };
 
@@ -63,54 +74,60 @@ export function PropertyContextMenu({
         {children}
       </div>
       {pos && (
-        <div
-          ref={menuRef}
-          style={{ left: pos.x, top: pos.y }}
-          className={cn(
-            "fixed z-50 min-w-[180px] rounded-md border py-1 shadow-lg",
-            "border-[var(--color-border-primary)] bg-[var(--color-bg-secondary-solid)]",
-            "text-xs",
-          )}
-        >
-          <div className="px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-[var(--color-text-tertiary)]">
-            {t("properties:menu.type")}
-          </div>
-          {allowedTypes.map((type) => (
+        <ContextMenuPortal>
+          <div
+            ref={menuRef}
+            style={getContextMenuSurfaceStyle({
+              x: pos.x,
+              y: pos.y,
+              minWidth: 180,
+              estimatedHeight: 260,
+            })}
+            className={cn(
+              "munix-context-menu fixed z-50 min-w-[180px] rounded-md border py-1 shadow-lg",
+              "border-[var(--color-border-primary)] bg-[var(--color-context-menu-bg)]",
+            )}
+          >
+            <div className="munix-context-menu-section px-2 py-1 font-semibold uppercase text-[var(--color-context-menu-muted)]">
+              {t("properties:menu.type")}
+            </div>
+            {allowedTypes.map((type) => (
+              <button
+                key={type}
+                type="button"
+                onClick={() => {
+                  onTypeChange(type);
+                  setPos(null);
+                }}
+                className={cn(
+                  "munix-context-menu-item flex w-full items-center gap-2 px-2 py-1",
+                  "hover:bg-[var(--color-bg-hover)]",
+                  "text-[var(--color-context-menu-text)]",
+                )}
+              >
+                <span className="w-3">
+                  {currentType === type && <Check className="h-3 w-3" />}
+                </span>
+                {t(`properties:types.${type}`, { defaultValue: type })}
+              </button>
+            ))}
+            <div className="my-1 border-t border-[var(--color-border-primary)]" />
             <button
-              key={type}
               type="button"
               onClick={() => {
-                onTypeChange(type);
+                onDelete();
                 setPos(null);
               }}
               className={cn(
-                "flex w-full items-center gap-2 px-2 py-1",
+                "munix-context-menu-item flex w-full items-center px-2 py-1",
                 "hover:bg-[var(--color-bg-hover)]",
-                "text-[var(--color-text-primary)]",
+                "text-[var(--color-context-menu-danger)]",
               )}
             >
-              <span className="w-3">
-                {currentType === type && <Check className="h-3 w-3" />}
-              </span>
-              {t(`properties:types.${type}`, { defaultValue: type })}
+              {t("properties:menu.delete")}
             </button>
-          ))}
-          <div className="my-1 border-t border-[var(--color-border-primary)]" />
-          <button
-            type="button"
-            onClick={() => {
-              onDelete();
-              setPos(null);
-            }}
-            className={cn(
-              "flex w-full items-center px-2 py-1",
-              "hover:bg-[var(--color-bg-hover)]",
-              "text-[var(--color-text-primary)]",
-            )}
-          >
-            {t("properties:menu.delete")}
-          </button>
-        </div>
+          </div>
+        </ContextMenuPortal>
       )}
     </>
   );

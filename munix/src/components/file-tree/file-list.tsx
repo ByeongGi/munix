@@ -2,6 +2,10 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Virtuoso, type VirtuosoHandle } from "react-virtuoso";
 import type { FileNode } from "@/types/ipc";
 import { cn } from "@/lib/cn";
+import {
+  requestCloseContextMenus,
+  subscribeContextMenuClose,
+} from "@/lib/context-menu-coordinator";
 import { ContextMenu } from "./context-menu";
 import { FileTreeEmptyPlaceholder } from "./file-list-empty-placeholder";
 import { FlatTreeRow } from "./file-tree-inner";
@@ -28,9 +32,11 @@ export function FileList(props: FileListProps) {
   useEffect(() => {
     if (!menu) return;
     const close = () => setMenu(null);
+    const unsubscribeContextMenuClose = subscribeContextMenuClose(close);
     window.addEventListener("click", close);
     window.addEventListener("contextmenu", close, { once: true });
     return () => {
+      unsubscribeContextMenuClose();
       window.removeEventListener("click", close);
       window.removeEventListener("contextmenu", close);
     };
@@ -68,6 +74,7 @@ export function FileList(props: FileListProps) {
     (e: React.MouseEvent, node: FileNode) => {
       e.preventDefault();
       e.stopPropagation();
+      requestCloseContextMenus();
       const isSelected = selectedPaths.has(node.path);
       if (!isSelected) {
         setSelectedPaths(new Set([node.path]));
