@@ -4,6 +4,7 @@ import { useVaultStore } from "@/store/vault-store";
 import { useVaultDockStore } from "@/store/vault-dock-store";
 import { getWorkspaceStore } from "@/store/workspace-registry";
 import { ipc } from "@/lib/ipc";
+import { isTauriRuntime } from "@/lib/tauri-runtime";
 
 interface FileChangeEvent {
   vaultId: string;
@@ -24,6 +25,8 @@ interface FileChangeEvent {
  */
 export function useVaultWatcher(): void {
   useEffect(() => {
+    if (!isTauriRuntime()) return;
+
     let unlisten: UnlistenFn | null = null;
     let cancelled = false;
 
@@ -96,13 +99,19 @@ export function useVaultWatcher(): void {
           }
         }
       }
-    }).then((u) => {
-      if (cancelled) {
-        u();
-      } else {
-        unlisten = u;
-      }
-    });
+    })
+      .then((u) => {
+        if (cancelled) {
+          u();
+        } else {
+          unlisten = u;
+        }
+      })
+      .catch((e) => {
+        if (import.meta.env.DEV) {
+          console.warn("[vault-watcher] listen failed", e);
+        }
+      });
 
     return () => {
       cancelled = true;

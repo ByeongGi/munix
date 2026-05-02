@@ -1,13 +1,19 @@
 # Munix — 수동 검증 체크리스트
 
-> 빌드는 통과했지만 실제 Tauri 창에서 검증되지 않은 항목들.
-> `pnpm tauri dev` 후 각 항목을 직접 확인하면서 체크.
+> **상태:** 자동화 전환 대기열.
+> 최종 목표는 이 문서의 모든 회귀 항목을 자동화 테스트로 치환하는 것이다.
+> 새 수동 회귀 항목은 추가하지 않는다. 불가피하게 남길 경우 자동화 대상 레이어와 만료 조건을 같이 적는다.
+>
+> 현재 남은 수동 테스트 부채는 `cd munix && pnpm test:manual-debt`로 집계한다.
+> 전환 기준은 [test-automation-strategy.md](./test-automation-strategy.md)를 따른다.
+>
+> `pnpm tauri dev` 후 직접 확인하는 방식은 임시 fallback이다.
 > 버그 발견 시 [issues-log.md](./issues-log.md)에 기록.
 >
 > **검증 완료된 항목은 본 문서에서 제거됨** — 회귀 검증 필요 시 git history (`git log --oneline`) 또는 [issues-log.md](./issues-log.md) 참조.
 
 **사용 환경:** macOS (Tauri 2 + WKWebView)
-**빌드 검증 도구:** `pnpm exec tsc --noEmit`, `cargo check`
+**자동화 게이트:** `pnpm check`, `pnpm test:render`, `pnpm test:manual-debt`
 
 범례: 🔴 미검증 · ⚠️ 알려진 이슈
 
@@ -15,12 +21,14 @@
 
 ## 0. 환경 · 부팅
 
-- [ ] 🔴 첫 실행: 폴더 선택 화면 → 폴더 열기 → vault 활성화
+- [ ] 🔴 첫 실행: 폴더 열기 버튼 → native folder picker → vault 활성화
 - [x] ✅ 첫 실행 화면: "샘플 vault 만들기" → Documents/Munix Sample Vault 생성 → 샘플 노트 자동 생성 → Welcome.md 열림 (2026-04-26)
 - [ ] 🔴 두 번째 실행 이후: `munix.json` 의 마지막 active vault 자동 reopen (open: true 인 다른 vault 도 모두 reopen — ADR-032)
-- [ ] 🔴 vault 폴더가 외부에서 삭제된 후 재실행 → reopen 실패 catch 에서 entry 가 closed 로 옮겨짐 → Welcome history 에 ⚠ FolderX + "없음" 배지 표시
+- [ ] 🔴 vault 폴더가 외부에서 삭제된 후 재실행 → reopen 실패 catch 에서 entry 가 closed 로 옮겨짐
 - [ ] 🔴 폴더 선택 화면 "최근 vault" 섹션: 클릭 즉시 오픈, hover X 버튼으로 munix.json 에서 entry 제거 + trusted-vaults 도 같이 정리
 - [ ] 🔴 vault 열기 실패 시 해당 path 가 히스토리에서 자동 제거
+
+> 자동화 완료: no-vault picker 렌더, mock vault workspace 렌더, closed/missing recent vault disabled + "missing" 배지 표시.
 
 ### 0a. 멀티 vault (ADR-031, ADR-032)
 
@@ -64,6 +72,8 @@
 
 ## 4. 탭 시스템
 
+> 자동화 완료: tab helper 순수 로직(닫기/오른쪽 모두 닫기/모두 닫기/rename/remove/reorder)과 active pane 라우팅. 남은 항목은 실제 UI interaction.
+
 - [ ] 🔴 새 파일 → 새 탭 생성
 - [ ] 🔴 사이드바에서 클릭 → 새 탭 (또는 이미 열린 탭이면 활성)
 - [ ] 🔴 탭 클릭 → 활성, 닫기 버튼, 휠 클릭 닫기
@@ -93,6 +103,7 @@
 ### 8a. 인파일 (Mod+F) — ✅ 검증 완료
 
 ### 8b. Vault 전체 (Mod+Shift+F)
+
 - [ ] 🔴 🔄 재구성 버튼 동작 (코드 확인됨 — `search-panel.tsx:49-61`, 검증만 남음)
 - [ ] 🔴 watcher가 deleted/created/modified 이벤트로 인덱스 자동 증분 갱신 (수동 재구성 없이도 결과 갱신)
 - [ ] 🔴 정규식 모드 토글 (`Regex` 아이콘) — 활성 시 입력창 monospace, MiniSearch 우회하고 `searchRegex`로 직접 매칭. 잘못된 정규식이면 빨간 에러 메시지 표시
@@ -102,6 +113,8 @@
 - [ ] 🔴 검색 결과 이동 후 인파일 검색바가 열리고 Enter/Shift+Enter로 다음/이전 매치 이동
 
 ## 9. QuickOpen / Command Palette / 치트시트 / 설정
+
+> 자동화 완료: Command Palette prefix parser(`없음`, `>`, `#`, `@`, `:`)와 Markdown heading extraction. 남은 항목은 결과 렌더링과 Enter 실행 흐름.
 
 - [ ] 🔴 `Mod+P` QuickOpen — 빈 쿼리 시 최근 파일 우선
 - [ ] 🔴 결과 ↑↓ Enter Esc
@@ -192,7 +205,7 @@
 
 ## 17. 에디터 — Code block
 
-- [ ] 🔴 `/코드` 또는 `` ``` `` → 코드 블럭
+- [ ] 🔴 `/코드` 또는 ` ``` ` → 코드 블럭
 - [ ] 🔴 우상단 언어 드롭다운 — 변경 시 highlight 갱신
 - [ ] 🔴 호버 시 "복사" 버튼 등장 → 클릭 시 클립보드 복사 + "복사됨" 표시
 - [ ] 🔴 lowlight syntax highlight 적용
@@ -228,8 +241,8 @@
 ## 20.5 에디터 — Properties (Obsidian 호환) 🆕
 
 > 참조: [specs/frontmatter-properties-spec.md](./specs/frontmatter-properties-spec.md) §13, ADR-028 / ADR-029
+> 자동화 완료: `.obsidian/types.json` 이 없을 때 `resolve(field, value)` 휴리스틱 타입 추정(text/multitext/number/checkbox/date/datetime/tags/aliases).
 
-- [ ] 🔴 vault에 `.obsidian/types.json` 없음 → 휴리스틱 `resolve(field, value)`로 타입 추정 (text/multitext/number/checkbox/date/datetime)
 - [ ] 🔴 Property 행 우클릭 → 컨텍스트 메뉴 (타입 변경 / 필드 삭제) 표시. 더블클릭은 inline edit (컨텍스트 메뉴 안 열림)
 - [ ] 🔴 우클릭으로 타입 변경 → `.obsidian/types.json` 생성/갱신 + Obsidian에서 동일 타입 표시
 - [ ] 🔴 외부에서 `.obsidian/types.json` 수정 → watcher가 핫 리로드, UI에 즉시 반영
@@ -326,7 +339,7 @@
 ## 알려진 제약 (테스트 필요 X)
 
 - 표 컬럼 너비 — GFM 한계로 저장 안 됨 (Obsidian과 동일)
-- 단위 테스트 — 미작성 (Vitest, cargo test)
+- 남은 미체크 항목 — 자동화 전환 전까지의 테스트 부채로 취급
 - macOS 휴지통 "되돌리기" 메뉴 — NSFileManager 방식의 일부 케이스 제한 (Phase 6 서명 빌드 시 Finder 방식 재검토)
 
 ## 발견 시 보고 양식
@@ -346,6 +359,6 @@
 
 ---
 
-**문서 버전:** v1.2
+**문서 버전:** v1.3
 **작성일:** 2026-04-25
-**최근 업데이트:** 2026-04-26 — Onboarding 샘플 vault 검증 완료, §8b 검색 결과 line jump, §9 Command Palette prefix 모드 검증 항목 추가
+**최근 업데이트:** 2026-05-02 — 자동화 검증 완료 항목 정리(no-vault/mock workspace/missing recent vault UI, command palette parser, property type heuristic, tab helper 로직).

@@ -9,7 +9,7 @@ import type {
 } from "@/types/ipc";
 import type { TerminalCompletionSuggestion } from "@/types/terminal-completion";
 
-export const ipc = {
+const tauriIpc = {
   /**
    * vault 오픈. ADR-031 적용 — 응답에 `id` 포함.
    * `setActive` 기본 true: backend의 active vault 어댑터에 등록되어
@@ -151,6 +151,29 @@ export const ipc = {
       vaultId: vaultId ?? null,
     }),
 };
+
+export type IpcClient = typeof tauriIpc;
+
+let activeIpc: IpcClient = tauriIpc;
+
+export function setIpcClient(client: IpcClient): () => void {
+  const previous = activeIpc;
+  activeIpc = client;
+  return () => {
+    activeIpc = previous;
+  };
+}
+
+export function resetIpcClient(): void {
+  activeIpc = tauriIpc;
+}
+
+export const ipc: IpcClient = new Proxy({} as IpcClient, {
+  get(_target, prop: string | symbol) {
+    const value = activeIpc[prop as keyof IpcClient];
+    return typeof value === "function" ? value.bind(activeIpc) : value;
+  },
+});
 
 export interface VaultRegistryEntry {
   path: string;

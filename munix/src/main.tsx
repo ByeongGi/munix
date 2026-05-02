@@ -8,10 +8,13 @@ import { useSettingsStore } from "@/store/settings-store";
 import { Root } from "@/root";
 import { bootstrapVaultRegistry } from "@/lib/vault-registry";
 import { installDevErrorTrap } from "@/lib/dev-error-trap";
+import { isTauriRuntime } from "@/lib/tauri-runtime";
 
 // Rust 쪽 log 매크로(`info!`, `error!` 등) 출력을 webview console 로 포워드.
 // 실패해도 앱 부팅을 막지 않음 (browser 환경/플러그인 누락 대비).
-void attachConsole().catch(() => undefined);
+if (isTauriRuntime()) {
+  void attachConsole().catch(() => undefined);
+}
 
 if (import.meta.env.DEV) {
   installDevErrorTrap();

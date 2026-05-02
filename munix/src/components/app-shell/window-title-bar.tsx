@@ -1,9 +1,9 @@
 import { useTranslation } from "react-i18next";
-import { getCurrentWindow } from "@tauri-apps/api/window";
 import { PanelLeftClose, PanelLeftOpen } from "lucide-react";
 
 import { IconButton } from "@/components/ui/icon-button";
 import { cn } from "@/lib/cn";
+import { getAppWindow } from "@/lib/tauri-window";
 import { handleWindowTitleMouseDown } from "@/lib/window-drag";
 
 function WindowControl({
@@ -48,7 +48,7 @@ type AppTitleBarProps =
 
 export function AppTitleBar(props: AppTitleBarProps) {
   const { t } = useTranslation("app");
-  const win = getCurrentWindow();
+  const win = getAppWindow();
   const isWorkspace = props.variant === "workspace";
   const sidebarCollapsed = isWorkspace ? props.sidebarCollapsed : true;
   const sidebarToggleLabel = sidebarCollapsed
