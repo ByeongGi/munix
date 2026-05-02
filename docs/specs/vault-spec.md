@@ -656,7 +656,7 @@ async fn list_children(
 
 1. **검색 인덱스**: `.munix/index.db`를 SQLite로 할지, Tantivy의 자체 포맷으로 할지
 2. **이미지 미리보기 캐시**: `.munix/cache/thumbs/`에 생성 vs 매번 이미지 로드
-3. ~~**멀티 vault 전환**~~ → [ADR-031](../decisions.md#adr-031-멀티-vault-워크스페이스-cmux-스타일-좌측-세로-탭) 및 [multi-vault-spec.md](./multi-vault-spec.md)로 해소 (cmux 스타일 좌측 세로 탭 + 탭 → 새 창 승격, proposed)
+3. ~~**멀티 vault 전환**~~ → [ADR-031](../decisions.md#adr-031-멀티-vault-워크스페이스-cmux-스타일-좌측-세로-탭) 및 [multi-vault-spec.md](./multi-vault-spec.md)로 해소 (cmux 스타일 좌측 세로 탭 + workspace split 연계, accepted)
 4. **Drive 심볼릭 링크**: 사용자가 Obsidian의 vault를 연결한 경우 허용 여부
 5. **권한 요청 UX**: macOS의 폴더 접근 권한을 앱 초기화 시에 한 번에 받을 것인지
 
@@ -666,6 +666,6 @@ async fn list_children(
 **작성일:** 2026-04-25
 **최근 업데이트:** 2026-04-26 — ADR-031 cross-reference 추가 (AppState §4.2, Tauri 커맨드 §6, 오픈 이슈 §11)
 **관련 문서:**
-- [multi-vault-spec.md](./multi-vault-spec.md) — 멀티 vault 워크스페이스 (ADR-031, proposed)
+- [multi-vault-spec.md](./multi-vault-spec.md) — 멀티 vault 워크스페이스 (ADR-031, accepted)
 - [auto-save-spec.md](./auto-save-spec.md)
 - [file-tree-spec.md](./file-tree-spec.md)

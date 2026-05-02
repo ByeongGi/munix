@@ -188,19 +188,19 @@
 
 ## 16. 에디터 — 이미지
 
-> **참고:** Tauri `dragDropEnabled: false`로 OS 파일 드롭이 webview에서 차단됨.
-> 외부 파일 드롭이 필요하면 webview 내부 `ondrop` 핸들러에서 `e.dataTransfer.files`로 직접 처리해야 함.
+> **참고:** Tauri `dragDropEnabled: false`는 webview 내부 HTML5 DnD 이벤트를 받기 위한 필수 설정.
+> 이미지 드롭은 Tiptap `ImagePaste` extension의 ProseMirror `handleDrop` 경로로 처리한다.
 >
 > **썸네일 캐시 백엔드:** `ipc.getThumbnail(relPath)` IPC 추가 (Rust). 5MB 이상 이미지는 256x256 fit + JPEG q80으로 `.munix/cache/thumbs/{sha1}.jpg`에 캐싱 후 절대 path 반환. 작은 이미지는 원본 path 그대로. NodeView에서 사용처 통합은 추후 PR.
 
 - [ ] 🔴 클립보드 이미지 붙여넣기 → `assets/{YYYYMMDD}-{uuid}.{ext}` 저장
-- [ ] 🔴 파일 드롭 → 동일 처리 (HTML5 ondrop 직접 구현 필요)
+- [ ] 🔴 파일 드롭 → 동일 처리
 - [ ] 🔴 에디터에 이미지 표시 (asset:// URL 변환)
 - [ ] 🔴 저장 시 `![alt](assets/...)` 마크다운 (Obsidian 호환)
 - [ ] 🔴 .md 파일 reload 시 이미지 정상 표시
 - [ ] 🔴 다른 탭의 같은 이미지도 표시
 - [ ] 🔴 이미지 노드 선택 시 alt 텍스트 편집 입력 표시 (NodeView, blur 시 저장)
-- [ ] 🔴 이미지 selected 시 우측 하단 보라색 resize 핸들. 드래그 시 픽셀 width 표시 + 실시간 크기 변경 (64–2000px). 더블클릭 시 원래 크기로
+- [ ] 🔴 이미지 selected 시 우측 하단 accent resize 핸들. 드래그 시 픽셀 width 표시 + 실시간 크기 변경 (64–2000px). 더블클릭 시 원래 크기로
 - [ ] 🔴 이미지에 width 있을 때 저장: 표준 markdown 대신 inline `<img src=... alt=... width=N>` HTML로 직렬화 (Obsidian/GFM 호환)
 - [ ] 🔴 width 없는 이미지: 표준 `![alt](src)` 마크다운 유지
 - [ ] 🔴 reload 시 HTML img의 width 속성 보존되어 같은 크기로 표시
@@ -277,7 +277,7 @@
 
 - [ ] 🔴 파일 / 검색 / 목차 / 태그 탭 전환
 - [ ] 🔴 Outline: 현재 파일 헤딩 목록, 클릭 → 스크롤
-- [ ] 🔴 Outline: 현재 스크롤 위치의 헤딩이 보라색으로 강조 (IntersectionObserver)
+- [ ] 🔴 Outline: 현재 스크롤 위치의 헤딩이 accent 색상으로 강조 (IntersectionObserver)
 - [ ] 🔴 Outline: Tab으로 패널 포커스 → ↑↓ 이동, Enter로 스크롤, Home/End 처음/끝, Esc 포커스 해제
 - [ ] 🔴 Outline 하단 "백링크" 섹션: `[[현재파일]]` 참조 파일 + 스니펫
 - [ ] 🔴 태그 탭: 전체 태그 + 카운트, 태그 클릭 → 파일 드릴다운
@@ -292,7 +292,7 @@
 ## 23. 사이드바 — 너비 리사이즈
 
 - [ ] 🔴 사이드바와 에디터 사이 1px 핸들 드래그 → 너비 조정 (180-560)
-- [ ] 🔴 hover 시 보라색 강조
+- [ ] 🔴 hover 시 accent 색상 강조
 - [ ] 🔴 localStorage persist
 
 ## 24. 테마
@@ -365,4 +365,4 @@
 
 **문서 버전:** v1.3
 **작성일:** 2026-04-25
-**최근 업데이트:** 2026-05-02 — 백엔드/프론트 분리 전환 시작. 검색 인덱스, frontmatter 값 변환, Rust vault path/asset safety 자동화 추가.
+**최근 업데이트:** 2026-05-02 — 현재 스펙 기준으로 수동 체크리스트 문구 정리. 백엔드/프론트 분리 전환 시작. 검색 인덱스, frontmatter 값 변환, Rust vault path/asset safety 자동화 추가.

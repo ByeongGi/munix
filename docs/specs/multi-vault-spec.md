@@ -1,7 +1,7 @@
 # Multi-Vault 워크스페이스 상세 설계 — Munix
 
-> 좌측 세로 vault 탭(=Vault Dock) + 탭별 워크스페이스 격리 + 탭 → 새 창 승격.
-> ADR-031의 구현 사전 문서.
+> 좌측 세로 vault 탭(=Vault Dock) + 탭별 워크스페이스 격리.
+> ADR-031의 구현 상세 문서.
 
 **상태:** ✅ Accepted (구현 완료 2026-04-26). Phase A~C + F 끝. ~~Phase D (멀티 윈도우)~~ 폐기 (앱 컨셉 불일치, 2026-04-26 — [workspace-split-spec.md](./workspace-split-spec.md) 로 대체). Phase E (다른 spec 갱신) 후속.
 **관련 ADR:** [ADR-031](../decisions.md#adr-031-멀티-vault-워크스페이스-cmux-스타일-좌측-세로-탭) (supersedes [ADR-004](../decisions.md#adr-004-단일-vault-방식)), [ADR-032](../decisions.md#adr-032-글로벌-vault-레지스트리--munixjson-백엔드-파일) (글로벌 레지스트리)
@@ -12,7 +12,7 @@
 
 - **vault 전환 비용 최소화** — cmux의 탭 스위칭 경험을 노트앱에 이식
 - **vault 간 격리 유지** — 검색·자동완성·태그·백링크는 vault scope, 의도된 프라이버시
-- **동시 작업 지원** — 한 창 안에서 빠른 전환 + 필요 시 탭 → 새 창 승격
+- **동시 작업 지원** — 한 창 안에서 빠른 vault 전환 + workspace split 조합
 - **단일 프로세스 효율** — Obsidian 멀티 인스턴스 대비 메모리 절감
 
 ---
@@ -39,12 +39,11 @@
 - [ ] 좌측 Vault Dock에 열린 vault 세로 리스트 표시
 - [ ] vault 탭 클릭 시 메인 영역(사이드바 트리 + 파일 탭 + 에디터) 통째 swap
 - [ ] vault 워크스페이스 상태(파일 탭, undo, 스크롤 등) 탭 전환 시 보존
-- [ ] `Cmd+1`, `Cmd+2`, ..., `Cmd+9` 단축키로 vault 점프
-- [ ] `Cmd+T` 새 vault 탭 (폴더 선택 다이얼로그 또는 최근 vault 메뉴)
-- [ ] `Cmd+W` 현재 vault 탭 닫기 (unsaved 있으면 confirm)
-- [ ] vault 탭 우클릭 → 컨텍스트 메뉴 (닫기 / 새 창으로 / 핀 / 경로 복사 / Finder)
+- [ ] `Cmd+Alt+1`, `Cmd+Alt+2`, ..., `Cmd+Alt+9` 단축키로 vault 점프
+- [ ] `Cmd+Shift+N` 새 vault 탭 (폴더 선택 다이얼로그 또는 최근 vault 메뉴)
+- [ ] `Cmd+Alt+W` 현재 vault 탭 닫기 (unsaved 있으면 confirm)
+- [ ] vault 탭 우클릭 → 컨텍스트 메뉴 (닫기 / 기록 제거 / 핀 / 경로 복사 / Finder)
 - [ ] vault 탭 드래그로 순서 변경
-- [ ] vault 탭 드래그 아웃 → 새 창으로 분리 (Chrome 패턴)
 - [ ] 검색·자동완성·태그·백링크는 항상 active vault scope만
 
 ### 3.2 기능 요구 (P1)
@@ -145,7 +144,6 @@ interface VaultDockStore {
   close(id: VaultId): Promise<void>;
   pin(id: VaultId, pinned: boolean): void;
   reorder(ids: VaultId[]): void;
-  promoteToWindow(id: VaultId): Promise<void>;  // 탭 → 새 창
 }
 
 // src/stores/workspace-store.ts (신규)
@@ -177,7 +175,7 @@ function getWorkspaceStore(vaultId: VaultId): StoreApi<WorkspaceState> {
 
 ### 4.3 워크스페이스 영구화
 
-탭 전환 시 메모리 보존만으론 부족 (앱 재시작·창 닫힘 시 유실). 다음을 IndexedDB 또는 vault `.munix/workspace.json`에 저장:
+탭 전환 시 메모리 보존만으론 부족 (앱 재시작·창 닫힘 시 유실). 다음을 vault `.munix/workspace.json`에 저장:
 
 - 마지막 활성 파일 탭 + 열린 탭 목록
 - 사이드바 트리 펼침 상태
@@ -234,7 +232,7 @@ struct VaultInfo {
 
 ### 5.3 이벤트 라우팅
 
-기존 단일 watcher → vault별 watcher. 각 watcher는 `vault_id`를 payload에 포함하고, **그 vault를 active로 둔 윈도우들에만** 이벤트 송신.
+기존 단일 watcher → vault별 watcher. 각 watcher는 `vault_id`를 payload에 포함하고, frontend/store는 대상 vault workspace와 인덱스에만 이벤트를 반영한다. OS 멀티 윈도우 subscriber 라우팅은 현재 스펙 범위가 아니다.
 
 ```rust
 // 이벤트 페이로드
@@ -245,22 +243,15 @@ struct VaultFileEvent {
     kind: FileEventKind,            // Created | Modified | Deleted | Renamed
 }
 
-// VaultManager가 라우팅
+// VaultManager가 vault_id를 포함해 이벤트 송신
 fn emit_vault_event(&self, event: VaultFileEvent, app: &AppHandle) {
-    let subs = self.subscribers.read().unwrap();
-    if let Some(windows) = subs.get(&event.vault_id) {
-        for win_label in windows {
-            if let Some(window) = app.get_window(win_label) {
-                let _ = window.emit("vault:file_event", &event);
-            }
-        }
-    }
+    let _ = app.emit("vault:file_event", &event);
 }
 ```
 
 ### 5.4 충돌 감지 (`expected_modified`)
 
-기존 mtime 기반 충돌 감지([vault-spec §6.2](./vault-spec.md))는 그대로. 다만 같은 vault를 두 윈도우(또는 탭→승격 창)에서 동시 편집 시 충돌 가능성이 늘어남 → 마이그레이션 검증 시 회귀 테스트 필수.
+기존 mtime 기반 충돌 감지([vault-spec §6.2](./vault-spec.md))는 그대로. 멀티 vault 전환 후에도 vault id가 다른 저장/읽기 요청끼리는 충돌 감지 상태가 섞이면 안 된다.
 
 ---
 
@@ -296,14 +287,14 @@ fn emit_vault_event(&self, event: VaultFileEvent, app: &AppHandle) {
 - 각 탭 2줄 메타: 1줄차 vault 이름, 2줄차 경로 또는 상태(`● 편집 중`, `⚠ 2개 미저장`, `⏳ 인덱싱`)
 - 핀 그룹(★) → 일반 그룹 순으로 정렬, 각 그룹 내 사용자 정렬
 - active vault는 오닉스 틸 액센트 + 좌측 세로 막대 표시
-- 우클릭 컨텍스트 메뉴: 닫기 / 새 창으로 분리 / 핀 토글 / 경로 복사 / Finder에서 보기 / 이름 변경 (vault 표시명만, 폴더명은 변경 안 함)
+- 우클릭 컨텍스트 메뉴: 핀 토글 / 경로 복사 / Finder에서 보기 / 닫기 / 기록에서 제거
 
 ### 6.2 새 vault 열기 플로우
 
 ```
 사용자 액션          UI                              Backend
 ─────────────────────────────────────────────────────────────────────
-⌘ T 또는 ＋ 클릭     [폴더 선택 다이얼로그]            ─
+⌘⇧N 또는 ＋ 클릭     [폴더 선택 다이얼로그]            ─
 폴더 선택            "신뢰 prompt" 표시                vault-trust 검증
 신뢰 클릭            로딩 인디케이터 (Dock 새 탭)       VaultManager.open()
                                                      → vault_id 생성
@@ -318,7 +309,7 @@ fn emit_vault_event(&self, event: VaultFileEvent, app: &AppHandle) {
 ### 6.3 vault 전환
 
 ```
-사용자: vault 탭 클릭 또는 ⌘ 1/2/3
+사용자: vault 탭 클릭 또는 ⌘⌥1/2/3
   ├─ 현재 workspace state → 메모리 보존 (store 인스턴스 유지)
   ├─ activeVaultId 변경 → React Context 갱신
   ├─ 메인 영역 컴포넌트가 새 vault의 workspace store 구독
@@ -335,12 +326,12 @@ fn emit_vault_event(&self, event: VaultFileEvent, app: &AppHandle) {
 ### 6.5 vault 탭 닫기
 
 ```
-사용자: ⌘ W 또는 우클릭 → 닫기
+사용자: ⌘⌥W 또는 우클릭 → 닫기
   ├─ 현재 vault에 unsaved 있는지 검사
   │   └─ 있으면 confirm 다이얼로그
   │       [취소] [저장 안 함] [모두 저장 후 닫기]
   ├─ 닫기 진행:
-  │   ├─ workspace state → IndexedDB 영구화
+  │   ├─ workspace state → `.munix/workspace.json` 영구화
   │   ├─ store 인스턴스 dispose
   │   ├─ Backend: VaultManager.detach_window()
   │   │   └─ 마지막 구독자 사라지면 인덱스/watcher 정리
@@ -428,7 +419,6 @@ PaneId·TabId는 한 vault 안에서만 unique. vault 경계를 넘는 참조는
 ❌ 다른 vault 파일을 같은 창의 split pane으로 드래그
    → DnD payload의 vault_id가 active vault와 다르면 drop 거부
 
-✅ 같은 vault를 두 창에서 띄우고 각 창이 독립 split 보유
 ✅ 한 vault 안에서 N-pane split
 ✅ vault 전환 시 split 트리 보존
 ✅ 같은 파일을 같은 vault 안 두 pane에서 동시 편집 (mtime 충돌 감지)
@@ -454,20 +444,6 @@ function onDrop(target: Pane, payload: DragTabPayload) {
   // ... 기존 split 로직
 }
 ```
-
-#### 6.6.6 같은 vault, 두 창 — split 독립
-
-```
-Window A (회사 active)                  Window B (회사 active, 승격됨)
-┌────┬─────┬───────┬───────┐            ┌────┬─────┬───────────────────┐
-│Dock│Tree │ Pane  │ Pane  │            │Dock│Tree │   Single pane     │
-│★회●│     │ ref   │ todo  │            │★회●│     │  archive/2025.md  │
-│ 개 │     │       │       │            │ 개⧉│     │                   │
-└────┴─────┴───────┴───────┘            └────┴─────┴───────────────────┘
-   ↑ 자기만의 split 트리 보유                ↑ 자기만의 split 트리 보유
-```
-
-같은 vault라도 창마다 다른 split을 둠. backend의 `WorkspaceState`는 (`VaultId`, `WindowId`) 키로 분리되거나, 창별 frontend store 인스턴스가 자체 보존 — Phase B 구현 시 결정.
 
 ### 6.7 모든 vault 닫힘 → Welcome
 
@@ -500,19 +476,14 @@ Window A (회사 active)                  Window B (회사 active, 승격됨)
 
 | 단축키 | 동작 | 비고 |
 |---|---|---|
-| `⌘ T` | 새 vault 탭 열기 | 폴더 선택 다이얼로그 |
-| `⌘ W` | 현재 vault 탭 닫기 | unsaved confirm |
-| `⌘ 1`~`⌘ 9` | n번째 vault 탭으로 점프 | cmux 호환 |
-| `⌘ ⇧ [` / `⌘ ⇧ ]` | 이전/다음 vault 탭 | brave/cmux 패턴 |
-| `⌘ ⇧ T` | 최근 닫은 vault 다시 열기 | (P1) |
+| `⌘ ⇧ N` | 새 vault 열기 | 폴더 선택 다이얼로그 |
+| `⌘ ⌥ W` | 현재 vault 탭 닫기 | unsaved confirm |
+| `⌘ ⌥ 1`~`⌘ ⌥ 9` | n번째 vault 탭으로 점프 | 파일 탭 단축키와 충돌 회피 |
+| `⌘ ⌥ [` / `⌘ ⌥ ]` | 이전/다음 vault 탭 | 파일 탭 단축키와 충돌 회피 |
 | `⌘ ⇧ O` | Vault Switcher 팔레트 | recent + 검색 |
-| `⌘ ⇧ N` | 새 vault 만들기 | 빈 폴더 생성 + 오픈 |
 | `⌘ ⌥ B` | Vault Dock 토글 | 사이드바와 별개 |
 
-**충돌 점검 (기존 keymap-spec과):**
-- `⌘ T`는 기존 "새 파일 탭"과 충돌 가능 → 새 파일은 `⌘ N` 유지, `⌘ T`는 vault 탭으로 재할당
-- `⌘ W`도 동일 점검 필요 (현재는 파일 탭 닫기)
-- 해결안: vault Dock 포커스 / 메인 영역 포커스에 따라 컨텍스트 분기 (또는 modifier 추가)
+파일 탭 단축키와 충돌하는 `⌘T`, `⌘W`, `⌘1~9`, `⌘⇧[/]`는 vault 전환에 사용하지 않는다.
 
 ---
 
@@ -635,13 +606,13 @@ fn maybe_unload_idle_indexes(&self) {
 - [ ] `vault-dock-store` 신규
 - [ ] `workspace-store`를 vault별 인스턴스로 분리 (registry)
 - [ ] 기존 글로벌 stores를 workspace scope로 이동
-- [ ] 탭 전환 swap 로직 + IndexedDB 영구화
+- [ ] 탭 전환 swap 로직 + `.munix/workspace.json` 영구화
 
 ### Phase C: UI 도입
 - [ ] Vault Dock 컴포넌트 (좌측 세로 탭)
 - [ ] Welcome 화면 (모든 vault 닫힘 시)
 - [ ] Settings UI 글로벌/vault 분리
-- [ ] 단축키 추가 (`⌘ 1~9`, `⌘ T`, `⌘ W` 등) + 충돌 점검
+- [ ] 단축키 추가 (`⌘⌥1~9`, `⌘⇧N`, `⌘⌥W` 등)
 
 ### ~~Phase D: 탭 → 창 승격~~ 폐기 (2026-04-26)
 
@@ -670,7 +641,7 @@ fn maybe_unload_idle_indexes(&self) {
 - [ ] vault A에서 파일 탭 3개 열고 vault B로 swap → 다시 A 클릭 시 탭 3개 그대로
 - [ ] 사이드바 트리 펼침 상태 유지
 - [ ] undo 스택 유지 (메모리)
-- [ ] 앱 재시작 후 마지막 active vault + 그 워크스페이스 복원 (IndexedDB)
+- [ ] 앱 재시작 후 마지막 active vault + 그 워크스페이스 복원 (`.munix/workspace.json`)
 
 ### 14.3 멀티 vault 동시 운영
 
@@ -678,31 +649,21 @@ fn maybe_unload_idle_indexes(&self) {
 - [ ] idle 5분 → 인덱스 unload, 다음 검색 시 재로드
 - [ ] vault 1개에서 외부 파일 변경 → 그 vault 구독 윈도우만 알림
 
-### 14.4 탭 → 창 승격
+### 14.4 단축키·UX
 
-- [ ] vault 탭 드래그 아웃 → 새 창에 그 vault 표시
-- [ ] 두 창에서 같은 파일 동시 편집 → mtime 충돌 감지 동작
-- [ ] 한쪽 창에서 파일 저장 → 다른 창에서 외부 변경 알림 + reload prompt
-
-### 14.5 단축키·UX
-
-- [ ] `⌘ 1~9` 점프 → 해당 탭 active swap
-- [ ] `⌘ T` 새 vault 다이얼로그
-- [ ] `⌘ W` unsaved confirm
+- [ ] `⌘⌥1~9` 점프 → 해당 탭 active swap
+- [ ] `⌘⇧N` 새 vault 다이얼로그
+- [ ] `⌘⌥W` unsaved confirm
 - [ ] 탭 우클릭 컨텍스트 메뉴 모든 항목
 
 ---
 
 ## 15. 오픈 이슈
 
-1. **단축키 충돌 (`⌘ T`, `⌘ W`)**: 기존 파일 탭 단축키와 vault 탭 단축키 분리 방법 — 컨텍스트(포커스) 분기 vs modifier 추가. UX 검증 필요
-2. **같은 vault를 두 창에서**: 워크스페이스 store 동기화 방식 — broadcast vs leader-follower. 단순함 우선이면 broadcast
-3. **워크스페이스 IndexedDB vs 파일**: vault별 `.munix/workspace.json` 으로 vault와 함께 이동/백업 가능 vs IndexedDB(웹뷰) 빠름. **`.munix/workspace.json` 권장** (Obsidian 호환성·휴대성)
-4. **인덱스 unload 임계값**: 5분이 적절한지 검증 필요. 사용자 설정 노출 여부
-5. **Welcome 화면의 multiple vault 자동 복원**: 마지막 세션의 모든 vault 자동 재오픈 vs 가장 최근 active만. settings 토글 권장
-6. **vault 표시 이름 vs 폴더명**: vault override(.munix/settings.json)에 표시 이름 두면 폴더 이름 그대로 두고 Dock 표시만 바꿈. 충돌 시 우선순위
-7. **vault 액센트 컬러**: 자동(해시 기반) vs 사용자 선택. 자동 + override가 적절
-8. **모바일/태블릿 (장기)**: Vault Dock이 좁은 화면에 어떻게 적응하는지 — drawer 패턴? v2 고려
+1. **인덱스 unload 임계값**: 5분이 적절한지 검증 필요. 사용자 설정 노출 여부
+2. **vault 표시 이름 vs 폴더명**: vault override(.munix/settings.json)에 표시 이름 두면 폴더 이름 그대로 두고 Dock 표시만 바꿈. 충돌 시 우선순위
+3. **vault 액센트 컬러**: 자동(해시 기반) vs 사용자 선택. 자동 + override가 적절
+4. **모바일/태블릿 (장기)**: Vault Dock이 좁은 화면에 어떻게 적응하는지 — drawer 패턴? v2 고려
 
 ---
 
@@ -750,7 +711,7 @@ fn maybe_unload_idle_indexes(&self) {
 
 ---
 
-**문서 버전:** v0.4
+**문서 버전:** v0.5
 **작성일:** 2026-04-26
-**최근 업데이트:** 2026-04-26 — Phase D (멀티 윈도우) 폐기 (앱 컨셉 불일치, [workspace-split-spec.md](./workspace-split-spec.md) 로 대체). v0.3 → v0.4. Phase A~C + F 구현 완료 (Accepted). 남은 Phase E (다른 spec 갱신) 만 후속.
+**최근 업데이트:** 2026-05-02 — 폐기된 멀티 윈도우 승격 테스트와 `Cmd+T`/`Cmd+W` vault 단축키 가정을 제거. 현재 구현 단축키와 `.munix/workspace.json` 영구화 정책으로 정리.
 **작성자:** Munix contributors
