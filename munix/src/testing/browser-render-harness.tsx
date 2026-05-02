@@ -23,7 +23,9 @@ async function boot() {
       registry:
         scenario === "closed-vault"
           ? createMockRegistryWithClosedVault(MISSING_ROOT)
-          : undefined,
+          : scenario === "recent-vault"
+            ? createMockRegistryWithClosedVault(MOCK_ROOT)
+            : undefined,
     }),
   );
 

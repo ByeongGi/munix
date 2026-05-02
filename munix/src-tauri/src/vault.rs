@@ -696,3 +696,79 @@ fn walk(base: &Path, current: &Path, out: &mut Vec<FileNode>, lazy: bool) -> Vau
     }
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn temp_vault() -> (PathBuf, Vault) {
+        let root = std::env::temp_dir().join(format!("munix-vault-test-{}", uuid::Uuid::new_v4()));
+        std::fs::create_dir_all(&root).unwrap();
+        let vault = Vault::open(&root).unwrap();
+        (root, vault)
+    }
+
+    fn assert_invalid_name(name: &str) {
+        assert!(
+            matches!(validate_name(name), Err(VaultError::InvalidName(_))),
+            "{name:?} should be invalid"
+        );
+    }
+
+    #[test]
+    fn validate_name_accepts_cross_platform_safe_names() {
+        for name in ["Note.md", "folder", "한글 노트.md", "2026-05-02 daily.md"] {
+            validate_name(name).unwrap();
+        }
+    }
+
+    #[test]
+    fn validate_name_rejects_unsafe_names() {
+        for name in [
+            "",
+            ".",
+            "..",
+            "bad/name",
+            "bad\\name",
+            "bad:name",
+            "bad*name",
+            "bad?name",
+            "bad\"name",
+            "bad<name",
+            "bad>name",
+            "bad|name",
+            "bad\0name",
+            "bad\nname",
+            "CON",
+            "con.md",
+            "AUX.txt",
+            "LPT1",
+            "note.",
+            "note ",
+        ] {
+            assert_invalid_name(name);
+        }
+    }
+
+    #[test]
+    fn create_and_rename_reject_invalid_basenames() {
+        let (root, vault) = temp_vault();
+
+        assert!(matches!(
+            vault.create_file("bad:name.md", None),
+            Err(VaultError::InvalidName(_))
+        ));
+        assert!(matches!(
+            vault.create_folder("folder/bad "),
+            Err(VaultError::InvalidName(_))
+        ));
+
+        vault.create_file("ok.md", None).unwrap();
+        assert!(matches!(
+            vault.rename("ok.md", "folder/bad:name.md"),
+            Err(VaultError::InvalidName(_))
+        ));
+
+        std::fs::remove_dir_all(root).unwrap();
+    }
+}

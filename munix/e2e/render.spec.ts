@@ -32,3 +32,38 @@ test("marks missing recent vault entries as disabled", async ({ page }) => {
     page.locator("span").filter({ hasText: /^missing$/ }),
   ).toBeVisible();
 });
+
+test("opens a recent vault from the vault picker", async ({ page }) => {
+  await page.goto("/test-harness.html?scenario=recent-vault");
+
+  const recentVault = page.getByRole("button", {
+    name: /munix-render-vault/,
+  });
+
+  await expect(recentVault).toBeVisible();
+  await expect(recentVault).toBeEnabled();
+
+  await recentVault.click();
+
+  await expect(page.getByText("Welcome.md")).toBeVisible();
+  await expect(page.locator(".munix-window-shell")).toBeVisible();
+});
+
+test("removes a recent vault entry from the vault picker", async ({ page }) => {
+  await page.goto("/test-harness.html?scenario=recent-vault");
+
+  const recentVault = page.getByRole("button", {
+    name: /munix-render-vault/,
+  });
+
+  await expect(recentVault).toBeVisible();
+  await recentVault.hover();
+
+  await page
+    .getByRole("button", {
+      name: "Remove munix-render-vault from history",
+    })
+    .click();
+
+  await expect(recentVault).toBeHidden();
+});

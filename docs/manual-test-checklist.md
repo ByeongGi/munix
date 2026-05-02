@@ -25,10 +25,10 @@
 - [x] ✅ 첫 실행 화면: "샘플 vault 만들기" → Documents/Munix Sample Vault 생성 → 샘플 노트 자동 생성 → Welcome.md 열림 (2026-04-26)
 - [ ] 🔴 두 번째 실행 이후: `munix.json` 의 마지막 active vault 자동 reopen (open: true 인 다른 vault 도 모두 reopen — ADR-032)
 - [ ] 🔴 vault 폴더가 외부에서 삭제된 후 재실행 → reopen 실패 catch 에서 entry 가 closed 로 옮겨짐
-- [ ] 🔴 폴더 선택 화면 "최근 vault" 섹션: 클릭 즉시 오픈, hover X 버튼으로 munix.json 에서 entry 제거 + trusted-vaults 도 같이 정리
+- [ ] 🔴 최근 vault 기록 제거 시 더 이상 참조되지 않는 trusted-vaults.json path도 같이 정리
 - [ ] 🔴 vault 열기 실패 시 해당 path 가 히스토리에서 자동 제거
 
-> 자동화 완료: no-vault picker 렌더, mock vault workspace 렌더, closed/missing recent vault disabled + "missing" 배지 표시.
+> 자동화 완료: no-vault picker 렌더, mock vault workspace 렌더, closed/missing recent vault disabled + "missing" 배지 표시, 최근 vault 클릭 오픈, 최근 vault history 제거 UI.
 
 ### 0a. 멀티 vault (ADR-031, ADR-032)
 
@@ -61,9 +61,10 @@
 - [ ] 🔴 새 폴더 생성 → 자동 rename 모드 진입
 - [ ] 🔴 인라인 rename: Enter 커밋 / Esc 취소 / blur 커밋 / 확장자 자동 보정
 - [ ] 🔴 rename input 실시간 유효성: 금지 문자 / Windows 예약어 / trailing dot · space → 빨간 테두리 + 에러 메시지 toast
-- [ ] 🔴 Rust validate_name: create_file/folder/rename 시 백엔드도 동일 규칙 검증, 위반 시 InvalidName 에러
 - [ ] 🔴 컨텍스트 메뉴: "경로 복사" — 절대 경로 클립보드 복사
 - [ ] 🔴 컨텍스트 메뉴: "시스템 파인더에서 보기" — 파일이면 부모 폴더 열기, 폴더면 자체 열기 (plugin-opener)
+
+> 자동화 완료: Rust `validate_name` 금지 문자/Windows 예약어/trailing dot·space 검증, create_file/create_folder/rename InvalidName 회귀.
 
 ## 3. 파일/폴더 드래그 앤 드롭 (DnD) — ✅ 검증 완료
 
@@ -361,4 +362,4 @@
 
 **문서 버전:** v1.3
 **작성일:** 2026-04-25
-**최근 업데이트:** 2026-05-02 — 자동화 검증 완료 항목 정리(no-vault/mock workspace/missing recent vault UI, command palette parser, property type heuristic, tab helper 로직).
+**최근 업데이트:** 2026-05-02 — 자동화 검증 완료 항목 정리(no-vault/mock workspace/recent vault UI, Rust validate_name, command palette parser, property type heuristic, tab helper 로직).
