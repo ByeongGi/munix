@@ -164,6 +164,15 @@ export const createWorkspaceTreeSlice: StateCreator<
     void (async () => {
       await flushSave?.();
       const latest = get();
+      const activeTab = latest.tabs.find((item) => item.id === latest.activeId);
+      if (
+        !activeTab ||
+        isTerminalTab(activeTab) ||
+        activeTab.id !== tab.id ||
+        activeTab.path !== tab.path
+      ) {
+        return;
+      }
       await latest.openFile(tab.path, tab.id);
     })();
   }

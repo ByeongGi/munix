@@ -12,6 +12,8 @@ import {
   type Tab,
   type TabSlice,
 } from "./tab-slice";
+import type { DocumentRuntimeSlice } from "./document-runtime-slice";
+import type { EditorSlice } from "./editor-slice";
 
 const editorMocks = vi.hoisted(() => ({
   closeFile: vi.fn(),
@@ -35,16 +37,31 @@ vi.mock("@/store/recent-store", () => ({
   },
 }));
 
-type TestStore = TabSlice & WorkspaceTreeSlice;
+type TestStore = TabSlice &
+  WorkspaceTreeSlice &
+  Partial<EditorSlice> &
+  Partial<DocumentRuntimeSlice>;
 
 function tab(id: string, path: string): Tab {
   return { id, path, title: path.replace(/\.md$/, "") };
 }
 
-function makeStore(initialTabs: Tab[], activeId: string) {
+interface EditorOverrides {
+  closeFile?: EditorSlice["closeFile"];
+  flushSave?: EditorSlice["flushSave"];
+  openFile?: EditorSlice["openFile"];
+}
+
+function makeStore(
+  initialTabs: Tab[],
+  activeId: string,
+  editorOverrides: EditorOverrides = {},
+) {
   return create<TestStore>((set, get, api) => ({
-    closeFile: () => {},
-    openFile: async (_path: string) => {},
+    closeFile: editorOverrides.closeFile ?? (() => {}),
+    flushSave: editorOverrides.flushSave ?? null,
+    openFile: editorOverrides.openFile ?? (async (_path: string) => {}),
+    captureActiveDocumentRuntime: () => {},
     ...createWorkspaceTreeSlice(
       set as unknown as Parameters<typeof createWorkspaceTreeSlice>[0],
       get as unknown as Parameters<typeof createWorkspaceTreeSlice>[1],
@@ -58,6 +75,19 @@ function makeStore(initialTabs: Tab[], activeId: string) {
     tabs: initialTabs,
     activeId,
   }));
+}
+
+function deferred(): { promise: Promise<void>; resolve: () => void } {
+  let resolve!: () => void;
+  const promise = new Promise<void>((res) => {
+    resolve = res;
+  });
+  return { promise, resolve };
+}
+
+async function flushMicrotasks(): Promise<void> {
+  await Promise.resolve();
+  await Promise.resolve();
 }
 
 describe("tab-slice split pane routing", () => {
@@ -154,5 +184,93 @@ describe("tab-slice split pane routing", () => {
     expect(activeTab?.path).toBe("");
     expect(state.activePaneId).toBe(inactive.id);
     expect(state.activeId).toBe(activePane.activeTabId);
+  });
+});
+
+describe("tab-slice editor activation races", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("skips a document open when that tab is no longer active after save flush", async () => {
+    const first = tab("t1", "a.md");
+    const second = tab("t2", "b.md");
+    const pendingFlush = deferred();
+    const openFile = vi.fn(async (_path: string, _tabId?: string | null) => {});
+    const flushSave = vi
+      .fn()
+      .mockReturnValueOnce(pendingFlush.promise)
+      .mockResolvedValue(undefined);
+    const store = makeStore([first, second], first.id, {
+      flushSave,
+      openFile,
+    });
+
+    store.getState().activate(second.id);
+    await flushMicrotasks();
+    store.getState().activate(first.id);
+    await flushMicrotasks();
+
+    expect(openFile).toHaveBeenCalledWith(first.path, first.id);
+    pendingFlush.resolve();
+    await flushMicrotasks();
+
+    expect(openFile).toHaveBeenCalledTimes(1);
+    expect(openFile).not.toHaveBeenCalledWith(second.path, second.id);
+  });
+
+  it("skips a delayed close when an empty tab is no longer active", async () => {
+    const first = tab("t1", "a.md");
+    const pendingFlush = deferred();
+    const closeFile = vi.fn();
+    const openFile = vi.fn(async (_path: string, _tabId?: string | null) => {});
+    const flushSave = vi
+      .fn()
+      .mockReturnValueOnce(pendingFlush.promise)
+      .mockResolvedValue(undefined);
+    const store = makeStore([first], first.id, {
+      closeFile,
+      flushSave,
+      openFile,
+    });
+
+    store.getState().createEmptyTab();
+    await flushMicrotasks();
+    store.getState().activate(first.id);
+    await flushMicrotasks();
+
+    expect(openFile).toHaveBeenCalledWith(first.path, first.id);
+    pendingFlush.resolve();
+    await flushMicrotasks();
+
+    expect(closeFile).not.toHaveBeenCalled();
+  });
+
+  it("skips a delayed close when an empty tab is promoted to a document", async () => {
+    const first = tab("t1", "a.md");
+    const pendingFlush = deferred();
+    const closeFile = vi.fn();
+    const openFile = vi.fn(async (_path: string, _tabId?: string | null) => {});
+    const flushSave = vi
+      .fn()
+      .mockReturnValueOnce(pendingFlush.promise)
+      .mockResolvedValue(undefined);
+    const store = makeStore([first], first.id, {
+      closeFile,
+      flushSave,
+      openFile,
+    });
+
+    store.getState().createEmptyTab();
+    await flushMicrotasks();
+    const activeEmptyId = store.getState().activeId;
+    expect(store.getState().promoteActiveEmptyTab("new.md")).toBe(true);
+    await flushMicrotasks();
+
+    expect(openFile).toHaveBeenCalledWith("new.md", activeEmptyId);
+    pendingFlush.resolve();
+    await flushMicrotasks();
+
+    expect(closeFile).not.toHaveBeenCalled();
   });
 });

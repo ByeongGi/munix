@@ -27,7 +27,7 @@ import { EditorTitleInput } from "@/components/editor/editor-title-input";
 import { ErrorBoundary } from "@/components/error-boundary";
 import { BlockMenu } from "@/components/editor/block-menu";
 import { DragHandle } from "@tiptap/extension-drag-handle-react";
-import { GripVertical } from "lucide-react";
+import { GripVertical, LoaderCircle } from "lucide-react";
 import { useKeymapMatcher } from "@/hooks/use-keymap";
 import { preprocessMarkdownCached } from "@/lib/editor-preprocess";
 import {
@@ -43,9 +43,26 @@ const DEFER_DOCUMENT_HYDRATION_MIN_LENGTH = 80_000;
 const SCROLL_RESTORE_MAX_ATTEMPTS = 3;
 const SCROLL_RESTORE_OBSERVER_MS = 1200;
 const LIVE_EDITOR_CACHE_LIMIT = 2;
+const DOCUMENT_LOADING_DELAY_MS = 350;
 
 interface EditorViewProps {
   className?: string;
+}
+
+function useDelayedVisible(active: boolean, delayMs: number): boolean {
+  const [visible, setVisible] = useState(false);
+
+  useEffect(() => {
+    if (!active) {
+      setVisible(false);
+      return;
+    }
+
+    const timer = window.setTimeout(() => setVisible(true), delayMs);
+    return () => window.clearTimeout(timer);
+  }, [active, delayMs]);
+
+  return visible;
 }
 
 function normalizeSourceLine(line: string): string {
@@ -291,6 +308,7 @@ export function EditorView({ className }: EditorViewProps) {
     body,
   });
   const scrolledPathRef = useRef<string | null>(null);
+  const appliedEditorRef = useRef<TiptapEditor | null>(null);
   const appliedSourceVersionRef = useRef<number | null>(null);
   const [isHydrating, setIsHydrating] = useState(false);
 
@@ -356,6 +374,11 @@ export function EditorView({ className }: EditorViewProps) {
     [placeholder],
   );
   const editor = useLiveEditor(currentTabId, currentPath, editorOptions);
+  const showOpeningLoading = useDelayedVisible(
+    isOpening,
+    DOCUMENT_LOADING_DELAY_MS,
+  );
+  const showDocumentLoading = isHydrating || showOpeningLoading;
   const handleEditorEmptyAreaMouseDown = useCallback(
     (event: React.MouseEvent<HTMLElement>) => {
       focusEditorEndOnEmptySurface(editor, event);
@@ -450,6 +473,12 @@ export function EditorView({ className }: EditorViewProps) {
   );
 
   useEffect(() => {
+    // Editor option changes can replace the Tiptap instance without changing
+    // sourceVersion, so the new instance still needs the current body applied.
+    if (appliedEditorRef.current !== editor) {
+      appliedEditorRef.current = editor;
+      appliedSourceVersionRef.current = null;
+    }
     if (!editor) return;
     if (editor.isDestroyed) return;
     if (isOpening) {
@@ -682,6 +711,16 @@ export function EditorView({ className }: EditorViewProps) {
         open={searchOpen}
         onClose={handleSearchClose}
       />
+      {showDocumentLoading ? (
+        <div
+          role="status"
+          aria-live="polite"
+          className="pointer-events-none absolute top-3 left-1/2 z-30 flex -translate-x-1/2 items-center gap-2 rounded-md border border-[var(--color-border-primary)] bg-[var(--color-bg-secondary)] px-3 py-1.5 text-xs text-[var(--color-text-secondary)] shadow-[var(--shadow-popover)]"
+        >
+          <LoaderCircle className="h-3.5 w-3.5 animate-spin text-[var(--color-text-tertiary)]" />
+          <span>{t("editor:documentLoading.title")}</span>
+        </div>
+      ) : null}
       <div
         ref={scrollRef}
         className="h-full min-w-0 overflow-y-auto bg-[var(--color-editor-bg)]"
