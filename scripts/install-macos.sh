@@ -106,6 +106,9 @@ CLI_TARBALL_PATH="$WORK_DIR/$CLI_ASSET_NAME"
 
 if [ -z "$EXPECTED_SHA256" ] && [ "$ARCH" = "aarch64" ]; then
   case "$VERSION" in
+    0.1.15)
+      EXPECTED_SHA256="e8cfcc69a0f0aff8e609ad0de3bb358e6801e245aa1b600a51f5cd6ed82a9a88"
+      ;;
     0.1.14)
       EXPECTED_SHA256="89a444b0f9a2f419995ad5263fa48f673ba0006f698e6ba0b81016d6d3c67923"
       ;;
@@ -156,6 +159,9 @@ fi
 
 if [ -z "$EXPECTED_CLI_SHA256" ] && [ "$ARCH" = "aarch64" ]; then
   case "$VERSION" in
+    0.1.15)
+      EXPECTED_CLI_SHA256="a88f62a0738eecb4e67e881e5c195a95346517b2402d4ec18622889c1724b26f"
+      ;;
     0.1.14)
       EXPECTED_CLI_SHA256="ebfd2a63a2b451eef101ba3c2271c0c856236da39c21ca0b618cdcbfd3e42ff5"
       ;;
