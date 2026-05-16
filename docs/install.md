@@ -4,7 +4,7 @@ Munix는 현재 초기 오픈소스 빌드이며 macOS Apple notarization은 적
 
 ## 권장: 앱 + CLI 설치
 
-macOS 개발자/파워유저는 아래 명령으로 GitHub Release DMG와 CLI tarball을 다운로드하고 `~/Applications/munix.app`, `/usr/local/bin/munix`에 설치할 수 있다.
+macOS 개발자/파워유저는 아래 명령으로 GitHub Release DMG와 CLI tarball을 다운로드하고 `~/Applications/munix.app`을 설치할 수 있다. CLI는 앱 번들 내부에 설치하고 `/usr/local/bin/munix`는 그 바이너리를 가리키는 symlink로 만든다.
 
 ```bash
 curl -fsSL https://github.com/ByeongGi/munix/releases/latest/download/install-macos.sh | bash
@@ -18,7 +18,8 @@ curl -fsSL https://github.com/ByeongGi/munix/releases/latest/download/install-ma
 - GitHub Release의 `munix-cli_{version}_{arch}.tar.gz` 다운로드
 - DMG mount
 - `munix.app`을 `~/Applications/munix.app`에 복사
-- `munix` CLI를 `/usr/local/bin/munix`에 설치
+- `munix` CLI를 `~/Applications/munix.app/Contents/MacOS/munix-cli`에 설치
+- `/usr/local/bin/munix` symlink를 앱 번들 내부 CLI로 연결
 - 설치된 앱의 macOS quarantine 속성 제거
 
 이 방식은 Node.js, Rust, pnpm 같은 빌드 환경을 요구하지 않는다. macOS 기본 도구인 `curl`, `hdiutil`, `ditto`, `tar`, `xattr`만 사용한다.
@@ -42,6 +43,8 @@ CLI 설치 위치를 바꾸려면:
 export MUNIX_CLI_INSTALL_DIR="$HOME/.local/bin"
 curl -fsSL https://github.com/ByeongGi/munix/releases/latest/download/install-macos.sh | bash
 ```
+
+이 변수는 symlink 위치만 바꾼다. 실제 CLI 바이너리는 앱 번들 안에 있으므로 앱을 삭제하면 같이 제거된다.
 
 CLI 설치를 건너뛰려면:
 
@@ -67,6 +70,23 @@ munix vault=Work search query="tauri ipc"
 ```
 
 macOS에서는 Munix 앱이 꺼져 있으면 CLI가 `MUNIX_APP_PATH`, `~/Applications/munix.app`, `/Applications/munix.app` 순서로 앱을 찾아 실행한 뒤 명령을 전달한다.
+
+## 삭제
+
+권장 삭제 방법은 설치 스크립트의 uninstall 모드다. 앱과 CLI symlink를 함께 제거한다.
+
+```bash
+curl -fsSL https://github.com/ByeongGi/munix/releases/latest/download/install-macos.sh | bash -s -- --uninstall
+```
+
+수동으로 지울 때는 아래 두 경로를 제거한다.
+
+```bash
+rm -rf ~/Applications/munix.app
+sudo rm -f /usr/local/bin/munix
+```
+
+macOS에서 앱을 휴지통으로 버리는 동작에는 uninstall hook이 없으므로 `/usr/local/bin/munix` symlink까지 자동 제거되지는 않는다. 다만 symlink 대상인 실제 CLI 바이너리는 앱 번들 안에 있어 앱 삭제 시 함께 사라진다.
 
 ## 소스에서 직접 빌드
 

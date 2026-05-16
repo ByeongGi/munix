@@ -35,7 +35,7 @@ curl -fsSL https://github.com/ByeongGi/munix/releases/latest/download/install-ma
 open ~/Applications/munix.app
 ```
 
-이 설치 스크립트는 앱과 함께 `munix` CLI도 `/usr/local/bin/munix`에 설치한다.
+이 설치 스크립트는 앱과 함께 `munix` CLI도 설치한다. 실제 CLI 바이너리는 앱 번들 내부에 두고 `/usr/local/bin/munix`는 symlink로 연결한다.
 
 ```bash
 munix help
@@ -44,6 +44,12 @@ munix vault=Work search query="tauri ipc"
 ```
 
 자세한 설치 안내: [`docs/install.md`](./docs/install.md)
+
+삭제:
+
+```bash
+curl -fsSL https://github.com/ByeongGi/munix/releases/latest/download/install-macos.sh | bash -s -- --uninstall
+```
 
 ### 개발 환경
 

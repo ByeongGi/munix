@@ -22,6 +22,7 @@
 - 명령 문법은 `obsidian <command> key=value flag` 형태다.
 - `vault=<name|id>`는 command 앞에 둔다.
 - `file=<name>`은 wikilink처럼 이름 기반 resolution, `path=<path>`는 vault root 기준 정확한 경로다.
+- `content`는 `\n`, `\t` escape를 지원하고 `append`/`prepend`는 `inline` flag로 줄바꿈 보정을 끌 수 있다.
 - macOS는 앱 번들 안 CLI에 `/usr/local/bin/obsidian` symlink를 만들고, Linux는 `~/.local/bin`에 복사하며, Windows는 GUI stdout 제약 때문에 `.com` redirector를 제공한다.
 - 지원 명령군은 `open`, `create`, `read`, `append`, `prepend`, `search`, `daily:*`, `vaults`, `files`, `folders`, `tags`, `backlinks`, `properties`, `templates`, `workspace`, `tabs`, `history`, `plugins`, `themes`, `dev:*` 등이다.
 - URI scheme은 CLI와 별개로 `obsidian://open`, `new`, `daily`, `search`, `choose-vault` 등을 처리한다.
@@ -87,6 +88,10 @@ Munix는 이 구조 중 CLI 문법, 별도 CLI 엔트리포인트, URI와 CLI의
 munix [global] <command> [key=value ...] [flag ...]
 ```
 
+- `key=value`: shell quoting으로 공백 포함 값을 전달한다.
+- `flag`: 값 없는 boolean. 예: `newtab`, `open`, `overwrite`, `inline`.
+- `content` 값의 `\n`, `\t`, `\\`는 각각 newline, tab, backslash로 해석한다.
+
 전역 인자:
 
 ```bash
@@ -106,13 +111,17 @@ munix --help
 ```bash
 path="folder/note.md"   # vault root 기준 정확한 상대 경로
 file="Note title"       # 이름 기반 resolution, wikilink와 유사
+name="Note title"       # create 전용 파일명
 ```
 
 규칙:
 
 - `path`와 `file`을 동시에 지정하면 오류다.
-- P0 구현은 `path`를 우선 지원한다.
-- `file` resolution은 검색 인덱스와 title/frontmatter 통합 후 P1에서 정교화한다.
+- `path`는 vault root 기준 정확한 상대 경로다. 기존 파일을 여는 명령에서는 확장자를 자동 보정하지 않는다.
+- `file`은 `.md` 확장자 생략을 허용한다. 경로가 포함되면 path exact match, 파일명만 있으면 basename match를 사용한다.
+- `file` basename이 여러 파일에 매칭되면 첫 번째를 임의로 고르지 않고 ambiguous 오류로 처리한다.
+- `create name=<name>`은 root에 `<name>.md`를 만든다. 폴더 포함 경로는 `path=`를 사용한다.
+- `create`에 대상이 없으면 `Untitled.md`, `Untitled 1.md`, ... 중 비어 있는 이름을 사용한다.
 
 ### 4.3 출력 포맷
 
@@ -135,8 +144,10 @@ format=yaml
 munix vault=Work open path="daily/2026-05-16.md"
 munix vault=Work open path="daily/2026-05-16.md" line=42 newtab
 
+munix vault=Work create name="Trip to Paris" content="# Trip\n\nNotes" open
 munix vault=Work create path="inbox/idea.md" content="first draft" open
 munix vault=Work append path="daily/2026-05-16.md" content="- [ ] Follow up"
+munix vault=Work append path="daily/2026-05-16.md" content=" trailing text" inline
 munix vault=Work prepend path="inbox.md" content="# Inbox"
 munix vault=Work read path="README.md" format=md
 
@@ -150,6 +161,10 @@ munix vaults format=json
 munix vault=Work files format=json
 munix vault=Work folders
 ```
+
+`open`은 Obsidian CLI와 같이 기존 파일을 여는 명령이다. 대상 파일이 없으면 새 탭을 만들지 않는다. 새 파일을 만들고 바로 열려면 `create path="..." open` 또는 `create name="..." open`을 사용한다. `daily`는 예외적으로 해당 날짜 파일을 create-or-open 한다.
+
+`prepend`는 Obsidian처럼 YAML frontmatter가 있으면 frontmatter 블록 뒤에 내용을 삽입한다. `inline` flag가 없으면 기존 본문과 새 content 사이에 줄바꿈을 보정한다.
 
 ---
 
@@ -287,14 +302,14 @@ P1부터는 `read`, `search format=json`처럼 stdout이 중요한 명령에 대
 
 ## 10. 오픈 이슈
 
-- [ ] macOS 앱 번들 안 `munix-cli` 포함 및 `/usr/local/bin/munix` symlink 생성 UX
+- [x] macOS 앱 번들 안 `munix-cli` 포함 및 `/usr/local/bin/munix` symlink 생성 UX
 - [ ] Windows `.com` redirector 또는 console subsystem CLI 패키징
 - [ ] Linux `~/.local/bin/munix` 설치 경로
 - [ ] 앱 미실행 시 자동 기동 경로
 - [ ] `read`/`search format=json`의 request-response IPC
 - [ ] `daily` 기준일: 자정 vs 4am cutoff
 - [ ] 데일리 노트 경로: `daily/YYYY-MM-DD.md` vs 사용자 설정
-- [ ] `file=` resolution 우선순위: exact basename, title property, alias, fuzzy
+- [ ] `file=` resolution의 title property / aliases 지원
 - [ ] CLI TUI에 넣을 명령 범위
 
 ---

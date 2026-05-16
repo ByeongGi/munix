@@ -60,7 +60,7 @@ pub enum CliCommand {
         new_tab: bool,
     },
     Create {
-        target: FileTarget,
+        target: CreateTarget,
         content: Option<String>,
         open: bool,
         overwrite: bool,
@@ -73,11 +73,13 @@ pub enum CliCommand {
         target: FileTarget,
         content: String,
         open: bool,
+        inline: bool,
     },
     Prepend {
         target: FileTarget,
         content: String,
         open: bool,
+        inline: bool,
     },
     Search {
         query: String,
@@ -102,9 +104,19 @@ pub enum CliCommand {
 #[serde(tag = "type", rename_all = "camelCase")]
 pub enum DailyAction {
     Open,
-    Read { format: OutputFormat },
-    Append { content: String, open: bool },
-    Prepend { content: String, open: bool },
+    Read {
+        format: OutputFormat,
+    },
+    Append {
+        content: String,
+        open: bool,
+        inline: bool,
+    },
+    Prepend {
+        content: String,
+        open: bool,
+        inline: bool,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -124,6 +136,24 @@ impl FileTarget {
                 "expected path=... or file=...".to_string(),
             )),
             _ => Ok(Self { path, file }),
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CreateTarget {
+    pub path: Option<String>,
+    pub name: Option<String>,
+}
+
+impl CreateTarget {
+    fn new(path: Option<String>, name: Option<String>) -> Result<Self, CliParseError> {
+        match (&path, &name) {
+            (Some(_), Some(_)) => Err(CliParseError::InvalidTarget(
+                "use either path=... or name=..., not both".to_string(),
+            )),
+            _ => Ok(Self { path, name }),
         }
     }
 }
@@ -295,14 +325,14 @@ fn parse_open(tail: ParsedTail) -> Result<CliCommand, CliParseError> {
 }
 
 fn parse_create(tail: ParsedTail) -> Result<CliCommand, CliParseError> {
-    let target = tail.file_target(&["open", "overwrite"])?;
-    let content = tail.value("content").cloned();
+    let target = tail.create_target(&["open", "overwrite", "newtab", "new-tab"])?;
+    let content = tail.value("content").map(|value| decode_cli_text(value));
     let open = tail.has_flag("open");
     let overwrite = tail.has_flag("overwrite");
     tail.reject_unexpected(
-        &["path", "file", "content"],
-        &["open", "overwrite"],
-        tail.target_positional_limit(),
+        &["path", "name", "content"],
+        &["open", "overwrite", "newtab", "new-tab"],
+        tail.create_target_positional_limit(),
     )?;
     Ok(CliCommand::Create {
         target,
@@ -324,12 +354,13 @@ fn parse_read(tail: ParsedTail) -> Result<CliCommand, CliParseError> {
 }
 
 fn parse_append(tail: ParsedTail, prepend: bool) -> Result<CliCommand, CliParseError> {
-    let target = tail.file_target(&["open"])?;
-    let content = tail.required_value("content")?;
+    let target = tail.file_target(&["open", "inline"])?;
+    let content = decode_cli_text(&tail.required_value("content")?);
     let open = tail.has_flag("open");
+    let inline = tail.has_flag("inline");
     tail.reject_unexpected(
         &["path", "file", "content"],
-        &["open"],
+        &["open", "inline"],
         tail.target_positional_limit(),
     )?;
     if prepend {
@@ -337,12 +368,14 @@ fn parse_append(tail: ParsedTail, prepend: bool) -> Result<CliCommand, CliParseE
             target,
             content,
             open,
+            inline,
         })
     } else {
         Ok(CliCommand::Append {
             target,
             content,
             open,
+            inline,
         })
     }
 }
@@ -396,16 +429,26 @@ fn parse_daily(tail: ParsedTail, command: &str) -> Result<CliCommand, CliParseEr
             DailyAction::Read { format }
         }
         "daily:append" => {
-            let content = tail.required_value("content")?;
+            let content = decode_cli_text(&tail.required_value("content")?);
             let open = tail.has_flag("open");
-            tail.reject_unexpected(&["content"], &["open"], 0)?;
-            DailyAction::Append { content, open }
+            let inline = tail.has_flag("inline");
+            tail.reject_unexpected(&["content"], &["open", "inline"], 0)?;
+            DailyAction::Append {
+                content,
+                open,
+                inline,
+            }
         }
         "daily:prepend" => {
-            let content = tail.required_value("content")?;
+            let content = decode_cli_text(&tail.required_value("content")?);
             let open = tail.has_flag("open");
-            tail.reject_unexpected(&["content"], &["open"], 0)?;
-            DailyAction::Prepend { content, open }
+            let inline = tail.has_flag("inline");
+            tail.reject_unexpected(&["content"], &["open", "inline"], 0)?;
+            DailyAction::Prepend {
+                content,
+                open,
+                inline,
+            }
         }
         _ => {
             tail.reject_unexpected(&[], &["open"], 0)?;
@@ -483,8 +526,34 @@ impl ParsedTail {
         )
     }
 
+    fn create_target(&self, bare_flags: &[&str]) -> Result<CreateTarget, CliParseError> {
+        let mut positional_paths = self
+            .positionals
+            .iter()
+            .filter(|item| !bare_flags.contains(&item.as_str()))
+            .cloned()
+            .collect::<Vec<_>>();
+        let positional_path = if positional_paths.len() > 1 {
+            return Err(CliParseError::UnknownArgument(positional_paths.remove(1)));
+        } else {
+            positional_paths.pop()
+        };
+        CreateTarget::new(
+            self.value("path").cloned().or(positional_path),
+            self.value("name").cloned(),
+        )
+    }
+
     fn target_positional_limit(&self) -> usize {
         if self.value("path").is_some() || self.value("file").is_some() {
+            0
+        } else {
+            1
+        }
+    }
+
+    fn create_target_positional_limit(&self) -> usize {
+        if self.value("path").is_some() || self.value("name").is_some() {
             0
         } else {
             1
@@ -554,6 +623,29 @@ fn split_assignment(input: &str) -> Option<(&str, &str)> {
 
 fn normalize_key(key: &str) -> String {
     key.to_ascii_lowercase().replace('_', "-")
+}
+
+fn decode_cli_text(input: &str) -> String {
+    let mut out = String::with_capacity(input.len());
+    let mut chars = input.chars();
+    while let Some(ch) = chars.next() {
+        if ch != '\\' {
+            out.push(ch);
+            continue;
+        }
+
+        match chars.next() {
+            Some('n') => out.push('\n'),
+            Some('t') => out.push('\t'),
+            Some('\\') => out.push('\\'),
+            Some(other) => {
+                out.push('\\');
+                out.push(other);
+            }
+            None => out.push('\\'),
+        }
+    }
+    out
 }
 
 fn parse_output_format(value: &str) -> Result<OutputFormat, CliParseError> {
@@ -632,7 +724,7 @@ mod tests {
             "vault=Work",
             "create",
             "path=inbox/idea.md",
-            "content=hello",
+            "content=hello\\nworld",
             "open",
             "overwrite",
         ]);
@@ -640,13 +732,31 @@ mod tests {
         assert_eq!(
             parsed.command,
             CliCommand::Create {
-                target: FileTarget {
+                target: CreateTarget {
                     path: Some("inbox/idea.md".to_string()),
-                    file: None
+                    name: None
                 },
-                content: Some("hello".to_string()),
+                content: Some("hello\nworld".to_string()),
                 open: true,
                 overwrite: true
+            }
+        );
+    }
+
+    #[test]
+    fn parses_create_name_target() {
+        let parsed = parse(&["create", "name=Trip to Paris", "content=hello\\tworld"]);
+
+        assert_eq!(
+            parsed.command,
+            CliCommand::Create {
+                target: CreateTarget {
+                    path: None,
+                    name: Some("Trip to Paris".to_string())
+                },
+                content: Some("hello\tworld".to_string()),
+                open: false,
+                overwrite: false
             }
         );
     }
@@ -668,7 +778,26 @@ mod tests {
                     file: None
                 },
                 content: "- [ ] Follow up".to_string(),
-                open: true
+                open: true,
+                inline: false
+            }
+        );
+    }
+
+    #[test]
+    fn parses_append_inline() {
+        let parsed = parse(&["append", "path=a.md", "content=tail", "inline"]);
+
+        assert_eq!(
+            parsed.command,
+            CliCommand::Append {
+                target: FileTarget {
+                    path: Some("a.md".to_string()),
+                    file: None
+                },
+                content: "tail".to_string(),
+                open: false,
+                inline: true
             }
         );
     }
@@ -697,7 +826,24 @@ mod tests {
             CliCommand::Daily {
                 action: DailyAction::Append {
                     content: "- [ ] Review".to_string(),
-                    open: true
+                    open: true,
+                    inline: false
+                }
+            }
+        );
+    }
+
+    #[test]
+    fn parses_daily_prepend_inline() {
+        let parsed = parse(&["daily:prepend", "content=hello", "inline"]);
+
+        assert_eq!(
+            parsed.command,
+            CliCommand::Daily {
+                action: DailyAction::Prepend {
+                    content: "hello".to_string(),
+                    open: false,
+                    inline: true
                 }
             }
         );
@@ -711,6 +857,18 @@ mod tests {
             "file=A".to_string(),
         ])
         .expect_err("target should be invalid");
+
+        assert!(matches!(err, CliParseError::InvalidTarget(_)));
+    }
+
+    #[test]
+    fn rejects_create_path_and_name_together() {
+        let err = parse_args(&[
+            "create".to_string(),
+            "path=a.md".to_string(),
+            "name=A".to_string(),
+        ])
+        .expect_err("create target should be invalid");
 
         assert!(matches!(err, CliParseError::InvalidTarget(_)));
     }

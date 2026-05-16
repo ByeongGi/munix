@@ -11,6 +11,7 @@ APP_DEST="$APP_INSTALL_DIR/$APP_NAME"
 INSTALL_CLI="${MUNIX_INSTALL_CLI:-1}"
 CLI_INSTALL_DIR="${MUNIX_CLI_INSTALL_DIR:-/usr/local/bin}"
 CLI_DEST="$CLI_INSTALL_DIR/munix"
+UNINSTALL="${MUNIX_UNINSTALL:-0}"
 WORK_DIR="$(mktemp -d "${TMPDIR:-/tmp}/munix-install.XXXXXX")"
 MOUNT_DIR="$WORK_DIR/mount"
 
@@ -37,8 +38,44 @@ require_command() {
   fi
 }
 
+remove_path() {
+  local path="$1"
+  if [ ! -e "$path" ] && [ ! -L "$path" ]; then
+    return 0
+  fi
+
+  if rm -rf "$path" 2>/dev/null; then
+    return 0
+  fi
+
+  require_command sudo
+  sudo rm -rf "$path"
+}
+
+for arg in "$@"; do
+  case "$arg" in
+    --uninstall)
+      UNINSTALL=1
+      ;;
+    --no-cli)
+      INSTALL_CLI=0
+      ;;
+    *)
+      fail "unknown option: $arg"
+      ;;
+  esac
+done
+
 if [ "$(uname -s)" != "Darwin" ]; then
   fail "this installer currently supports macOS only."
+fi
+
+if [ "$UNINSTALL" = "1" ]; then
+  log "Uninstalling Munix..."
+  remove_path "$CLI_DEST"
+  remove_path "$APP_DEST"
+  log "Munix uninstalled."
+  exit 0
 fi
 
 require_command curl
@@ -188,8 +225,9 @@ log "Removing macOS quarantine attribute for this installed app..."
 xattr -dr com.apple.quarantine "$APP_DEST" 2>/dev/null || true
 
 if [ "$INSTALL_CLI" != "0" ]; then
-  log "Installing Munix CLI to:"
-  log "  $CLI_DEST"
+  CLI_BUNDLE_DEST="$APP_DEST/Contents/MacOS/munix-cli"
+  log "Installing Munix CLI inside the app bundle:"
+  log "  $CLI_BUNDLE_DEST"
   CLI_EXTRACT_DIR="$WORK_DIR/cli"
   mkdir -p "$CLI_EXTRACT_DIR"
   tar -xzf "$CLI_TARBALL_PATH" -C "$CLI_EXTRACT_DIR"
@@ -198,14 +236,28 @@ if [ "$INSTALL_CLI" != "0" ]; then
     fail "could not find munix executable in $CLI_ASSET_NAME."
   fi
   chmod 0755 "$CLI_SOURCE"
+  install -m 0755 "$CLI_SOURCE" "$CLI_BUNDLE_DEST"
 
+  if command -v codesign >/dev/null 2>&1; then
+    log "Refreshing ad-hoc code signature after adding the CLI..."
+    codesign --force --deep --sign - "$APP_DEST" >/dev/null
+  else
+    log "Warning: codesign not found; skipping ad-hoc re-signing."
+  fi
+
+  log "Linking Munix CLI to:"
+  log "  $CLI_DEST -> $CLI_BUNDLE_DEST"
   if mkdir -p "$CLI_INSTALL_DIR" 2>/dev/null && [ -w "$CLI_INSTALL_DIR" ]; then
-    install -m 0755 "$CLI_SOURCE" "$CLI_DEST"
+    rm -f "$CLI_DEST"
+    ln -s "$CLI_BUNDLE_DEST" "$CLI_DEST"
   else
     require_command sudo
     sudo mkdir -p "$CLI_INSTALL_DIR"
-    sudo install -m 0755 "$CLI_SOURCE" "$CLI_DEST"
+    sudo rm -f "$CLI_DEST"
+    sudo ln -s "$CLI_BUNDLE_DEST" "$CLI_DEST"
   fi
+
+  xattr -dr com.apple.quarantine "$APP_DEST" 2>/dev/null || true
 fi
 
 log ""

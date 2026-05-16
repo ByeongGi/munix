@@ -9,8 +9,15 @@ import { useTabStore } from "@/store/tab-store";
 import { useVaultDockStore } from "@/store/vault-dock-store";
 import { useVaultStore } from "@/store/vault-store";
 import { applyWorkspaceFileChange } from "@/lib/workspace-file-change";
+import {
+  appendContent,
+  prependContent,
+  resolveCreatePathFromNodes,
+  resolveFileTargetPathFromNodes,
+  type CliCreateTarget,
+  type CliFileTarget,
+} from "./cli-target-utils";
 import type { SidebarTab } from "@/components/app-shell/types";
-import type { FileNode } from "@/types/ipc";
 
 const CLI_EVENT_NAME = "munix-cli-command";
 
@@ -20,32 +27,39 @@ interface CliInvocation {
 }
 
 type CliCommand =
-  | { type: "open"; target: FileTarget; line?: number | null }
+  | { type: "open"; target: CliFileTarget; line?: number | null }
   | {
       type: "create";
-      target: FileTarget;
+      target: CliCreateTarget;
       content?: string | null;
       open: boolean;
       overwrite: boolean;
     }
-  | { type: "append"; target: FileTarget; content: string; open: boolean }
-  | { type: "prepend"; target: FileTarget; content: string; open: boolean }
+  | {
+      type: "append";
+      target: CliFileTarget;
+      content: string;
+      open: boolean;
+      inline: boolean;
+    }
+  | {
+      type: "prepend";
+      target: CliFileTarget;
+      content: string;
+      open: boolean;
+      inline: boolean;
+    }
   | { type: "search"; query: string; open: boolean }
   | { type: "daily"; action: DailyAction }
   | { type: "tui" | "help" | "version" | "vaults" | "files" | "folders" }
-  | { type: "read"; target: FileTarget }
+  | { type: "read"; target: CliFileTarget }
   | { type: "tags" | "backlinks" };
-
-interface FileTarget {
-  path?: string | null;
-  file?: string | null;
-}
 
 type DailyAction =
   | { type: "open" }
   | { type: "read" }
-  | { type: "append"; content: string; open: boolean }
-  | { type: "prepend"; content: string; open: boolean };
+  | { type: "append"; content: string; open: boolean; inline: boolean }
+  | { type: "prepend"; content: string; open: boolean; inline: boolean };
 
 interface UseCliCommandListenerOptions {
   refreshFiles: () => Promise<void>;
@@ -147,10 +161,11 @@ function looksLikePath(value: string): boolean {
 }
 
 async function openTarget(
-  target: FileTarget,
+  target: CliFileTarget,
   line?: number | null,
 ): Promise<void> {
-  const path = await resolveTargetPath(target);
+  const path = resolveTargetPath(target);
+  await ipc.readFile(path);
   if (line && line > 0) {
     useEditorStore.getState().setPendingJumpLine(line);
   }
@@ -161,10 +176,10 @@ async function createTarget(
   command: Extract<CliCommand, { type: "create" }>,
   options: UseCliCommandListenerOptions,
 ): Promise<void> {
-  const path = command.target.path;
-  if (!path) {
-    throw new Error("create requires path=...");
-  }
+  const path = resolveCreatePathFromNodes(
+    command.target,
+    useVaultStore.getState().files,
+  );
 
   const kind = command.overwrite ? "modified" : "created";
   if (command.overwrite) {
@@ -184,8 +199,13 @@ async function appendTarget(
   prepend: boolean,
   options: UseCliCommandListenerOptions,
 ): Promise<void> {
-  const path = await resolveTargetPath(command.target);
-  await writeWithInsertedContent(path, command.content, prepend);
+  const path = resolveTargetPath(command.target);
+  await writeWithInsertedContent(
+    path,
+    command.content,
+    prepend,
+    command.inline ?? false,
+  );
   await refreshAndApplyChange(path, "modified", options);
 
   if (command.open) {
@@ -205,6 +225,7 @@ async function runDailyAction(
       path,
       action.content,
       action.type === "prepend",
+      action.inline ?? false,
     );
     await refreshAndApplyChange(path, "modified", options);
     if (action.open) {
@@ -236,11 +257,12 @@ async function writeWithInsertedContent(
   path: string,
   content: string,
   prepend: boolean,
+  inline: boolean,
 ): Promise<void> {
   const current = await ipc.readFile(path);
   const next = prepend
-    ? joinBlocks(content, current.content)
-    : joinBlocks(current.content, content);
+    ? prependContent(current.content, content, inline)
+    : appendContent(current.content, content, inline);
   await ipc.writeFile(path, next, current.modified, true);
 }
 
@@ -260,43 +282,8 @@ function openTabIfNotCurrent(path: string): void {
   useTabStore.getState().openTab(path);
 }
 
-function joinBlocks(a: string, b: string): string {
-  if (!a) return b;
-  if (!b) return a;
-  return `${a.replace(/\s*$/, "")}\n${b.replace(/^\s*/, "")}`;
-}
-
-async function resolveTargetPath(target: FileTarget): Promise<string> {
-  if (target.path) return target.path;
-  if (!target.file) {
-    throw new Error("expected path=... or file=...");
-  }
-
-  const files = useVaultStore.getState().files;
-  const match = flattenFiles(files).find((node) => {
-    if (node.kind !== "file") return false;
-    const withoutExtension = node.name.replace(/\.md$/i, "");
-    return node.name === target.file || withoutExtension === target.file;
-  });
-
-  if (!match) {
-    throw new Error(`File not found: ${target.file}`);
-  }
-  return match.path;
-}
-
-function flattenFiles(nodes: FileNode[]): FileNode[] {
-  const out: FileNode[] = [];
-  const stack = [...nodes];
-  while (stack.length > 0) {
-    const node = stack.shift();
-    if (!node) continue;
-    out.push(node);
-    if (node.children) {
-      stack.unshift(...node.children);
-    }
-  }
-  return out;
+function resolveTargetPath(target: CliFileTarget): string {
+  return resolveFileTargetPathFromNodes(target, useVaultStore.getState().files);
 }
 
 function localDateString(): string {
