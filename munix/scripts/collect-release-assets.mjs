@@ -49,9 +49,12 @@ function walk(dir) {
   });
 }
 
-const assets = walk(bundleDir).filter((file) =>
-  allowedExtensions.has(extname(file)),
-);
+const assets = walk(bundleDir).filter((file) => {
+  const name = basename(file);
+  return (
+    allowedExtensions.has(extname(file)) && name.includes(packageJson.version)
+  );
+});
 
 if (assets.length === 0) {
   console.error(
