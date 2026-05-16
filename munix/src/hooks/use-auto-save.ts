@@ -71,6 +71,7 @@ export function useAutoSave(editor: Editor | null): {
             baseModified: result.modified,
             status: { kind: "saved", at: Date.now() },
             dirty: false,
+            externalModified: false,
             lastAccessedAt: Date.now(),
           });
         }

@@ -115,6 +115,11 @@ export const createDocumentRuntimeSlice: StateCreator<
         ...state.documentRuntimes,
         [runtime.tabId]: {
           ...runtime,
+          externalModified:
+            runtime.externalModified ??
+            (state.documentRuntimes[runtime.tabId]?.path === runtime.path
+              ? state.documentRuntimes[runtime.tabId]?.externalModified
+              : undefined),
           dirty: isRuntimeDirty(runtime),
           lastAccessedAt: Date.now(),
         },
@@ -168,11 +173,7 @@ export const createDocumentRuntimeSlice: StateCreator<
       const next = { ...state.documentRuntimes };
       for (const [tabId, runtime] of Object.entries(next)) {
         if (!isPathOrDescendant(runtime.path, path)) continue;
-        if (isRuntimeDirty(runtime)) {
-          next[tabId] = { ...runtime, externalModified: true };
-        } else {
-          delete next[tabId];
-        }
+        next[tabId] = { ...runtime, externalModified: true };
         changed = true;
       }
       return changed ? { documentRuntimes: next } : {};

@@ -91,6 +91,7 @@ export function useInactivePaneAutosave({
         baseModified: result.modified,
         status: { kind: "saved", at: Date.now() },
         dirty: false,
+        externalModified: false,
         lastAccessedAt: Date.now(),
       });
       updateIndexesAfterInactiveSave(path, nextBody);

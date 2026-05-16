@@ -8,6 +8,7 @@ import { useSearchStore } from "@/store/search-store";
 import { useTabStore } from "@/store/tab-store";
 import { useVaultDockStore } from "@/store/vault-dock-store";
 import { useVaultStore } from "@/store/vault-store";
+import { applyWorkspaceFileChange } from "@/lib/workspace-file-change";
 import type { SidebarTab } from "@/components/app-shell/types";
 import type { FileNode } from "@/types/ipc";
 
@@ -165,12 +166,13 @@ async function createTarget(
     throw new Error("create requires path=...");
   }
 
+  const kind = command.overwrite ? "modified" : "created";
   if (command.overwrite) {
     await ipc.writeFile(path, command.content ?? "", null, true);
   } else {
     await ipc.createFile(path, command.content ?? "");
   }
-  await options.refreshFiles();
+  await refreshAndApplyChange(path, kind, options);
 
   if (command.open) {
     useTabStore.getState().openTab(path);
@@ -184,10 +186,10 @@ async function appendTarget(
 ): Promise<void> {
   const path = await resolveTargetPath(command.target);
   await writeWithInsertedContent(path, command.content, prepend);
-  await options.refreshFiles();
+  await refreshAndApplyChange(path, "modified", options);
 
   if (command.open) {
-    useTabStore.getState().openTab(path);
+    openTabIfNotCurrent(path);
   }
 }
 
@@ -204,23 +206,29 @@ async function runDailyAction(
       action.content,
       action.type === "prepend",
     );
-    await options.refreshFiles();
+    await refreshAndApplyChange(path, "modified", options);
     if (action.open) {
-      useTabStore.getState().openTab(path);
+      openTabIfNotCurrent(path);
     }
     return;
   }
 
-  await ensureFile(path);
-  await options.refreshFiles();
+  const created = await ensureFile(path);
+  if (created) {
+    await refreshAndApplyChange(path, "created", options);
+  } else {
+    await options.refreshFiles();
+  }
   useTabStore.getState().openTab(path);
 }
 
-async function ensureFile(path: string): Promise<void> {
+async function ensureFile(path: string): Promise<boolean> {
   try {
     await ipc.readFile(path);
+    return false;
   } catch {
     await ipc.createFile(path, "");
+    return true;
   }
 }
 
@@ -234,6 +242,22 @@ async function writeWithInsertedContent(
     ? joinBlocks(content, current.content)
     : joinBlocks(current.content, content);
   await ipc.writeFile(path, next, current.modified, true);
+}
+
+async function refreshAndApplyChange(
+  path: string,
+  kind: "created" | "modified",
+  options: UseCliCommandListenerOptions,
+): Promise<void> {
+  await options.refreshFiles();
+  const vaultId = useVaultDockStore.getState().activeVaultId;
+  if (!vaultId) return;
+  applyWorkspaceFileChange(vaultId, kind, path);
+}
+
+function openTabIfNotCurrent(path: string): void {
+  if (useEditorStore.getState().currentPath === path) return;
+  useTabStore.getState().openTab(path);
 }
 
 function joinBlocks(a: string, b: string): string {

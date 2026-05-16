@@ -16,6 +16,8 @@ import type { FileNode, VaultInfo } from "@/types/ipc";
 import { ipc } from "@/lib/ipc";
 import { useVaultDockStore } from "@/store/vault-dock-store";
 
+let listFilesRequestSeq = 0;
+
 interface VaultStore {
   info: VaultInfo | null;
   files: FileNode[];
@@ -68,7 +70,15 @@ export const useVaultStore = create<VaultStore>((set, get) => ({
       const info =
         useVaultDockStore.getState().vaults.find((v) => v.id === id) ?? null;
       if (!info) throw new Error("Vault registration missing after openVault");
+      const requestSeq = ++listFilesRequestSeq;
       const files = await ipc.listFiles();
+      if (
+        requestSeq !== listFilesRequestSeq ||
+        useVaultDockStore.getState().activeVaultId !== id
+      ) {
+        set({ loading: false });
+        return;
+      }
       set({ info, files, loading: false });
     } catch (e) {
       set({
@@ -89,8 +99,15 @@ export const useVaultStore = create<VaultStore>((set, get) => ({
   },
 
   refresh: async () => {
-    if (!get().info) return;
+    const info = get().info;
+    if (!info) return;
+    const requestSeq = ++listFilesRequestSeq;
+    const vaultId = info.id;
+    if (useVaultDockStore.getState().activeVaultId !== vaultId) return;
     const files = await ipc.listFiles();
+    if (requestSeq !== listFilesRequestSeq) return;
+    if (useVaultDockStore.getState().activeVaultId !== vaultId) return;
+    if (useVaultStore.getState().info?.id !== vaultId) return;
     set({ files });
   },
 }));
@@ -110,9 +127,12 @@ useVaultDockStore.subscribe((state, prev) => {
   if (useVaultStore.getState().info?.id === id) return;
   const info = state.vaults.find((v) => v.id === id) ?? null;
   if (!info) return;
+  const requestSeq = ++listFilesRequestSeq;
   void ipc
     .listFiles()
     .then((files) => {
+      if (requestSeq !== listFilesRequestSeq) return;
+      if (useVaultDockStore.getState().activeVaultId !== id) return;
       useVaultStore.setState({ info, files });
     })
     .catch((e) => {

@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { JSONContent } from "@tiptap/core";
+import { useStore } from "zustand";
 import { preprocessMarkdownCached } from "@/lib/editor-preprocess";
 import { useActiveWorkspaceStore } from "@/lib/active-vault";
 import { ipc } from "@/lib/ipc";
@@ -30,9 +31,42 @@ export function useInactivePaneDocumentLoader(path: string, tabId: string) {
   const statusRef = useRef<InactiveEditorStatus>("loading");
   const frontmatterRef = useRef<Record<string, unknown> | null>(null);
   const baseModifiedRef = useRef<number | null>(null);
+  const externalModified = useStore(
+    ws,
+    (state) => state.documentRuntimes[tabId]?.externalModified === true,
+  );
   const content = useMemo(
     () => editorJson ?? preprocessMarkdownCached(body),
     [body, editorJson],
+  );
+
+  const loadFromDisk = useCallback(
+    async (isCancelled: () => boolean) => {
+      setStatus("loading");
+      setBaseModified(null);
+      const file = await ipc.readFile(path);
+      if (isCancelled()) return;
+      const parsed = parseDocument(file.content);
+      frontmatterRef.current = parsed.frontmatter;
+      baseModifiedRef.current = file.modified;
+      setBody(parsed.body);
+      setEditorJson(null);
+      setFrontmatter(parsed.frontmatter);
+      setBaseModified(file.modified);
+      setStatus("ready");
+      ws.getState().upsertDocumentRuntime({
+        tabId,
+        path,
+        body: parsed.body,
+        frontmatter: parsed.frontmatter,
+        baseModified: file.modified,
+        status: { kind: "idle" },
+        dirty: false,
+        externalModified: false,
+        lastAccessedAt: Date.now(),
+      });
+    },
+    [path, tabId, ws],
   );
 
   useEffect(() => {
@@ -63,31 +97,7 @@ export function useInactivePaneDocumentLoader(path: string, tabId: string) {
       };
     }
 
-    setStatus("loading");
-    setBaseModified(null);
-    void ipc
-      .readFile(path)
-      .then((file) => {
-        if (cancelled) return;
-        const parsed = parseDocument(file.content);
-        frontmatterRef.current = parsed.frontmatter;
-        baseModifiedRef.current = file.modified;
-        setBody(parsed.body);
-        setEditorJson(null);
-        setFrontmatter(parsed.frontmatter);
-        setBaseModified(file.modified);
-        setStatus("ready");
-        ws.getState().upsertDocumentRuntime({
-          tabId,
-          path,
-          body: parsed.body,
-          frontmatter: parsed.frontmatter,
-          baseModified: file.modified,
-          status: { kind: "idle" },
-          dirty: false,
-          lastAccessedAt: Date.now(),
-        });
-      })
+    void loadFromDisk(() => cancelled)
       .catch((e) => {
         if (cancelled) return;
         console.error("inactive pane editor failed", e);
@@ -102,7 +112,28 @@ export function useInactivePaneDocumentLoader(path: string, tabId: string) {
     return () => {
       cancelled = true;
     };
-  }, [path, tabId, ws]);
+  }, [loadFromDisk, path, tabId, ws]);
+
+  useEffect(() => {
+    if (!externalModified) return;
+
+    if (statusRef.current !== "ready") {
+      if (statusRef.current === "dirty" || statusRef.current === "saving") {
+        setStatus("conflict");
+      }
+      return;
+    }
+
+    let cancelled = false;
+    void loadFromDisk(() => cancelled).catch((e) => {
+      if (cancelled) return;
+      console.error("inactive pane editor reload failed", e);
+      setStatus("loadError");
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [externalModified, loadFromDisk]);
 
   return {
     body,

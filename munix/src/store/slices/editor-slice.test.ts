@@ -86,4 +86,85 @@ describe("editor-slice runtime reuse", () => {
     expect(store.getState().body).toBe("# Fresh");
     expect(store.getState().sourceVersion).toBe(2);
   });
+
+  it("marks clean runtimes as externally modified instead of dropping them", () => {
+    const store = makeStore();
+    store.getState().upsertDocumentRuntime({
+      tabId: "tab-1",
+      path: "note.md",
+      body: "# Cached",
+      frontmatter: null,
+      baseModified: 10,
+      status: { kind: "idle" },
+      dirty: false,
+      lastAccessedAt: 1,
+    });
+
+    store.getState().invalidateDocumentRuntimesForPath("note.md");
+
+    expect(
+      store.getState().documentRuntimes["tab-1"]?.externalModified,
+    ).toBe(true);
+  });
+
+  it("preserves an external modification flag across passive runtime capture", () => {
+    const store = makeStore();
+    store.getState().upsertDocumentRuntime({
+      tabId: "tab-1",
+      path: "note.md",
+      body: "# Stale",
+      frontmatter: null,
+      baseModified: 10,
+      status: { kind: "idle" },
+      dirty: false,
+      externalModified: true,
+      lastAccessedAt: 1,
+    });
+
+    store.getState().upsertDocumentRuntime({
+      tabId: "tab-1",
+      path: "note.md",
+      body: "# Still stale",
+      frontmatter: null,
+      baseModified: 10,
+      status: { kind: "idle" },
+      dirty: false,
+      lastAccessedAt: 2,
+    });
+
+    expect(
+      store.getState().documentRuntimes["tab-1"]?.externalModified,
+    ).toBe(true);
+  });
+
+  it("clears an external modification flag after an explicit disk reload", () => {
+    const store = makeStore();
+    store.getState().upsertDocumentRuntime({
+      tabId: "tab-1",
+      path: "note.md",
+      body: "# Stale",
+      frontmatter: null,
+      baseModified: 10,
+      status: { kind: "idle" },
+      dirty: false,
+      externalModified: true,
+      lastAccessedAt: 1,
+    });
+
+    store.getState().upsertDocumentRuntime({
+      tabId: "tab-1",
+      path: "note.md",
+      body: "# Fresh",
+      frontmatter: null,
+      baseModified: 20,
+      status: { kind: "idle" },
+      dirty: false,
+      externalModified: false,
+      lastAccessedAt: 2,
+    });
+
+    expect(
+      store.getState().documentRuntimes["tab-1"]?.externalModified,
+    ).toBe(false);
+  });
 });

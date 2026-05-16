@@ -175,6 +175,7 @@ export const createEditorSlice: StateCreator<
           baseModified: content.modified,
           status: { kind: "idle" },
           dirty: false,
+          externalModified: false,
           lastAccessedAt: Date.now(),
         });
       }
@@ -227,6 +228,7 @@ export const createEditorSlice: StateCreator<
           baseModified: content.modified,
           status: { kind: "idle" },
           dirty: false,
+          externalModified: false,
           lastAccessedAt: Date.now(),
         });
       }
