@@ -1,4 +1,5 @@
 import { createAppCommands } from "./palette-app-commands";
+import { createEditorCommands } from "./palette-editor-commands";
 import { createFileCommands } from "./palette-file-commands";
 import { createSidebarCommands } from "./palette-sidebar-commands";
 import { createTabCommands } from "./palette-tab-commands";
@@ -15,6 +16,7 @@ export function createPaletteCommands(
 ): PaletteCommand[] {
   return [
     ...createFileCommands(context),
+    ...createEditorCommands(context),
     ...createTabCommands(context),
     ...createSidebarCommands(context),
     ...createVaultCommands(context),

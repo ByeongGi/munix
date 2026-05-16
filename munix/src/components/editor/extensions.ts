@@ -23,6 +23,7 @@ import { Wikilink } from "./wikilink/wikilink-node";
 import { WikilinkSuggestion } from "./wikilink/wikilink-suggestion";
 import { WikilinkClick } from "./wikilink/wikilink-click";
 import { MarkdownLinkClick } from "./markdown-link-click";
+import { StandardClipboardCopy } from "./standard-clipboard-copy";
 import { HorizontalRuleNode } from "./horizontal-rule-node";
 import { HorizontalRuleEnter } from "./horizontal-rule-enter";
 import { BlockShortcuts } from "./block-shortcuts";
@@ -84,6 +85,7 @@ export function createEditorExtensions(
       transformPastedText: true,
       transformCopiedText: true,
     }),
+    StandardClipboardCopy,
     SlashCommand,
     SearchHighlight,
     SelectionVisibility,

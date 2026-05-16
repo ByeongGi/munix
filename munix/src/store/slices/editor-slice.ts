@@ -11,6 +11,7 @@ import type { StateCreator } from "zustand";
 import { ipc } from "@/lib/ipc";
 import { isImagePath } from "@/lib/file-kind";
 import type { DocumentRuntimeSlice } from "./document-runtime-slice";
+import type { CopySelectionFn } from "@/types/editor-clipboard";
 
 export type SaveStatus =
   | { kind: "idle" }
@@ -37,6 +38,7 @@ export interface EditorSlice {
   status: SaveStatus;
   flushSave: FlushFn | null;
   requestSave: (() => void) | null;
+  copySelectionAs: CopySelectionFn | null;
   pendingSearchQuery: string | null;
   pendingJumpHeading: string | null;
   pendingJumpLine: number | null;
@@ -51,6 +53,7 @@ export interface EditorSlice {
   setFrontmatter: (fm: Record<string, unknown> | null) => void;
   setFlushSave: (fn: FlushFn | null) => void;
   setRequestSave: (fn: (() => void) | null) => void;
+  setCopySelectionAs: (fn: CopySelectionFn | null) => void;
   setPendingSearchQuery: (q: string | null) => void;
   setPendingJumpHeading: (h: string | null) => void;
   setPendingJumpLine: (n: number | null) => void;
@@ -72,6 +75,7 @@ export function defaultEditorSlice(): EditorSlice {
     status: { kind: "idle" },
     flushSave: null,
     requestSave: null,
+    copySelectionAs: null,
     pendingSearchQuery: null,
     pendingJumpHeading: null,
     pendingJumpLine: null,
@@ -85,6 +89,7 @@ export function defaultEditorSlice(): EditorSlice {
     setFrontmatter: () => {},
     setFlushSave: () => {},
     setRequestSave: () => {},
+    setCopySelectionAs: () => {},
     setPendingSearchQuery: () => {},
     setPendingJumpHeading: () => {},
     setPendingJumpLine: () => {},
@@ -110,6 +115,7 @@ export const createEditorSlice: StateCreator<
   status: { kind: "idle" },
   flushSave: null,
   requestSave: null,
+  copySelectionAs: null,
   pendingSearchQuery: null,
   pendingJumpHeading: null,
   pendingJumpLine: null,
@@ -250,6 +256,7 @@ export const createEditorSlice: StateCreator<
   setFrontmatter: (fm) => set({ frontmatter: fm }),
   setFlushSave: (fn) => set({ flushSave: fn }),
   setRequestSave: (fn) => set({ requestSave: fn }),
+  setCopySelectionAs: (fn) => set({ copySelectionAs: fn }),
   setPendingSearchQuery: (q) => set({ pendingSearchQuery: q }),
   setPendingJumpHeading: (h) => set({ pendingJumpHeading: h }),
   setPendingJumpLine: (n) => set({ pendingJumpLine: n }),

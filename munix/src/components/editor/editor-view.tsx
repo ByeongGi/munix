@@ -13,6 +13,7 @@ import {
   useState,
 } from "react";
 import { createEditorExtensions } from "@/components/editor/extensions";
+import { copyEditorSelection } from "@/components/editor/standard-clipboard-copy";
 import { useAutoSave } from "@/hooks/use-auto-save";
 import { useEditorStore } from "@/store/editor-store";
 import { useTabStore } from "@/store/tab-store";
@@ -39,6 +40,7 @@ import type {
   DocumentRuntime,
   ScrollRuntimeState,
 } from "@/store/slices/document-runtime-slice";
+import type { EditorCopyMode } from "@/types/editor-clipboard";
 
 const DEFER_DOCUMENT_HYDRATION_MIN_LENGTH = 80_000;
 const SCROLL_RESTORE_MAX_ATTEMPTS = 3;
@@ -429,6 +431,23 @@ export function EditorView({ className }: EditorViewProps) {
     return () => {
       ws.getState().captureActiveDocumentRuntime();
       ws.getState().setActiveEditorRuntimeCapture(null);
+    };
+  }, [editor, ws]);
+
+  useEffect(() => {
+    if (!editor) {
+      ws.getState().setCopySelectionAs(null);
+      return;
+    }
+
+    const copySelectionAs = (mode: EditorCopyMode = "standard") =>
+      copyEditorSelection(editor, mode);
+
+    ws.getState().setCopySelectionAs(copySelectionAs);
+    return () => {
+      if (ws.getState().copySelectionAs === copySelectionAs) {
+        ws.getState().setCopySelectionAs(null);
+      }
     };
   }, [editor, ws]);
 
