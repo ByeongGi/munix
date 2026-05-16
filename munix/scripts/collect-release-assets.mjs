@@ -6,11 +6,15 @@ import {
   rmSync,
   statSync,
 } from "node:fs";
-import { basename, extname, join } from "node:path";
+import { basename, dirname, extname, join, resolve } from "node:path";
 import { platform } from "node:os";
+import { fileURLToPath } from "node:url";
 import packageJson from "../package.json" with { type: "json" };
 
 const tag = `v${packageJson.version}`;
+const scriptDir = dirname(fileURLToPath(import.meta.url));
+const appRootDir = resolve(scriptDir, "..");
+const repoRootDir = resolve(appRootDir, "..");
 const currentPlatform =
   {
     darwin: "macos",
@@ -18,10 +22,10 @@ const currentPlatform =
     linux: "linux",
   }[platform()] ?? platform();
 
-const bundleDir = join("src-tauri", "target", "release", "bundle");
-const releaseRootDir = join("..", "release-dist", tag);
+const bundleDir = join(appRootDir, "src-tauri", "target", "release", "bundle");
+const releaseRootDir = join(repoRootDir, "release-dist", tag);
 const outputDir = join(releaseRootDir, currentPlatform);
-const installerScript = join("..", "scripts", "install-macos.sh");
+const installerScript = join(repoRootDir, "scripts", "install-macos.sh");
 const allowedExtensions = new Set([
   ".AppImage",
   ".appimage",

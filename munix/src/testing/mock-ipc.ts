@@ -303,6 +303,7 @@ export function createMockIpcClient(options: MockIpcOptions = {}): IpcClient {
     terminalResize: async () => {},
     terminalKill: async () => {},
     terminalComplete: async (): Promise<TerminalCompletionSuggestion[]> => [],
+    startCliIpcServer: async () => {},
   };
 }
 

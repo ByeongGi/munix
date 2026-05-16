@@ -1,10 +1,10 @@
 # Munix 설치 안내
 
-Munix는 현재 초기 오픈소스 빌드이며 macOS Apple notarization은 적용되어 있지 않다. macOS에서는 GitHub Release DMG를 직접 열면 Gatekeeper 경고가 발생할 수 있으므로, 개발자/파워유저에게는 CLI 설치 방식을 권장한다.
+Munix는 현재 초기 오픈소스 빌드이며 macOS Apple notarization은 적용되어 있지 않다. macOS에서는 GitHub Release DMG를 직접 열면 Gatekeeper 경고가 발생할 수 있으므로, 개발자/파워유저에게는 설치 스크립트 방식을 권장한다.
 
-## 권장: CLI 설치
+## 권장: 앱 + CLI 설치
 
-macOS 개발자/파워유저는 아래 명령으로 GitHub Release DMG를 다운로드하고 `~/Applications/munix.app`에 설치할 수 있다.
+macOS 개발자/파워유저는 아래 명령으로 GitHub Release DMG와 CLI tarball을 다운로드하고 `~/Applications/munix.app`, `/usr/local/bin/munix`에 설치할 수 있다.
 
 ```bash
 curl -fsSL https://github.com/ByeongGi/munix/releases/latest/download/install-macos.sh | bash
@@ -15,11 +15,13 @@ curl -fsSL https://github.com/ByeongGi/munix/releases/latest/download/install-ma
 스크립트는 다음을 수행한다.
 
 - GitHub Release의 DMG 다운로드
+- GitHub Release의 `munix-cli_{version}_{arch}.tar.gz` 다운로드
 - DMG mount
 - `munix.app`을 `~/Applications/munix.app`에 복사
+- `munix` CLI를 `/usr/local/bin/munix`에 설치
 - 설치된 앱의 macOS quarantine 속성 제거
 
-이 방식은 Node.js, Rust, pnpm 같은 빌드 환경을 요구하지 않는다. macOS 기본 도구인 `curl`, `hdiutil`, `ditto`, `xattr`만 사용한다.
+이 방식은 Node.js, Rust, pnpm 같은 빌드 환경을 요구하지 않는다. macOS 기본 도구인 `curl`, `hdiutil`, `ditto`, `tar`, `xattr`만 사용한다.
 
 필요 조건:
 
@@ -34,12 +36,37 @@ export MUNIX_APP_INSTALL_DIR=/Applications
 curl -fsSL https://github.com/ByeongGi/munix/releases/latest/download/install-macos.sh | bash
 ```
 
+CLI 설치 위치를 바꾸려면:
+
+```bash
+export MUNIX_CLI_INSTALL_DIR="$HOME/.local/bin"
+curl -fsSL https://github.com/ByeongGi/munix/releases/latest/download/install-macos.sh | bash
+```
+
+CLI 설치를 건너뛰려면:
+
+```bash
+export MUNIX_INSTALL_CLI=0
+curl -fsSL https://github.com/ByeongGi/munix/releases/latest/download/install-macos.sh | bash
+```
+
 특정 버전을 설치하려면:
 
 ```bash
 export MUNIX_VERSION=0.1.1
 curl -fsSL https://github.com/ByeongGi/munix/releases/latest/download/install-macos.sh | bash
 ```
+
+설치 후 CLI는 Obsidian식 문법을 사용한다.
+
+```bash
+munix help
+munix vault=Work open path="daily/2026-05-16.md"
+munix vault=Work create path="inbox/idea.md" content="first draft" open
+munix vault=Work search query="tauri ipc"
+```
+
+macOS에서는 Munix 앱이 꺼져 있으면 CLI가 `MUNIX_APP_PATH`, `~/Applications/munix.app`, `/Applications/munix.app` 순서로 앱을 찾아 실행한 뒤 명령을 전달한다.
 
 ## 소스에서 직접 빌드
 
@@ -49,7 +76,7 @@ curl -fsSL https://github.com/ByeongGi/munix/releases/latest/download/install-ma
 git clone https://github.com/ByeongGi/munix.git
 cd munix/munix
 pnpm install
-pnpm tauri build
+pnpm release:build
 open src-tauri/target/release/bundle/macos/munix.app
 ```
 

@@ -1,10 +1,11 @@
 [package]
 name = "munix"
-version = "0.1.12"
+version = "0.1.13"
 description = "A Tauri App"
 authors = ["you"]
 edition = "2021"
 license = "MIT"
+default-run = "munix"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 

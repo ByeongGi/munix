@@ -1,3 +1,5 @@
+pub mod cli;
+pub mod cli_ipc;
 mod clipboard;
 mod commands;
 mod error;
@@ -37,6 +39,7 @@ pub fn run() {
         .plugin(tauri_plugin_shell::init())
         .manage(AppState::new())
         .invoke_handler(tauri::generate_handler![
+            cli_ipc::start_cli_ipc_server,
             commands::vault::open_vault,
             commands::vault::close_vault,
             commands::vault::get_vault_info,

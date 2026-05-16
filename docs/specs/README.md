@@ -18,7 +18,7 @@
 | 8   | [theme-spec.md](./theme-spec.md)                            | 컬러 토큰, 다크모드, 타이포                                                  | 6     | 구현               |
 | 9   | [plugin-spec.md](./plugin-spec.md) 🆕                       | Extism WASM 플러그인 시스템 (capability 기반)                                | 7+    | **proposed**       |
 | 10  | [terminal-spec.md](./terminal-spec.md) 🆕                   | 터미널 (workspace tab, xterm.js + portable-pty)                              | 7+    | **구현**           |
-| 11  | [cli-spec.md](./cli-spec.md) 🆕                             | CLI + URI scheme (`munix://`) — 3계층 출시                                   | 6/7+  | **proposed**       |
+| 11  | [cli-spec.md](./cli-spec.md) 🆕                             | Obsidian-style CLI + URI scheme (`munix://`)                                 | 6/7+  | **accepted**       |
 | 12  | [i18n-spec.md](./i18n-spec.md)                              | 다국어 지원 (i18next 26 + react-i18next 17, 영/한 + 점진적)                  | 6/7+  | **구현 (Phase A)** |
 | 13  | [workspace-split-spec.md](./workspace-split-spec.md) 🆕     | Obsidian-style 분할 패널, pane별 탭, 탭 DnD split                            | 7+    | **proposed**       |
 | 14  | [vault-trust-spec.md](./vault-trust-spec.md) 🆕             | Vault 단위 신뢰 모델, 시스템 연동 권한 요청                                  | 6/7+  | **partial**        |
@@ -117,7 +117,7 @@ multi-vault-spec ──┬──> vault-spec (VaultManager 도입)
 
 - **초안 작성일:** 2026-04-25
 - **모든 스펙 버전:** v0.1
-- **최근 추가 (2026-04-25):** plugin-spec / terminal-spec / cli-spec (모두 proposed — [ADR-022](../decisions.md#adr-022-플러그인-시스템-extism-wasm), [ADR-023](../decisions.md#adr-023-터미널-플러그인-1호), [ADR-024](../decisions.md#adr-024-cli--uri-scheme-munix))
+- **최근 추가 (2026-04-25):** plugin-spec / terminal-spec / cli-spec (초안 — [ADR-022](../decisions.md#adr-022-플러그인-시스템-extism-wasm), [ADR-023](../decisions.md#adr-023-터미널-플러그인-1호), [ADR-024](../decisions.md#adr-024-cli--uri-scheme-munix))
 - **최근 추가 (2026-04-26):** workspace-split-spec (proposed — Obsidian-style pane split + tab DnD)
 - **최근 추가 (2026-04-26):** vault-trust-spec (partial — 시스템 파일 관리자 reveal에 초기 적용)
 - **최근 업데이트 (2026-05-02):** multi-vault-spec v0.5 (accepted — [ADR-031](../decisions.md#adr-031-멀티-vault-워크스페이스-cmux-스타일-좌측-세로-탭) cmux 스타일 좌측 세로 vault 탭 + workspace split 연계, 멀티 윈도우 승격 테스트 제거)
@@ -125,6 +125,7 @@ multi-vault-spec ──┬──> vault-spec (VaultManager 도입)
 - **최근 추가 (2026-04-29):** mermaid-spec v0.1 (proposed — fenced code block `mermaid` 구분값과 렌더링 정책 정의)
 - **최근 추가 (2026-05-02):** tab-runtime-cache-spec v0.1 (partial — 탭 전환 runtime snapshot cache, selection/scroll anchor 복원, Mermaid async layout 보정 1차 구현)
 - **최근 추가 (2026-05-02):** ui-ux-spec v0.1 (proposed — UX 조사 기반 체감 성능 budget, loading/feedback/accessibility 기준 정의)
+- **최근 업데이트 (2026-05-16):** cli-spec v0.2 (accepted — Obsidian 공식 CLI 조사 반영, 별도 `munix-cli` + local IPC 구조)
 
 ---
 

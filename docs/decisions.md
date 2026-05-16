@@ -31,7 +31,7 @@
 | [ADR-021](#adr-021-fs-watcher-self-write-suppression) | FS Watcher self-write suppression | 2026-04-25 | Accepted (사후 기록) |
 | [ADR-022](#adr-022-플러그인-시스템-extism-wasm) | 플러그인 시스템 (Extism WASM) | 2026-04-25 | 🟡 Proposed |
 | [ADR-023](#adr-023-터미널-플러그인-1호) | 터미널 (플러그인 1호) | 2026-04-25 | 🔴 Superseded by ADR-034 |
-| [ADR-024](#adr-024-cli--uri-scheme-munix) | CLI + URI scheme (`munix://`) | 2026-04-25 | 🟡 Proposed |
+| [ADR-024](#adr-024-cli--uri-scheme-munix) | CLI + URI scheme (`munix://`) | 2026-05-16 | ✅ Accepted |
 | [ADR-025](#adr-025-다국어-지원-i18next--react-i18next) | 다국어 지원 (i18next) | 2026-04-25 | ✅ Accepted |
 | [ADR-026](#adr-026-파일-트리-가상-스크롤-react-virtuoso) | 파일 트리 가상 스크롤 (react-virtuoso) | 2026-04-25 | ✅ Accepted |
 | [ADR-027](#adr-027-frontmatter-파싱은-gray-matter-안-쓰고-js-yaml-직접-사용) | Frontmatter 파싱은 js-yaml 직접 | 2026-04-25 | ✅ Accepted |
@@ -1118,44 +1118,57 @@ Munix 터미널은 `@xterm/xterm` renderer와 Rust `portable-pty` backend로 구
 
 ## ADR-024: CLI + URI scheme (`munix://`)
 
-**상태:** 🟡 Proposed (다음 세션에 정식 결정)
-**결정일:** 2026-04-25
+**상태:** ✅ Accepted
+**결정일:** 2026-05-16
 
 ### 컨텍스트
 
-사용자 요청: "옵시디언처럼 CLI 지원". 옵시디언은 공식 CLI 없음 — 두 가지가 사실상 표준:
+사용자 요청: "옵시디언처럼 CLI 지원". 2026-05-16 조사 기준 Obsidian은 공식 CLI를 제공한다. 단순 launcher가 아니라 실행 중인 데스크톱 앱에 연결해 vault, file, search, daily note, properties, workspace 등을 제어하는 터미널 엔트리포인트다.
 
-1. **URI scheme** (공식): `obsidian://open?vault=foo&file=bar.md`. OS 레벨 URL handler.
-2. **커뮤니티 CLI 래퍼** (npm `obsidian-cli` 등): 결국 URI scheme이나 파일 직접 조작.
+Obsidian에서 참고할 핵심:
+
+1. **별도 CLI 엔트리포인트**: macOS symlink, Linux PATH 복사, Windows `.com` redirector.
+2. **명령 문법**: `obsidian vault=Notes open path="daily/today.md" newtab`처럼 `command key=value flag`.
+3. **URI scheme 분리**: `obsidian://open`, `new`, `daily`, `search`는 브라우저/외부 앱 링크용 surface다.
 
 Munix CLI/URI가 필요한 이유:
-- 셸에서 빠르게 노트 열기/생성 (`munix open ~/notes/today.md`)
+- 셸에서 빠르게 노트 열기/생성 (`munix vault=Work open path="today.md"`)
 - 외부 도구가 노트 작성 트리거 (스크립트, 단축키 매크로, OS 자동화)
 - 데일리 노트 자동화
 - 옵시디언 사용자 멘탈 모델과 연속성
 
-### 결정 (잠정)
+### 결정
 
-**계층화 접근** — 단계별 출시:
+**별도 `munix-cli` 바이너리 + local IPC + URI scheme 분리**를 채택한다.
 
-**계층 1 (v1.0 후반):**
-- `munix://` URI scheme 등록 — `tauri-plugin-deep-link`
-- `munix path/to/note.md` args 파싱 + single-instance forwarding (`tauri-plugin-single-instance`)
-- URI 형식: `munix://open?vault=...&file=...&line=...`
-- macOS Info.plist / Windows registry / Linux .desktop 통합
+구성:
 
-**계층 2 (v1.1):**
-- 풍부한 CLI: `munix new <title>`, `munix daily`, `munix search <query>`
-- `--vault`, `--new-window` 옵션
-- 같은 바이너리에서 args 분기 (별도 cli 바이너리 X)
+- `src-tauri/src/bin/munix-cli.rs`: 터미널 CLI entry.
+- `src-tauri/src/cli.rs`: Obsidian식 command model/parser.
+- `src-tauri/src/cli_ipc.rs`: CLI와 실행 중인 GUI 앱 사이의 local IPC.
+- `munix://`: 외부 앱/문서 링크용 URI scheme.
 
-**계층 3 (v1.2+):**
-- Unix socket API (`/tmp/munix.sock`) — JSON-RPC. cmux 스타일. 외부 도구/플러그인 통합용
-- x-callback-url 패턴 (Apple 표준) 검토
+P0 명령:
 
-**보안:**
-- URI는 외부 호출 가능 → 위험한 액션(파일 삭제 등)은 사용자 확인 prompt 필수
-- vault 외부 경로 차단 (path traversal, ADR-016 vault sandbox와 정합)
+- `munix vault=Work open path="daily/2026-05-16.md" [line=42] [newtab]`
+- `munix vault=Work create path="inbox/idea.md" [content=...] [open] [overwrite]`
+- `munix vault=Work read path="README.md" [format=text|json|md]`
+- `munix vault=Work append path="daily/2026-05-16.md" content="..."`
+- `munix vault=Work search query="tauri ipc" [open] [format=json]`
+- `munix vaults`, `munix files`, `munix folders`
+
+URI P0:
+
+- `munix://open?vault=...&path=...&line=...`
+- `munix://new?vault=...&path=...&content=...`
+- `munix://daily?vault=...`
+- `munix://search?vault=...&query=...`
+
+보안:
+
+- CLI와 URI 입력 모두 vault sandbox를 통과한다.
+- URI는 외부 입력이므로 파괴적 작업을 기본 비활성화하고 사용자 확인을 요구한다.
+- path traversal은 Rust vault validation에서 차단한다.
 
 자세한 설계는 [specs/cli-spec.md](./specs/cli-spec.md) 참조.
 
@@ -1163,11 +1176,14 @@ Munix CLI/URI가 필요한 이유:
 
 **긍정:**
 - 플러그인 시스템 의존 없음 — v1.0/v1.1에서 독립 진행 가능
-- Tauri 공식 플러그인이 OS 통합 처리 — 우리는 라우팅만
+- Obsidian 공식 CLI와 같은 사용자 모델 — 전환 비용 낮음
+- 별도 CLI 바이너리라 stdout/stderr, exit code, JSON 출력 설계가 가능
 - 옵시디언 사용자 멘탈 모델과 일치 (전환 비용 낮음)
 - 자동화 워크플로우(데일리 노트, 빠른 캡처) 지원
 
 **부정:**
+- GUI 앱과 CLI 바이너리 2개를 패키징해야 함
+- local IPC request/response, app auto-start, Windows redirector 구현 부담
 - URI scheme 등록은 OS-level — 사용자 거부/IT 정책 차단 가능 (특히 macOS Gatekeeper, Windows SmartScreen 첫 호출)
 - 보안 환경에서 IT 정책이 URI 핸들러 등록 자체를 차단할 수 있음 → 우아한 폴백 필요
 - single-instance 라우팅이 다중 vault 시나리오(v2.0)에서 모호 — 가장 최근 vault 휴리스틱 또는 prompt
@@ -1176,15 +1192,18 @@ Munix CLI/URI가 필요한 이유:
 ### 대안 (검토 후 기각/보류)
 
 - **Unix socket만 (CLI 없이)**: 외부 의존성 적지만 일반 사용자가 socket 직접 호출 불가.
-- **URI scheme 없이 args만**: 이미 실행 중인 인스턴스에 routing 어려움. single-instance 패턴이 필수.
-- **별도 `munix-cli` 바이너리**: 메인 앱과 통신/상태 동기 부담. 같은 바이너리 args 분기가 단순.
+- **URI scheme만으로 CLI 구현**: stdout/stderr, exit code, JSON 출력, `read` 같은 headless 명령에 부적합.
+- **GUI 바이너리 args만 사용**: Windows GUI stdout 제약과 앱 상태 통신 문제가 큼.
+- **Tauri sidecar만 사용**: 앱 내부 보조 실행 파일에는 적합하지만 사용자가 터미널에서 직접 호출하는 CLI 설치 UX는 별도 설계가 필요.
 - **계층 한 번에 다 출시**: 스코프 부담. 계층 1 (URI + open)만으로도 충분히 가치 있음.
 
 ### 참고
 
 - Tauri deep-link plugin: https://v2.tauri.app/plugin/deep-linking/
 - Tauri single-instance plugin: https://v2.tauri.app/plugin/single-instance/
-- Obsidian URI: https://help.obsidian.md/Concepts/Obsidian+URI
+- Tauri sidecar docs: https://tauri.app/develop/sidecar/
+- Obsidian CLI: https://obsidian.md/help/cli
+- Obsidian URI: https://obsidian.md/help/uri
 - 스펙: [specs/cli-spec.md](./specs/cli-spec.md)
 - 관련 ADR: ADR-016 (vault sandbox와 path traversal 방어선 정합)
 

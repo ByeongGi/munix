@@ -150,6 +150,8 @@ const tauriIpc = {
       sessionId: sessionId ?? null,
       vaultId: vaultId ?? null,
     }),
+
+  startCliIpcServer: () => invoke<void>("start_cli_ipc_server"),
 };
 
 export type IpcClient = typeof tauriIpc;

@@ -1,272 +1,316 @@
 # CLI + URI scheme 상세 설계 — Munix
 
-> 상태: **초안 (proposed)**. [ADR-024](../decisions.md#adr-024-cli--uri-scheme-munix) 채택 후 확정.
-> 옵시디언 URI scheme 패턴 + 옵시디언이 안 가진 풍성한 CLI를 단계적 출시.
+> 상태: **accepted**. [ADR-024](../decisions.md#adr-024-cli--uri-scheme-munix)에 따른 실행 스펙.
+> Obsidian 1.12.7+ 공식 CLI 모델을 기준으로, Munix는 별도 `munix-cli` 바이너리와 local IPC를 둔다.
 
 ---
 
 ## 1. 목적
 
-- 셸/스크립트/외부 도구에서 Munix 트리거 (옵시디언 URI scheme 패턴)
-- 빠른 노트 열기/생성 워크플로우 — 데일리 노트, 빠른 캡처, OS 자동화
-- 옵시디언 사용자 멘탈 모델과 연속성 (전환 비용 감소)
-
-## 2. 요구사항
-
-### 2.1 기능 요구사항 (계층별)
-
-#### 계층 1 — v1.0 후반 (P0)
-
-| ID | 요구사항 |
-|---|---|
-| CLI-01 | `munix://open?vault=...&file=...&line=...` URI 처리 |
-| CLI-02 | `munix path/to/note.md` args로 파일 열기 |
-| CLI-03 | 이미 실행 중인 인스턴스로 forwarding (single-instance) |
-| CLI-04 | macOS / Windows / Linux OS 통합 (URL handler 등록) |
-| CLI-05 | URI 첫 호출 시 사용자 승인 prompt (보안) |
-
-#### 계층 2 — v1.1 (P1)
-
-| ID | 요구사항 |
-|---|---|
-| CLI-06 | `munix new <title>` — 새 노트 생성 + 열기 |
-| CLI-07 | `munix daily` — 오늘 데일리 노트 |
-| CLI-08 | `munix search <query>` — 검색 결과 패널 열기 |
-| CLI-09 | `munix --vault <path>` — 특정 vault 강제 |
-| CLI-10 | `munix --new-window` — single-instance 우회 |
-| CLI-11 | shell 자동완성 스크립트 (zsh/bash/fish) |
-
-#### 계층 3 — v1.2+ (P2)
-
-| ID | 요구사항 |
-|---|---|
-| CLI-12 | Unix socket API (`/tmp/munix.sock`) — JSON-RPC |
-| CLI-13 | `munix get/set` — 외부 도구 상태 질의 |
-| CLI-14 | x-callback-url 패턴 (Apple 표준) |
-| CLI-15 | macOS Quick Action / Windows Send To 통합 |
-
-### 2.2 비기능 요구사항
-
-- URI 핸들러 응답 < 200ms (창이 이미 떠있을 때)
-- 새 인스턴스 콜드 스타트 < 2s (Tauri 평균)
-- 보안: vault 외부 경로 차단 (path traversal, ADR-016 정합)
-- 보안: 위험 액션은 명시적 사용자 승인
+- 터미널/스크립트에서 Munix vault와 note를 제어한다.
+- 브라우저, 문서, 외부 앱에서는 `munix://` URI scheme으로 Munix를 호출한다.
+- Obsidian 사용자에게 익숙한 `command key=value flag` 문법을 제공한다.
+- 앱이 실행 중이면 CLI 명령을 기존 GUI 인스턴스로 전달하고, 앱이 꺼져 있으면 후속 단계에서 앱을 기동한 뒤 재전달한다.
 
 ---
 
-## 3. 데이터 모델
+## 2. 참고 모델: Obsidian CLI
 
-### 3.1 URI scheme
+2026-05-16 조사 기준, Obsidian은 공식 CLI를 제공한다.
 
-```
-munix://<action>?<params>
-```
+- CLI는 설정에서 활성화한 뒤 PATH에 등록한다.
+- 명령 문법은 `obsidian <command> key=value flag` 형태다.
+- `vault=<name|id>`는 command 앞에 둔다.
+- `file=<name>`은 wikilink처럼 이름 기반 resolution, `path=<path>`는 vault root 기준 정확한 경로다.
+- macOS는 앱 번들 안 CLI에 `/usr/local/bin/obsidian` symlink를 만들고, Linux는 `~/.local/bin`에 복사하며, Windows는 GUI stdout 제약 때문에 `.com` redirector를 제공한다.
+- 지원 명령군은 `open`, `create`, `read`, `append`, `prepend`, `search`, `daily:*`, `vaults`, `files`, `folders`, `tags`, `backlinks`, `properties`, `templates`, `workspace`, `tabs`, `history`, `plugins`, `themes`, `dev:*` 등이다.
+- URI scheme은 CLI와 별개로 `obsidian://open`, `new`, `daily`, `search`, `choose-vault` 등을 처리한다.
 
-| Action | 설명 | 필수 params | 옵션 params |
-|---|---|---|---|
-| `open` | 파일 열기 | `vault` | `file`, `line`, `column` |
-| `new` | 새 노트 생성 + 열기 | `vault`, `file` | `content` (URL-encoded) |
-| `daily` | 오늘 데일리 노트 | `vault` | (frontmatter 자동) |
-| `search` | 검색 결과 열기 | `vault`, `q` | `mode` (text/regex) |
-
-예:
-- `munix://open?vault=/Users/me/notes&file=daily/2026-04-25.md`
-- `munix://new?vault=/Users/me/notes&file=inbox/quick.md&content=%EB%A9%94%EB%AA%A8`
-- `munix://search?vault=/Users/me/notes&q=react+hooks`
-
-### 3.2 CLI args
-
-```
-munix [options] <command> [args]
-
-Options:
-  --vault <path>       특정 vault 강제
-  --new-window         새 창 (single-instance 우회)
-  --json               결과를 JSON으로 stdout (계층 3)
-
-Commands:
-  open <file>          파일 열기 (vault 추정 또는 --vault 명시)
-  new <title> [-c <content>]
-                       새 노트 생성 + 열기
-  daily                오늘 데일리 노트
-  search <query>       검색
-  (계층 3)
-  get <key>            상태 질의 (current-file, current-vault 등)
-  set <key> <value>    상태 변경 (제한적)
-```
-
-### 3.3 라우팅 (Rust)
-
-```rust
-enum CliCommand {
-  Open { vault: Option<PathBuf>, file: PathBuf, line: Option<u32> },
-  New { vault: Option<PathBuf>, title: String, content: Option<String> },
-  Daily { vault: Option<PathBuf> },
-  Search { vault: Option<PathBuf>, query: String, mode: SearchMode },
-}
-
-fn parse_uri(uri: &str) -> Result<CliCommand, CliError>;
-fn parse_args(args: &[String]) -> Result<CliCommand, CliError>;
-fn dispatch(cmd: CliCommand, app: &AppHandle) -> Result<()>;
-```
+Munix는 이 구조 중 CLI 문법, 별도 CLI 엔트리포인트, URI와 CLI의 역할 분리를 채택한다. Obsidian Sync/Publish/plugin marketplace 같은 제품 고유 명령은 Munix 기능이 생기기 전까지 제외한다.
 
 ---
 
-## 4. API/인터페이스
+## 3. 기능 요구사항
 
-### 4.1 Tauri 플러그인
+### 3.1 계층 0 — 스캐폴드 (현재 구현)
 
-- **`tauri-plugin-deep-link`**: URI scheme 등록 + 이벤트 수신
-  - macOS: Info.plist `CFBundleURLTypes`
-  - Windows: registry `HKCU\Software\Classes\munix`
-  - Linux: `.desktop` 파일 `MimeType=x-scheme-handler/munix`
-- **`tauri-plugin-single-instance`**: 두 번째 실행 시 args를 첫 인스턴스로 forwarding
+| ID     | 요구사항                                                                            |
+| ------ | ----------------------------------------------------------------------------------- |
+| CLI-00 | Rust 공유 모듈에 CLI command model과 parser를 둔다.                                 |
+| CLI-01 | `src-tauri/src/bin/munix-cli.rs` 별도 바이너리를 추가한다.                          |
+| CLI-02 | `munix vault=Work open path="daily/today.md" newtab` 형태를 파싱한다.               |
+| CLI-03 | 실행 중인 GUI 앱으로 command envelope를 보낼 local IPC 클라이언트/서버 골격을 둔다. |
+| CLI-04 | GUI는 local IPC로 받은 command를 Tauri event로 frontend에 전달한다.                 |
 
-### 4.2 라우팅 흐름
+### 3.2 계층 1 — v1.0 후반 P0
 
-```
-[OS]
-  munix://open?... 클릭
-        ↓
-[Tauri deep-link plugin]
-  uri 이벤트 수신
-        ↓
-[parse_uri]
-  CliCommand 변환
-        ↓
-[validate]
-  vault 외부 경로? path traversal? capability?
-        ↓
-[dispatch]
-  ├─ Open → editor.openFile(path)
-  ├─ New → editor.createAndOpen(path, content)
-  ├─ Daily → daily.openOrCreateToday()
-  └─ Search → searchPanel.open(query)
-```
+| ID     | 요구사항                                                                    |
+| ------ | --------------------------------------------------------------------------- |
+| CLI-10 | `munix open path=... [line=...] [newtab]`                                   |
+| CLI-11 | `munix create path=... [content=...] [open] [overwrite]`                    |
+| CLI-12 | `munix read path=... [format=text\|json\|md]`                               |
+| CLI-13 | `munix append path=... content=...`, `munix prepend path=... content=...`   |
+| CLI-14 | `munix search query=... [open] [format=text\|json]`                         |
+| CLI-15 | `munix daily`, `daily:read`, `daily:append`, `daily:prepend`                |
+| CLI-16 | `munix vaults`, `munix files`, `munix folders`                              |
+| CLI-17 | `munix://open`, `munix://new`, `munix://daily`, `munix://search` 처리       |
+| CLI-18 | CLI 설치/등록: macOS symlink, Linux `~/.local/bin`, Windows redirector 설계 |
 
-### 4.3 보안 검증
+### 3.3 계층 2 — v1.1 P1
 
-```rust
-fn validate_path(vault: &Path, file: &Path) -> Result<PathBuf, CliError> {
-  let canonical = vault.join(file).canonicalize()?;
-  if !canonical.starts_with(vault) {
-    return Err(CliError::PathTraversal);  // ADR-016 정합
-  }
-  Ok(canonical)
-}
+| ID     | 요구사항                                                                 |
+| ------ | ------------------------------------------------------------------------ |
+| CLI-20 | `tags`, `tag`, `backlinks`, `links`, `unresolved`, `orphans`, `deadends` |
+| CLI-21 | `outline`, `recents`, `tabs`, `tab:open`                                 |
+| CLI-22 | `property:set`, `property:remove`, `property:read`                       |
+| CLI-23 | `templates`, `template:read`, `template:insert`                          |
+| CLI-24 | shell completion (`zsh`, `bash`, `fish`)                                 |
+| CLI-25 | `munix` TUI 모드: history, autocomplete, reverse search                  |
 
-fn require_user_confirmation(cmd: &CliCommand) -> bool {
-  matches!(cmd, CliCommand::New { .. })  // 첫 호출 시
-}
-```
+### 3.4 계층 3 — v1.2+ P2
+
+| ID     | 요구사항                                      |
+| ------ | --------------------------------------------- |
+| CLI-30 | `workspace:*`, `history:*`, `diff`            |
+| CLI-31 | plugin/theme/snippet 명령군                   |
+| CLI-32 | JSON-RPC local API 안정화 및 외부 도구 문서화 |
+| CLI-33 | x-callback-url (`x-success`, `x-error`)       |
+| CLI-34 | macOS Quick Action / Windows Send To 통합     |
 
 ---
 
-## 5. UI/UX 플로우
+## 4. 명령 문법
 
-### 5.1 URI 클릭 (브라우저)
-
-1. 사용자가 브라우저/이메일에서 `munix://...` 클릭
-2. OS가 Munix 실행 (없으면 spawn, 있으면 deep-link 이벤트로 forward)
-3. **첫 호출 시**: "이 URL을 열까요?" 확인 모달 + "이후 자동 허용" 옵션
-4. Munix 창 포커스 + 액션 수행
-
-### 5.2 셸 호출
+### 4.1 기본 문법
 
 ```bash
-$ munix open ~/notes/today.md
-# → 이미 실행 중이면 즉시 열림, 아니면 spawn 후 열림
-
-$ munix new "회의록 2026-04-25"
-# → vault/inbox/회의록 2026-04-25.md 생성 후 열기
-
-$ munix daily
-# → vault/daily/2026-04-25.md (없으면 생성)
-
-$ munix search "react hooks"
-# → 검색 패널 열림
+munix [global] <command> [key=value ...] [flag ...]
 ```
 
-### 5.3 단일 인스턴스 충돌
+전역 인자:
 
-- 다른 vault 열린 상태에서 다른 vault의 파일 호출 → "Vault A에서 Vault B로 전환?" prompt
-- `--new-window`로 우회 가능 (계층 2)
+```bash
+vault=<name|id|absolute-path>
+```
 
-### 5.4 OS 등록 첫 경험
+호환 alias:
 
-- 첫 실행 시 "munix:// URL을 처리하도록 등록할까요?" prompt
-- 거부해도 앱 자체는 정상 동작 (CLI만 사용 가능)
+```bash
+munix --vault <name|id|absolute-path> open path="note.md"
+munix --version
+munix --help
+```
 
----
+### 4.2 파일 지정
 
-## 6. 에러 처리
+```bash
+path="folder/note.md"   # vault root 기준 정확한 상대 경로
+file="Note title"       # 이름 기반 resolution, wikilink와 유사
+```
 
-| 케이스 | 처리 |
-|---|---|
-| vault 외부 경로 (path traversal) | 거부 + 알림 |
-| 존재하지 않는 파일 | "파일이 없습니다. 생성하시겠습니까?" 또는 거부 |
-| URI 형식 오류 | 무시 + 로그 (사용자 알림 X — 노이즈) |
-| `--vault` 지정 vault 없음 | 알림 + 가장 최근 vault로 폴백 |
-| URI 첫 호출 사용자 거부 | 액션 취소 |
-| OS가 deep-link 등록 차단 (보안 정책) | 알림 + CLI만 사용 안내 |
+규칙:
 
----
+- `path`와 `file`을 동시에 지정하면 오류다.
+- P0 구현은 `path`를 우선 지원한다.
+- `file` resolution은 검색 인덱스와 title/frontmatter 통합 후 P1에서 정교화한다.
 
-## 7. 엣지 케이스
+### 4.3 출력 포맷
 
-- **vault 미오픈 상태에서 `munix open` 호출**: 가장 최근 vault 사용
-- **다중 vault 동시 (v2.0)**: vault 매칭 우선순위 — `--vault` > URI `vault` param > 현재 활성 vault > 최근 vault
-- **macOS Gatekeeper**: 첫 deep-link 호출 차단 가능 (서명 안 된 빌드)
-- **Windows SmartScreen**: registry 등록 차단 가능
-- **Linux 환경별 차이**: `xdg-mime` 지원 안 되는 경량 WM
-- **WSL 사용자**: Windows에서 WSL 경로 (`\\wsl$\Ubuntu\...`) 처리
-- **OS path 구분자 차이**: 항상 `/`로 통일 (CLAUDE.md 컨벤션 정합)
-- **content URL-encoding**: 멀티바이트 (한글) 정상 디코딩 검증
-- **동시 다중 URI**: 100개 URI를 동시에 호출하면 큐잉 또는 throttle
+```bash
+format=text
+format=json
+format=md
+format=tsv
+format=csv
+format=yaml
+```
 
----
-
-## 8. 테스트 케이스
-
-- `munix://open?vault=...&file=...` → 해당 파일 열림
-- `munix://open?...&line=42` → 42번 라인으로 스크롤
-- `munix://new?...&content=...` (URL-encoded 한글) → 정확한 본문
-- `munix://search?...&q=test` → 검색 패널 + 결과 표시
-- 셸 args 파싱 모든 조합 (`munix open foo`, `munix --vault X open foo`)
-- single-instance forwarding — 다른 PID에서 호출
-- path traversal 시도 (`file=../etc/passwd`) → 거부
-- 같은 URI 100회 호출 → 정상 처리 또는 throttle
-- 사용자 거부 시 액션 취소
-- OS별 등록 (macOS Info.plist, Windows registry, Linux .desktop)
+`--json`은 `format=json` alias로 취급한다.
 
 ---
 
-## 9. 오픈 이슈
+## 5. P0 명령 예시
 
-- [ ] 다중 vault 시 vault 매칭 알고리즘 (priority chain)
-- [ ] URI 핸들러 첫 등록 동의 prompt UI — OS-level vs 앱 내?
-- [ ] x-callback-url 표준 따를지 (`x-success`, `x-error` 콜백)
-- [ ] CLI 자동완성 (zsh/bash/fish 완성 스크립트 — 계층 2)
-- [ ] 시스템 trayicon에서 quick action (계층 2~3)
-- [ ] `munix daily` 의 "오늘" 정의 — 자정 기준 / 4am 기준 (사용자 설정)?
-- [ ] daily 노트 템플릿 ([settings-spec.md](./settings-spec.md) 통합)
-- [ ] 데일리 노트 경로 컨벤션 — `daily/YYYY-MM-DD.md` vs `journal/YYYY/MM/DD.md`?
-- [ ] CLI 결과 stderr/stdout 분리 (스크립트 친화적)
-- [ ] Unix socket API 인증 (계층 3) — 같은 사용자만 vs token
+```bash
+munix vault=Work open path="daily/2026-05-16.md"
+munix vault=Work open path="daily/2026-05-16.md" line=42 newtab
 
----
+munix vault=Work create path="inbox/idea.md" content="first draft" open
+munix vault=Work append path="daily/2026-05-16.md" content="- [ ] Follow up"
+munix vault=Work prepend path="inbox.md" content="# Inbox"
+munix vault=Work read path="README.md" format=md
 
-## 10. 의존 관계
+munix vault=Work search query="tauri ipc" format=json
+munix vault=Work search:open query="tauri ipc"
 
-- **선행 ADR**: [ADR-024](../decisions.md#adr-024-cli--uri-scheme-munix)
-- **연관 ADR**: [ADR-016](../decisions.md) (vault sandbox와 path traversal 방어선 정합)
-- **연관 spec**: [vault-spec.md](./vault-spec.md) (path validation), [search-spec.md](./search-spec.md) (search 액션 통합)
-- **외부 의존**:
-  - [tauri-plugin-deep-link](https://v2.tauri.app/plugin/deep-linking/) (MIT)
-  - [tauri-plugin-single-instance](https://v2.tauri.app/plugin/single-instance/) (MIT)
+munix vault=Work daily
+munix vault=Work daily:append content="- [ ] Review CLI spec"
+
+munix vaults format=json
+munix vault=Work files format=json
+munix vault=Work folders
+```
 
 ---
 
-**문서 버전:** v0.1 (초안)
+## 6. URI scheme
+
+URI는 터미널 CLI의 내부 구현 수단이 아니라, 외부 앱/문서 링크용 public surface다.
+
+```text
+munix://open?vault=Work&path=daily/2026-05-16.md&line=42
+munix://new?vault=Work&path=inbox/idea.md&content=hello
+munix://daily?vault=Work
+munix://search?vault=Work&query=tauri%20ipc
+```
+
+URI 파라미터:
+
+| Action   | 필수                        | 옵션                           |
+| -------- | --------------------------- | ------------------------------ |
+| `open`   | `vault`, `path` 또는 `file` | `line`, `column`, `newtab`     |
+| `new`    | `vault`, `path`             | `content`, `open`, `overwrite` |
+| `daily`  | `vault`                     | `append`, `prepend`, `read`    |
+| `search` | `vault`, `query`            | `open`, `format`               |
+
+보안:
+
+- URI는 외부 입력으로 간주한다.
+- path traversal은 Rust vault validation에서 차단한다.
+- `delete`, `overwrite`, plugin/theme 설치 같은 파괴적 작업은 URI에서 기본 비활성화한다.
+- 첫 외부 호출 또는 새 vault 접근은 사용자 확인을 요구한다.
+
+---
+
+## 7. 아키텍처
+
+### 7.1 모듈 구성
+
+```text
+munix/src-tauri/
+  src/
+    main.rs                 # Tauri GUI entry
+    lib.rs                  # GUI runtime + shared module export
+    cli.rs                  # command model + parser
+    cli_ipc.rs              # local IPC server/client
+    bin/
+      munix-cli.rs          # terminal CLI entry
+```
+
+### 7.2 흐름
+
+```text
+[terminal]
+  munix vault=Work open path=note.md
+        ↓
+[munix-cli]
+  parse_args -> CliInvocation
+        ↓
+[local IPC]
+  Unix domain socket / Windows named pipe
+        ↓
+[Munix GUI]
+  Tauri event: munix-cli-command
+        ↓
+[frontend command handler]
+  vault resolve -> tab/editor/search action
+```
+
+앱이 실행 중이지 않을 때:
+
+```text
+munix-cli
+  ├─ 앱 실행 시도 (macOS open / Windows ShellExecute / Linux xdg-open or executable path)
+  ├─ IPC readiness 대기
+  └─ command 재전송
+```
+
+이 자동 기동은 P0 후반 작업이다. 현재 스캐폴드는 실행 중인 앱으로 보내는 경로를 먼저 고정한다.
+
+### 7.3 IPC envelope
+
+```rust
+struct CliInvocation {
+  vault: Option<String>,
+  command: CliCommand,
+}
+```
+
+Frontend event name:
+
+```text
+munix-cli-command
+```
+
+초기 응답:
+
+```json
+{ "ok": true, "message": "accepted" }
+```
+
+P1부터는 `read`, `search format=json`처럼 stdout이 중요한 명령에 대해 request id 기반 응답을 돌려준다.
+
+---
+
+## 8. 에러 처리
+
+| 케이스                    | 처리                                           |
+| ------------------------- | ---------------------------------------------- |
+| 알 수 없는 명령           | CLI stderr + exit code 64                      |
+| 알 수 없는 key/flag       | CLI stderr + exit code 64                      |
+| `path`와 `file` 동시 지정 | CLI stderr + exit code 64                      |
+| 앱 미실행, IPC 연결 실패  | CLI stderr + exit code 69, 후속 자동 기동 구현 |
+| vault 미지정              | active vault fallback, 없으면 오류             |
+| vault 이름 중복           | prompt 또는 `vault=<id>` 요구                  |
+| path traversal            | Rust vault validation에서 거부                 |
+| URI parsing 실패          | 사용자 알림 없이 warn 로그                     |
+| 외부 URI 위험 작업        | 확인 prompt 또는 거부                          |
+
+---
+
+## 9. 테스트 케이스
+
+- `vault=Work open path=a.md line=42 newtab` 파싱
+- `--vault Work open path=a.md` alias 파싱
+- `create path=a.md content=hello open overwrite` 파싱
+- `append path=a.md content=hello` 파싱
+- `search:open query=tauri format=json` 파싱
+- `daily:append content=hello` 파싱
+- `path`와 `file` 동시 지정 오류
+- 알 수 없는 key/flag 오류
+- 실행 중인 GUI로 IPC envelope 전송
+- GUI가 `munix-cli-command` event를 frontend에 emit
+- URI `munix://open?...`를 `CliInvocation`으로 변환
+- path traversal 시도 거부
+
+---
+
+## 10. 오픈 이슈
+
+- [ ] macOS 앱 번들 안 `munix-cli` 포함 및 `/usr/local/bin/munix` symlink 생성 UX
+- [ ] Windows `.com` redirector 또는 console subsystem CLI 패키징
+- [ ] Linux `~/.local/bin/munix` 설치 경로
+- [ ] 앱 미실행 시 자동 기동 경로
+- [ ] `read`/`search format=json`의 request-response IPC
+- [ ] `daily` 기준일: 자정 vs 4am cutoff
+- [ ] 데일리 노트 경로: `daily/YYYY-MM-DD.md` vs 사용자 설정
+- [ ] `file=` resolution 우선순위: exact basename, title property, alias, fuzzy
+- [ ] CLI TUI에 넣을 명령 범위
+
+---
+
+## 11. 의존 관계
+
+- [ADR-024](../decisions.md#adr-024-cli--uri-scheme-munix)
+- [vault-spec.md](./vault-spec.md): path validation, vault sandbox
+- [search-spec.md](./search-spec.md): search/open routing
+- [multi-vault-spec.md](./multi-vault-spec.md): vault id/name/path resolution
+- Tauri plugin 후보:
+  - `tauri-plugin-deep-link`: `munix://` 처리
+  - `tauri-plugin-single-instance`: GUI 중복 실행 방지
+
+---
+
+**문서 버전:** v0.2
 **작성일:** 2026-04-25
-**상태:** Proposed — 계층 1 v1.0 후반 구현 시 v0.2로 업데이트
+**최근 업데이트:** 2026-05-16 — Obsidian 공식 CLI 조사 반영, 별도 `munix-cli` + local IPC 구조로 갱신

@@ -1,7 +1,7 @@
 {
   "name": "munix",
   "private": true,
-  "version": "0.1.12",
+  "version": "0.1.13",
   "type": "module",
   "engines": {
     "node": ">=24.0.0"
@@ -23,7 +23,7 @@
     "lint:rust": "cd src-tauri && cargo clippy -- -D warnings",
     "check": "pnpm lint && pnpm test && pnpm test:render && pnpm test:manual-debt && pnpm build && pnpm test:rust && pnpm lint:rust",
     "icon:generate": "tauri icon src-tauri/icons/source.png",
-    "release:build": "pnpm tauri build",
+    "release:build": "pnpm tauri build && cargo build --manifest-path src-tauri/Cargo.toml --release --bin munix-cli && node scripts/package-cli-assets.mjs",
     "release:collect": "node scripts/collect-release-assets.mjs",
     "release:local": "pnpm release:check && pnpm release:build && pnpm release:collect",
     "release:upload": "node scripts/upload-release-assets.mjs",

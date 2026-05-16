@@ -26,6 +26,7 @@ import { useFileSystemActions } from "@/hooks/app/use-file-system-actions";
 import { useFileTreeActionDispatcher } from "@/hooks/app/use-file-tree-action-dispatcher";
 import { useFileTreeReveal } from "@/hooks/app/use-file-tree-reveal";
 import { useGlobalShortcuts } from "@/hooks/app/use-global-shortcuts";
+import { useCliCommandListener } from "@/hooks/app/use-cli-command-listener";
 import { usePersistentSidebarState } from "@/hooks/app/use-persistent-sidebar-state";
 import { useVaultPickerAction } from "@/hooks/app/use-vault-picker-action";
 
@@ -133,6 +134,11 @@ function App() {
     setShortcutsOpen,
     setSettingsOpen,
     setVaultSwitcherOpen,
+  });
+
+  useCliCommandListener({
+    refreshFiles,
+    setSidebarTab,
   });
 
   const handleAction = useFileTreeActionDispatcher({

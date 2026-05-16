@@ -53,6 +53,58 @@ pub struct TerminalManager {
     sessions: Arc<Mutex<HashMap<String, TerminalSession>>>,
 }
 
+#[derive(Default)]
+struct TerminalUtf8Decoder {
+    pending: Vec<u8>,
+}
+
+impl TerminalUtf8Decoder {
+    fn push(&mut self, bytes: &[u8]) -> String {
+        self.pending.extend_from_slice(bytes);
+        let mut output = String::new();
+
+        loop {
+            match std::str::from_utf8(&self.pending) {
+                Ok(valid) => {
+                    output.push_str(valid);
+                    self.pending.clear();
+                    break;
+                }
+                Err(err) => {
+                    let valid_up_to = err.valid_up_to();
+                    if valid_up_to > 0 {
+                        let valid = std::str::from_utf8(&self.pending[..valid_up_to])
+                            .expect("valid UTF-8 prefix reported by from_utf8");
+                        output.push_str(valid);
+                        self.pending.drain(..valid_up_to);
+                        continue;
+                    }
+
+                    if let Some(error_len) = err.error_len() {
+                        output.push('\u{fffd}');
+                        self.pending.drain(..error_len);
+                        continue;
+                    }
+
+                    break;
+                }
+            }
+        }
+
+        output
+    }
+
+    fn finish(&mut self) -> String {
+        if self.pending.is_empty() {
+            return String::new();
+        }
+
+        let output = String::from_utf8_lossy(&self.pending).into_owned();
+        self.pending.clear();
+        output
+    }
+}
+
 fn default_shell() -> String {
     #[cfg(target_os = "windows")]
     {
@@ -65,8 +117,11 @@ fn default_shell() -> String {
     }
 }
 
-fn emit_terminal_data(app: &AppHandle, id: &str, bytes: &[u8]) {
-    let data = String::from_utf8_lossy(bytes).into_owned();
+fn emit_terminal_data(app: &AppHandle, id: &str, data: String) {
+    if data.is_empty() {
+        return;
+    }
+
     let _ = app.emit(
         TERMINAL_DATA_EVENT,
         TerminalDataPayload {
@@ -84,13 +139,16 @@ fn spawn_reader(
 ) {
     thread::spawn(move || {
         let mut buf = [0_u8; 8192];
+        let mut decoder = TerminalUtf8Decoder::default();
         loop {
             match reader.read(&mut buf) {
                 Ok(0) => break,
-                Ok(n) => emit_terminal_data(&app, &id, &buf[..n]),
+                Ok(n) => emit_terminal_data(&app, &id, decoder.push(&buf[..n])),
                 Err(_) => break,
             }
         }
+
+        emit_terminal_data(&app, &id, decoder.finish());
 
         if let Ok(mut sessions) = sessions.lock() {
             sessions.remove(&id);
@@ -331,4 +389,36 @@ pub async fn terminal_kill(id: String, state: State<'_, AppState>) -> VaultResul
     }
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::TerminalUtf8Decoder;
+
+    #[test]
+    fn utf8_decoder_preserves_multibyte_character_across_chunks() {
+        let mut decoder = TerminalUtf8Decoder::default();
+        let bytes = "\u{2500}\u{2500}".as_bytes();
+
+        assert_eq!(decoder.push(&bytes[..2]), "");
+        assert_eq!(decoder.push(&bytes[2..]), "\u{2500}\u{2500}");
+        assert_eq!(decoder.finish(), "");
+    }
+
+    #[test]
+    fn utf8_decoder_emits_valid_prefix_before_incomplete_tail() {
+        let mut decoder = TerminalUtf8Decoder::default();
+
+        assert_eq!(decoder.push(b"ok \xe2"), "ok ");
+        assert_eq!(decoder.push(b"\x94\x80"), "\u{2500}");
+        assert_eq!(decoder.finish(), "");
+    }
+
+    #[test]
+    fn utf8_decoder_replaces_invalid_bytes_without_losing_following_text() {
+        let mut decoder = TerminalUtf8Decoder::default();
+
+        assert_eq!(decoder.push(b"a\xffb"), "a\u{fffd}b");
+        assert_eq!(decoder.finish(), "");
+    }
 }

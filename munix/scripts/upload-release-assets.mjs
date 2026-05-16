@@ -1,13 +1,17 @@
 import { existsSync, readdirSync, statSync } from "node:fs";
 import { spawnSync } from "node:child_process";
-import { join } from "node:path";
+import { dirname, join, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import packageJson from "../package.json" with { type: "json" };
 
 const args = process.argv.slice(2);
 const tagFlagIndex = args.indexOf("--tag");
 const tag =
   tagFlagIndex >= 0 ? args[tagFlagIndex + 1] : `v${packageJson.version}`;
-const releaseDir = join("..", "release-dist", tag);
+const scriptDir = dirname(fileURLToPath(import.meta.url));
+const appRootDir = resolve(scriptDir, "..");
+const repoRootDir = resolve(appRootDir, "..");
+const releaseDir = join(repoRootDir, "release-dist", tag);
 
 function run(command, commandArgs, options = {}) {
   const result = spawnSync(command, commandArgs, {

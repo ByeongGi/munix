@@ -5,8 +5,12 @@ VERSION="${MUNIX_VERSION:-latest}"
 ARCH="${MUNIX_ARCH:-aarch64}"
 APP_NAME="munix.app"
 EXPECTED_SHA256="${MUNIX_SHA256:-}"
+EXPECTED_CLI_SHA256="${MUNIX_CLI_SHA256:-}"
 APP_INSTALL_DIR="${MUNIX_APP_INSTALL_DIR:-$HOME/Applications}"
 APP_DEST="$APP_INSTALL_DIR/$APP_NAME"
+INSTALL_CLI="${MUNIX_INSTALL_CLI:-1}"
+CLI_INSTALL_DIR="${MUNIX_CLI_INSTALL_DIR:-/usr/local/bin}"
+CLI_DEST="$CLI_INSTALL_DIR/munix"
 WORK_DIR="$(mktemp -d "${TMPDIR:-/tmp}/munix-install.XXXXXX")"
 MOUNT_DIR="$WORK_DIR/mount"
 
@@ -41,6 +45,7 @@ require_command curl
 require_command hdiutil
 require_command ditto
 require_command shasum
+require_command tar
 require_command xattr
 
 if [ "$VERSION" = "latest" ]; then
@@ -56,11 +61,17 @@ if [ "$VERSION" = "latest" ]; then
 fi
 
 ASSET_NAME="munix_${VERSION}_${ARCH}.dmg"
+CLI_ASSET_NAME="munix-cli_${VERSION}_${ARCH}.tar.gz"
 DOWNLOAD_URL="${MUNIX_DMG_URL:-https://github.com/ByeongGi/munix/releases/download/v${VERSION}/${ASSET_NAME}}"
+CLI_DOWNLOAD_URL="${MUNIX_CLI_URL:-https://github.com/ByeongGi/munix/releases/download/v${VERSION}/${CLI_ASSET_NAME}}"
 DMG_PATH="$WORK_DIR/$ASSET_NAME"
+CLI_TARBALL_PATH="$WORK_DIR/$CLI_ASSET_NAME"
 
 if [ -z "$EXPECTED_SHA256" ] && [ "$ARCH" = "aarch64" ]; then
   case "$VERSION" in
+    0.1.13)
+      EXPECTED_SHA256="830a8bc956c09e8145698dab67cc63f68fdd23d8515109dba3f50a54346623a5"
+      ;;
     0.1.12)
       EXPECTED_SHA256="e38244d21df0621658eebaa09cbd302a24feb20ecf10f9fcb29054fe55d285e4"
       ;;
@@ -103,6 +114,14 @@ if [ -z "$EXPECTED_SHA256" ] && [ "$ARCH" = "aarch64" ]; then
   esac
 fi
 
+if [ -z "$EXPECTED_CLI_SHA256" ] && [ "$ARCH" = "aarch64" ]; then
+  case "$VERSION" in
+    0.1.13)
+      EXPECTED_CLI_SHA256="ee660f33bfc34c073d12a8132cfe6f032cd296e891804f37ee66a244bd79dcfc"
+      ;;
+  esac
+fi
+
 case "$(uname -m)" in
   arm64)
     if [ "$ARCH" != "aarch64" ]; then
@@ -128,6 +147,22 @@ else
   log "Warning: no SHA256 checksum configured for this version."
 fi
 
+if [ "$INSTALL_CLI" != "0" ]; then
+  log "Downloading Munix CLI $VERSION from:"
+  log "  $CLI_DOWNLOAD_URL"
+  curl --fail --location --progress-bar "$CLI_DOWNLOAD_URL" --output "$CLI_TARBALL_PATH"
+
+  if [ -n "$EXPECTED_CLI_SHA256" ]; then
+    log "Verifying CLI SHA256..."
+    ACTUAL_CLI_SHA256="$(shasum -a 256 "$CLI_TARBALL_PATH" | awk '{print $1}')"
+    if [ "$ACTUAL_CLI_SHA256" != "$EXPECTED_CLI_SHA256" ]; then
+      fail "CLI SHA256 mismatch. Expected $EXPECTED_CLI_SHA256 but got $ACTUAL_CLI_SHA256."
+    fi
+  else
+    log "Warning: no CLI SHA256 checksum configured for this version."
+  fi
+fi
+
 mkdir -p "$MOUNT_DIR"
 log "Mounting DMG..."
 hdiutil attach "$DMG_PATH" -mountpoint "$MOUNT_DIR" -nobrowse -quiet
@@ -146,11 +181,38 @@ ditto "$APP_SOURCE" "$APP_DEST"
 log "Removing macOS quarantine attribute for this installed app..."
 xattr -dr com.apple.quarantine "$APP_DEST" 2>/dev/null || true
 
+if [ "$INSTALL_CLI" != "0" ]; then
+  log "Installing Munix CLI to:"
+  log "  $CLI_DEST"
+  CLI_EXTRACT_DIR="$WORK_DIR/cli"
+  mkdir -p "$CLI_EXTRACT_DIR"
+  tar -xzf "$CLI_TARBALL_PATH" -C "$CLI_EXTRACT_DIR"
+  CLI_SOURCE="$CLI_EXTRACT_DIR/munix"
+  if [ ! -f "$CLI_SOURCE" ]; then
+    fail "could not find munix executable in $CLI_ASSET_NAME."
+  fi
+  chmod 0755 "$CLI_SOURCE"
+
+  if mkdir -p "$CLI_INSTALL_DIR" 2>/dev/null && [ -w "$CLI_INSTALL_DIR" ]; then
+    install -m 0755 "$CLI_SOURCE" "$CLI_DEST"
+  else
+    require_command sudo
+    sudo mkdir -p "$CLI_INSTALL_DIR"
+    sudo install -m 0755 "$CLI_SOURCE" "$CLI_DEST"
+  fi
+fi
+
 log ""
 log "Munix installed successfully."
 log ""
 log "Open it with:"
 log "  open \"$APP_DEST\""
+if [ "$INSTALL_CLI" != "0" ]; then
+  log ""
+  log "Use the CLI with:"
+  log "  munix help"
+  log "  munix vault=Work open path=\"note.md\""
+fi
 log ""
 log "Note: Munix is currently ad-hoc signed and not Apple-notarized."
 log "Only run this installer if you trust the official GitHub release."
